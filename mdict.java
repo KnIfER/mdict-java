@@ -25,7 +25,7 @@ import rbtree.RBTree;
  * Mdict Java test
  *	change the .mdx path(File in) and watch the output
  *  no o-o classes,
- *  a wonderful streight forward test
+ *  a wonderful straight forward test
  * @author KnIfER
  * @date 2017/11/22
  */
