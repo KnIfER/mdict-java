@@ -26,7 +26,7 @@ import rbtree.RBTree;
  * Mdict java : resource file (.mdd) test
  *	change the .mdd path(File in) and watch the output
  *  no o-o classes,
- *  just a streight forward test
+ *  just a straight forward test
  * @author KnIfER
  * @date 2017/12/8
  */
