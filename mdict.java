@@ -23,7 +23,7 @@ import rbtree.RBTree;
 
 /**
  * Mdict Java test
- *	change the .mdx path and watch the output
+ *	change the .mdx path(File in) and watch the output
  *  no o-o classes,
  *  a wonderful streight forward test
  * @author KnIfER
