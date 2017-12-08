@@ -22,10 +22,10 @@ import rbtree.RBTree;
 
 
 /**
- * Java conversion
+ * Mdict Java test
  *	change the .mdx path and watch the output
  *  no o-o classes,
- *  just a streight forward test
+ *  a wonderful streight forward test
  * @author KnIfER
  * @date 2017/11/22
  */
