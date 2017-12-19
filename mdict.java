@@ -7,35 +7,89 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.Adler32;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
+
+import org.anarres.lzo.LzoAlgorithm;
+import org.anarres.lzo.LzoDecompressor;
+import org.anarres.lzo.LzoInputStream;
+import org.anarres.lzo.LzoLibrary;
+import org.jvcompress.lzo.MiniLZO;
+import org.jvcompress.util.MInt;
+
 import rbtree.RBTree;
 
 
 /**
- * Mdict Java test
- *	change the .mdx path(File in) and watch the output
+ * Java test...
+ *	change the .mdx path and watch the output
  *  no o-o classes,
- *  a wonderful straight forward test
+ *  just a straight forward test
  * @author KnIfER
  * @date 2017/11/22
  */
 
 public class mdict {
+	
 	private static final int BlockID = 0;
 
-	//print key texts and content.
-	static boolean doUWantuPrintEverything=true;
-	
+	static String key = "红树";//abduco@拉丁语英语		马连鞍@有毒植物		happy@简明英汉
+    
+    static File f;
+    
+    static void assignMdxFile(){
+    //f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\简明英汉汉英词典.mdx");
+    //f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\古生物图鉴.mdx");
+    //f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdx");
+    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\neo\\拉丁语英语[31655](091009).mdx");
+    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\neo\\英语拉丁语字典【匿名原创】【版本日期未注明】.mdx");
+    f = new File("C:\\antiquafortuna\\MDictPC\\doc\\古生物图鉴.mdx");
+    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\NameOfPlants.mdx");
+    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\有毒植物,J.Huang.mdx");
+    }
+
+    
+    
+/*    
+    推荐文本编辑器：notepad++，使用 alt+2 技能键获得全局观~ 其他技能键：双击近战，ctrl+f洲际导弹。
+    
+    usage : getRecordAt(lookUp("happy"))
+    
+    笔记(给自己看的):initialize mdx 得到 _key_block_info_list 。相关文件部分有4个组成: headerKeyText (s)、 tailerKeyText (s)、 key_block_compressed_size (s)、 key_block_decompressed_size (s)
+    
+    *lookUp("key") SUMMARY: lookUp returns the position of best-matched entry to "key".
+            first,根据“根据头部信息建立起来的Red-Black树： block_blockId_search_tree ”,使用我写的二叉树搜索算法xxing,获得最近匹配项（即最相近的块起始单词）所在的block id.
+            second,根据 _key_block_info_list[block id] 存储的信息,将第block id个key_block解压出来。这事获得2000个词条左右的数组，一并放入_key_block_info_list[block id].key_list 中。
+            最后调用 binary_find_closest2 ,作用于 key_list,得最近匹配项相对于key_list的位置，然后根据 num_entries_accumulator 换算得到最近匹配项相对于第一个入口词条的位置。
+            
+    *getEntryAt(pos): returns key_Text at position "pos".主要用于安卓listview adapter的实现
+    *getRecordAt(pos): SUMMARY: returns the no.pos entry's Contents.
+    
+    [0]file header
+    [0]key_block_info section 有4个组成
+    根据头部信息建立 Red-Black树： block_blockId_search_tree ,结点形式：[key_block块i起始单词（shrinked text）,i] 且树根据起始单词的String排序建立。
+    [0]key_block section:该文件部分存储所有入口词条。
+    [2]record_block_info section
+    Decode_record_block_header,根据头部信息建立 Red-Black树： accumulation_RecordB_tree ,
+        结点形式：[ decompressed_size_accumulator,i] 且树根据decompressed_size_accumulator的int值大小排序建立。
+        decompressed_size_accumulator:Record_block块i之前所有Record_block解压后的大小
+    [2]record_block section:存储所有词条的具体内容。  
+
+*/
+    
 	static int _encrypt=0;
 	static String _encoding="";
 	static String _passcode = "";
@@ -55,7 +109,8 @@ public class mdict {
     static RBTree<myCpr<String , Integer>> block_blockId_search_tree = new RBTree<myCpr<String , Integer>>();
     static long accumulation_blockId_tree_TIME = 0;
     static long block_blockId_search_tree_TIME = 0;
-    static File f;
+    static String _Dictionary_Name;
+
     public static class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,T2>>{
     	public T1 key;
     	public T2 value;
@@ -86,6 +141,7 @@ public class mdict {
 		public String headerKeyText;
     	public String tailerKeyText;
     	public long key_block_compressed_size_accumulator;
+    	public long key_block_compressed_size;
     	public long key_block_decompressed_size;
         public long num_entries;
         public long num_entries_accumulator;
@@ -110,7 +166,6 @@ public class mdict {
     	public long decompressed_size;
     	public long decompressed_size_accumulator;
         public void ini(){
-
         }
     }	
 	
@@ -140,11 +195,10 @@ public class mdict {
 	    return data.toByteArray();
     }
 
+    //入口 这么长，我也不想啊。但大多数代码和python代码保持一致。不一致的用 INCONGRUENT 标明。
     public static void main(String[] args) throws IOException  {
 //![]File in
-    	//byte[] asd = new byte[]{'s',2,3,4,1,2,3,4,1,2,3,4};NameOfPlants.mdx 简明英汉汉英词典.mdx
-    	f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\简明英汉汉英词典.mdx");
-    	//FileInputStream data_in =new FileInputStream(f);	
+    	assignMdxFile();
     	DataInputStream data_in =new DataInputStream(new FileInputStream(f));	
 //![0]read_header 
     	// number of bytes of header text
@@ -166,21 +220,26 @@ public class mdict {
 		Matcher m = re.matcher(new String(header_bytes,"UTF-16LE"));
 		HashMap<String,String> header_tag = new HashMap<String,String>();
 		while(m.find()) {
-			//for(int i=0;i<=m.groupCount();i++)
-	        // System.out.println("Found value: " + m.group(i)); 
+			System.out.println("header tag: " + m.group(0)); 
 			header_tag.put(m.group(1), m.group(2));
-	      }
-		if (_encoding==""){
-			_encoding = header_tag.get("Encoding");
-            // GB18030 > GBK > GB2312
-            if(_encoding =="GBK"|| _encoding =="GB2312")
-            	_encoding = "GB18030";
-		}
+	      }				
+		if(header_tag.containsKey("Title"))
+			_Dictionary_Name=header_tag.get("Title");
+		
+		_encoding = header_tag.get("Encoding");
+        // GB18030 > GBK > GB2312
+        if(_encoding.equals("GBK")|| _encoding.equals("GB2312"))
+        	_encoding = "GB18030";
+        if(_encoding.equals("UTF-16"))
+        	_encoding = "UTF-16LE"; //INCONGRUENT java charset          
+        if (_encoding.equals("")){
+        	_encoding = "ASCII";
+        }
         // encryption flag
         //   0x00 - no encryption
         //   0x01 - encrypt record block
         //   0x02 - encrypt key info block
-		if(!header_tag.containsKey("Encrypted") || header_tag.get("Encrypted") == "0")
+		if(!header_tag.containsKey("Encrypted") || header_tag.get("Encrypted").equals("0") || header_tag.get("Encrypted").equals("No"))
             _encrypt = 0;
 		else if(header_tag.get("Encrypted") == "1")
             _encrypt = 1;
@@ -238,8 +297,10 @@ public class mdict {
             assert adler32 == (getInt(itemBuf[0],itemBuf[1],itemBuf[2],itemBuf[3])& 0xffffffff);
         }
         
-        // read key block info, which comprises each key block's starting&&ending words' textSize&&shrinkedText、compressed && decompressed size
+        // read key block info, which comprises each key block's starting&&ending words、 textSize&&shrinkedText、compressed && decompressed size
 		itemBuf = new byte[(int) key_block_info_size];
+        System.out.println("key_block_info_size ="+key_block_info_size);  
+
 		data_in.read(itemBuf, 0, (int) key_block_info_size);
         _key_block_info_list = _decode_key_block_info(itemBuf);
         assert(_num_key_blocks == _key_block_info_list.length);
@@ -252,33 +313,38 @@ public class mdict {
 		//long end=System.currentTimeMillis(); //获取结束时间
 		//System.out.println("_decode_key_block时间： "+(end-start)+"ms"); 
 		//System.out.println(key_list.size()+":"+_num_entries); 
-        _record_block_offset = _key_block_offset+num_bytes+4+key_block_info_size+key_block_size;
+        if(_version<2)
+            _record_block_offset = _key_block_offset+4 * 4+key_block_info_size+key_block_size;
+        else
+        	_record_block_offset = _key_block_offset+num_bytes+4+key_block_info_size+key_block_size;
+
 //_read_keys END
         
 		for(myCpr<String,Integer> i:block_blockId_search_tree.flatten()){
 			System.out.println(i);
 		}
-		System.out.println(block_blockId_search_tree.sxing(new myCpr("rmt",1)) );
-		System.out.println(block_blockId_search_tree.sxing(new myCpr("rmt",1)).getKey().value );
-		System.out.println("accumulation_blockId_tree_TIME 建树时间="+accumulation_blockId_tree_TIME);
-		System.out.println("block_blockId_search_tree_TIME 建树时间="+block_blockId_search_tree_TIME); 
-        
+		//System.out.println(block_blockId_search_tree.sxing(new myCpr("rmt",1)) );
+		//System.out.println(block_blockId_search_tree.sxing(new myCpr("rmt",1)).getKey().value );
+		//System.out.println("accumulation_blockId_tree_TIME 建树时间="+accumulation_blockId_tree_TIME);
+		//System.out.println("block_blockId_search_tree_TIME 建树时间="+block_blockId_search_tree_TIME); 
+
 		_key_block_compressed = new byte[(int) key_block_size];
 		data_in.read(_key_block_compressed, 0, (int) key_block_size);
 //一、
 		long start=System.currentTimeMillis(); //获取开始时间 
 		for(int i=0;i<26;i++){
-        lookUp(new String(new byte[]{(byte) (i+'a')}),_key_block_compressed, _key_block_info_list);
-        //System.out.println(new String(new byte[]{(byte) ('a'+i)})); 
+	        //lookUp(new String(new byte[]{(byte) (i+'a')}),_key_block_compressed, _key_block_info_list);
+	        //System.out.println(new String(new byte[]{(byte) ('a'+i)})); 
         }
-        long end=System.currentTimeMillis(); //获取结束时间
-        System.out.println("平均查询时间： "+(end-start)*1.f/26+"ms"); 
+        System.out.println("平均查询时间： "+(System.currentTimeMillis()-start)*1.f/26+"ms"); 
         
-//Decode record block header
+//Decode_record_block_header
         DataInputStream data_in1 = new DataInputStream(new FileInputStream(f));
         data_in1.skipBytes((int) _record_block_offset);
         _num_record_blocks = _read_number(data_in1);
         long num_entries = _read_number(data_in1);
+        System.out.println(num_entries); 
+        System.out.println(_num_entries); 
         assert(num_entries == _num_entries);
         long record_block_info_size = _read_number(data_in1);
         long record_block_size = _read_number(data_in1);
@@ -296,100 +362,44 @@ public class mdict {
             decompressed_size_accumulator+=decompressed_size;
             size_counter += _number_width * 2;
 		}
-//System.out.print("nb: "+num_record_blocks);
-//System.out.print("nb2: "+_num_key_blocks);
+System.out.println("_num_record_blocks: "+_num_record_blocks);
+System.out.println("_num_key_blocks: "+_num_key_blocks);
         assert(size_counter == record_block_info_size);
-        
+        block_blockId_search_tree.print();
 //二、
-        start=System.currentTimeMillis(); //获取开始时间 
-        String key = "happy";
-        System.out.println("查询"+key+" ： "+getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list)));
-        end=System.currentTimeMillis(); //获取结束时间
-        System.out.println("查询"+key+"时间： "+(end-start)+"ms"); 
+        show("_encoding is "+_encoding);
+        long start1=System.currentTimeMillis(); //获取开始时间 
+        System.out.println("查询 "+key+" ： "+getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list)));
+        //getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list));
+        System.out.println("查询 "+key+" 时间： "+(System.currentTimeMillis()-start1)+"ms"); 
+        
 }
     
-    
 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+   
     public static String getRecordAt(int position) throws IOException {
         int blockId = accumulation_blockId_tree.xxing(new mdict.myCpr(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
         long start = infoI.key_block_compressed_size_accumulator;
         long compressedSize;
-        if(infoI.keys==null){
-        	infoI.ini();
-            byte[] key_block = new byte[1];
-            if(blockId==_key_block_info_list.length-1)
-                compressedSize = _key_block_compressed.length - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
-            else
-                compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
-                
-        
-            String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) start],_key_block_compressed[(int) (start+1)],_key_block_compressed[(int) (start+2)],_key_block_compressed[(int) (start+3)]});
-            int adler32 = getInt(_key_block_compressed[(int) (start+4)],_key_block_compressed[(int) (start+5)],_key_block_compressed[(int) (start+6)],_key_block_compressed[(int) (start+7)]);
-            if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
-                //无需解压
-                System.out.println("no compress!");
-                key_block = new byte[(int) (_key_block_compressed.length-start-8)];
-                System.arraycopy(_key_block_compressed, (int)(start+8), key_block, 0,(int) (_key_block_compressed.length-start-8));
-            }else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
-            {
-                System.out.println("LZO compression is not supported");
-            }
-            else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
-                
-                key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
-                //System.out.println("zip!");
-            }
-            //!!spliting curr Key block
-            int key_start_index = 0;
-            String delimiter;
-            int width = 0,i1=0,key_end_index=0;
-            int keyCounter = 0;
-            //long start2=System.currentTimeMillis(); //获取开始时间 
-            ByteBuffer sf = ByteBuffer.wrap(key_block);
-            String key_block_str = "";
-			try {
-				key_block_str = new String(key_block,"ASCII");
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-			}
-            while(key_start_index < key_block.length){
-                long key_id = sf.getLong(key_start_index);
-                if(_encoding == "UTF-16"){
-                    width = 2;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0,0}),i1);
-                    i1 = key_start_index + _number_width;  
-                }else{
-                    width = 1;
-                    i1 = key_start_index + _number_width;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0}),i1);
-                }
-                String key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width));//[key_start_index+_number_width:key_end_index]
-
-                try {
-					key_text = new String(key_text.getBytes(),_encoding);
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				}
-
-                key_start_index = key_end_index + width;
-                infoI.keys[keyCounter]=key_text;
-                infoI.key_offsets[keyCounter]=key_id;
-                keyCounter++;
-            }
-            //long end2=System.currentTimeMillis(); //获取开始时间 
-            //System.out.println("解压耗时："+(end2-start2));
-            assert(adler32 == (calcChecksum(key_block)));
-        }
-        String[] key_list = infoI.keys;
+        show("blockId:"+blockId);
 //decode record block
         DataInputStream data_in = new DataInputStream(new FileInputStream(f));
         // record block info section
         data_in.skipBytes( (int) (_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width));
         
         // actual record block data
-        int i = (int) (position-infoI.num_entries_accumulator);
-        
+        int i = (int) (position-infoI.num_entries_accumulator);//处于当前record块的第几个
+        //infoI.key_offsets[i] 获取Key_ID,即文件偏移
         record_info_struct RinfoI = _record_info_struct_list[accumulation_RecordB_tree.xxing(new mdict.myCpr(infoI.key_offsets[i],1)).getKey().value];
         data_in.skipBytes((int) RinfoI.compressed_size_accumulator);
         //whole section of record_blocks;
@@ -397,14 +407,11 @@ public class mdict {
         	long compressed_size = RinfoI.compressed_size;
         	long decompressed_size = RinfoI.decompressed_size;//用于验证
         	byte[] record_block_compressed = new byte[(int) compressed_size];
-        	//System.out.println(compressed_size) ;
-        	//System.out.println(decompressed_size) ;
-        	data_in.read(record_block_compressed);
+        	data_in.read(record_block_compressed);//+8 TODO optimize
             // 4 bytes indicates block compression type
         	byte[] record_block_type = new byte[4];
         	System.arraycopy(record_block_compressed, 0, record_block_type, 0, 4);
         	String record_block_type_str = new String(record_block_type);
-        	//ripemd128.printBytes(record_block_type);
         	// 4 bytes adler checksum of uncompressed content
         	ByteBuffer sf1 = ByteBuffer.wrap(record_block_compressed);
             int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
@@ -413,15 +420,20 @@ public class mdict {
             if(record_block_type_str.equals(new String(new byte[]{0,0,0,0}))){
             	record_block = new byte[(int) (compressed_size-8)];
             	System.arraycopy(record_block_compressed, 8, record_block, 0, record_block.length-8);
-            	//System.out.println(1) ;
             }
             // lzo compression
             else if(record_block_type_str.equals(new String(new byte[]{1,0,0,0}))){
-            	System.out.print("lzo is None") ;
+                long st=System.currentTimeMillis(); //获取开始时间 
+                record_block = new byte[(int) decompressed_size];
+                MInt len = new MInt((int) decompressed_size);
+                byte[] arraytmp = new byte[(int) compressed_size];
+                System.arraycopy(record_block_compressed, 8, arraytmp, 0,(int) (compressed_size-8));
+                MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block,len);
+            	//System.out.println("get Record LZO decompressing key blocks done!") ;
+                //System.out.println("解压Record耗时："+(System.currentTimeMillis()-st));
             }
             // zlib compression
             else if(record_block_type_str.equals(new String(new byte[]{02,00,00,00}))){
-                // decompress
                 record_block = zlib_decompress(record_block_compressed,8);
             }
             // notice not that adler32 return signed value
@@ -431,39 +443,32 @@ public class mdict {
             
             // split record block according to the offset info from key block
             //String key_text = key_list[i];
-            long record_start = Long.valueOf(infoI.key_offsets[i])-RinfoI.decompressed_size_accumulator;
+            long record_start = infoI.key_offsets[i]-RinfoI.decompressed_size_accumulator;
             long record_end;
-            if (i < key_list.length-1){
+            if (i < infoI.num_entries-1){
             	record_end = Long.valueOf(infoI.key_offsets[i+1])-RinfoI.decompressed_size_accumulator; 	
             }
             else{
             	record_end = record_block.length;
             }
-            
             byte[] record = new byte[(int) (record_end-record_start)];         
             System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
-            // convert to utf-8
-            String record_str = new String(record,_encoding);
+
+            String record_str;
+            record_str = new String(record,_encoding); 	
             // substitute styles
             //if self._substyle and self._stylesheet:
             //    record = self._substitute_stylesheet(record);
             return	record_str;           	
-
-        
-        
-        
-        
-        
     }
     
-    
-    //for lv
-	public String getEntryAt(int position) {
-        int blockId = accumulation_blockId_tree.xxing(new mdict.myCpr(position,1)).getKey().value;
-        key_info_struct infoI = _key_block_info_list[blockId];
-        long start = infoI.key_block_compressed_size_accumulator;
-        long compressedSize;
+    //到底要不要将key entrys存储起来？？
+    public static void prepareItemByKeyInfo(key_info_struct infoI,int blockId){
         if(infoI.keys==null){
+            long start = infoI.key_block_compressed_size_accumulator;
+            long compressedSize;
+            long st=System.currentTimeMillis(); //获取开始时间 
+
         	infoI.ini();
             byte[] key_block = new byte[1];
             if(blockId==_key_block_info_list.length-1)
@@ -471,7 +476,6 @@ public class mdict {
             else
                 compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
                 
-        
             String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) start],_key_block_compressed[(int) (start+1)],_key_block_compressed[(int) (start+2)],_key_block_compressed[(int) (start+3)]});
             int adler32 = getInt(_key_block_compressed[(int) (start+4)],_key_block_compressed[(int) (start+5)],_key_block_compressed[(int) (start+6)],_key_block_compressed[(int) (start+7)]);
             if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
@@ -481,95 +485,14 @@ public class mdict {
                 System.arraycopy(_key_block_compressed, (int)(start+8), key_block, 0,(int) (_key_block_compressed.length-start-8));
             }else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
             {
-                System.out.println("LZO compression is not supported");
-            }
-            else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
-                
-                key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
-                //System.out.println("zip!");
-            }
-            //!!spliting curr Key block
-            int key_start_index = 0;
-            String delimiter;
-            int width = 0,i1=0,key_end_index=0;
-            int keyCounter = 0;
-            //long start2=System.currentTimeMillis(); //获取开始时间 
-            ByteBuffer sf = ByteBuffer.wrap(key_block);
-            String key_block_str = "";
-			try {
-				key_block_str = new String(key_block,"ASCII");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-            while(key_start_index < key_block.length){
-                long key_id = sf.getLong(key_start_index);
-                if(_encoding == "UTF-16"){
-                    width = 2;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0,0}),i1);
-                    i1 = key_start_index + _number_width;  
-                }else{
-                    width = 1;
-                    i1 = key_start_index + _number_width;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0}),i1);
-                }
-                String key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width));//[key_start_index+_number_width:key_end_index]
-
-                try {
-					key_text = new String(key_text.getBytes(),_encoding);
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-                key_start_index = key_end_index + width;
-                infoI.keys[keyCounter]=key_text;
-                infoI.key_offsets[keyCounter]=key_id;
-                keyCounter++;
-            }
-            //long end2=System.currentTimeMillis(); //获取开始时间 
-            //System.out.println("解压耗时："+(end2-start2));
-            assert(adler32 == (calcChecksum(key_block)));
-        }
-        return infoI.keys[(int) (position-infoI.num_entries_accumulator)];
-		
-	}
-
-   
-    
-    public static int lookUp(String keyword,
-                            byte[] _key_block_compressed,
-                            key_info_struct[] _key_block_info_list)
-                            throws UnsupportedEncodingException
-    {
-    	keyword = keyword.toLowerCase().replace(" ","").replace("-","");
-        int blockId = block_blockId_search_tree.sxing(new myCpr(keyword,1)).getKey().value;
-        
-        while(_key_block_info_list[blockId].headerKeyText.compareTo(keyword)>0)
-        	blockId--;
-        key_info_struct infoI = _key_block_info_list[blockId];
-        long start = infoI.key_block_compressed_size_accumulator;
-        long compressedSize;
-        if(infoI.keys==null){
-        	infoI.ini();
-            byte[] key_block = new byte[1];
-            if(blockId==_key_block_info_list.length-1)
-                compressedSize = _key_block_compressed.length - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
-            else
-                compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
-                
-        
-            String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) start],_key_block_compressed[(int) (start+1)],_key_block_compressed[(int) (start+2)],_key_block_compressed[(int) (start+3)]});
-            int adler32 = getInt(_key_block_compressed[(int) (start+4)],_key_block_compressed[(int) (start+5)],_key_block_compressed[(int) (start+6)],_key_block_compressed[(int) (start+7)]);
-            if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
-                //无需解压
-                System.out.println("no compress!");
-                key_block = new byte[(int) (_key_block_compressed.length-start-8)];
-                System.arraycopy(_key_block_compressed, (int)(start+8), key_block, 0,(int) (_key_block_compressed.length-start-8));
-            }else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
-            {
-                System.out.println("LZO compression is not supported");
-                return -1;
+                //key_block = lzo_decompress(_key_block_compressed,(int) (start+_number_width),(int)(compressedSize-_number_width));
+            	MInt len = new MInt((int) infoI.key_block_decompressed_size);
+            	key_block = new byte[len.v];
+                byte[] arraytmp = new byte[(int) compressedSize];
+                show(arraytmp.length+"哈哈哈"+compressedSize);
+                System.arraycopy(_key_block_compressed, (int)(start+8), arraytmp, 0,(int) (compressedSize-8));
+            	MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block,len);
+                //System.out.println("look up LZO decompressing key blocks done!");
             }
             else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
                 key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
@@ -581,47 +504,98 @@ public class mdict {
             int width = 0,i1=0,key_end_index=0;
             int keyCounter = 0;
             ByteBuffer sf = ByteBuffer.wrap(key_block);//must outside of while...
-            String key_block_str = new String(key_block,"ASCII");//must outside of while...
+            /*主要耗时步骤
+            主要耗时步骤
+            主要耗时步骤*/
             while(key_start_index < key_block.length){
-                long key_id = sf.getLong(key_start_index);
-                if(_encoding == "UTF-16"){
+            	long key_id;
+            	if(_version<2)
+            		key_id = sf.getInt(key_start_index);//Key_ID
+            	else
+            		key_id = sf.getLong(key_start_index);//Key_ID
+                //show("key_id"+key_id);
+                if(_encoding.startsWith("UTF-16")){//TODO optimize
                     width = 2;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0,0}),i1);
-                    i1 = key_start_index + _number_width;  
+                    key_end_index = key_start_index + _number_width;  
+                    while(i1<key_block.length){
+                    	if(key_block[key_end_index]==0 && key_block[key_end_index+1]==0)
+                    		break;
+                    	key_end_index+=width;
+                    }
                 }else{
                     width = 1;
-                    i1 = key_start_index + _number_width;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0}),i1);
+                    key_end_index = key_start_index + _number_width;  
+                    while(i1<key_block.length){
+                    	if(key_block[key_end_index]==0)
+                    		break;
+                    	key_end_index+=width;
+                    }
                 }
-                String key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width));//[key_start_index+_number_width:key_end_index]
 
-                key_text = new String(key_text.getBytes(),_encoding);
-
+                //show("key_start_index"+key_start_index);
+                byte[] arraytmp = new byte[key_end_index-(key_start_index+_number_width)];
+                System.arraycopy(key_block,key_start_index+_number_width, arraytmp, 0,arraytmp.length);
+                
+                String key_text = null;
+				try {
+					key_text = new String(arraytmp,_encoding);
+				} catch (UnsupportedEncodingException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
                 key_start_index = key_end_index + width;
                 infoI.keys[keyCounter]=key_text;
+                
                 infoI.key_offsets[keyCounter]=key_id;
                 keyCounter++;
             }
             assert(adler32 == (calcChecksum(key_block)));
+            long e=System.currentTimeMillis(); //获取开始时间 
+            System.out.println("建key表时间"+(e-st));
         }
-        int res = binary_find_closest(infoI.keys,keyword);//keyword
+    }
+    
+    //for android list view
+	public String getEntryAt(int position) {
+        int blockId = accumulation_blockId_tree.xxing(new mdict.myCpr(position,1)).getKey().value;
+        key_info_struct infoI = _key_block_info_list[blockId];
+        long start = infoI.key_block_compressed_size_accumulator;
+        long compressedSize;
+        prepareItemByKeyInfo(infoI,blockId);
+        return infoI.keys[(int) (position-infoI.num_entries_accumulator)];
+		
+	}
+
+    public static int lookUp(String keyword,
+                            byte[] _key_block_compressed,
+                            key_info_struct[] _key_block_info_list)
+                            throws UnsupportedEncodingException
+    {
+    	keyword = keyword.toLowerCase().replaceAll("[: . , - ]","");
+        int blockId = block_blockId_search_tree.sxing(new myCpr(keyword,1)).getKey().value;
+        //show("blockId:"+blockId);
+        while(blockId!=0 && _key_block_info_list[blockId].headerKeyText.compareTo(keyword)>0)
+        	blockId--;
+        
+        key_info_struct infoI = _key_block_info_list[blockId];
+
+        prepareItemByKeyInfo(infoI,blockId);
+        int res = binary_find_closest2(infoI.keys,keyword);//keyword
         if (res==-1){
         	System.out.println("search failed!");
         	return -1;
         }
         else{
         	String KeyText= infoI.keys[res];
+        	//show("match key "+KeyText+" at "+res);
         	long lvOffset = infoI.num_entries_accumulator+res;
         	long wjOffset = infoI.key_block_compressed_size_accumulator+infoI.key_offsets[res];
         	return (int) lvOffset;
-        }
-         
-        
-        
+        }   
     }
     
+    //deprecate?
     public static int  binary_find_closest(String[] array,String val){
-    	
     	int middle = 0;
     	int iLen = array.length;
     	int low=0,high=iLen-1;
@@ -640,16 +614,18 @@ public class mdict {
     	int subStrLen1,subStrLen0,cprRes1,cprRes0,cprRes;String houXuan1,houXuan0;
     	while(low<high){
     		counter+=1;
-    		//System.out.println(low+":"+high);
+    		System.out.println(low+":"+high);
     		middle = (low+high)/2;
-    		houXuan1 = array[middle+1].toLowerCase().replace(" ","").replace("-","");
-    		houXuan0 = array[middle  ].toLowerCase().replace(" ","").replace("-","");
+    		houXuan1 = array[middle+1].toLowerCase().replaceAll("[: . , - ]","");
+    		houXuan0 = array[middle  ].toLowerCase().replaceAll("[: . , - ]","");
     		cprRes1=houXuan1.compareTo(val);
         	cprRes0=houXuan0.compareTo(val);
         	if(cprRes1>0&&cprRes0>=0){
         		high=middle;
         	}else if(cprRes1<=0&&cprRes0<0){
-        		//System.out.println("rRes1<0&&cpr");
+        		//System.out.println("cprRes1<=0 && cprRes0<0");
+        		//System.out.println(houXuan1);
+        		//System.out.println(houXuan0);
         		low=middle+1;
         	}else if(cprRes1>=0 && cprRes0<0){
         		low=middle+1;
@@ -664,9 +640,9 @@ public class mdict {
     		resPreFinal = Math.abs(array[low].toLowerCase().replace(" ","").replace("-","").compareTo(val))>Math.abs(array[high].toLowerCase().replace(" ","").replace("-","").compareTo(val))?high:low;
     	}
 		//System.out.println(resPreFinal);
-		//System.out.println("执行了几次："+counter);
+		System.out.println("执行了几次："+counter);
     	houXuan1 = array[resPreFinal].toLowerCase().replace(" ","").replace("-","");
-
+show("houXuan1"+houXuan1);
     	if(val.length()>houXuan1.length())
     		return -1;//判为矢匹配.
     	else{
@@ -676,212 +652,82 @@ public class mdict {
     	}
     }
     
-    private static ArrayList<String[]> _decode_key_block2(byte[] _key_block_compressed,key_info_struct[] _key_block_info_list) throws UnsupportedEncodingException {
-    	ArrayList<String[]> key_list = new ArrayList<String[]>();
-        int i = 0;
-        int dprssTime = 0;
-        int splTime = 0;
-        long blocktrieTime = 0;
-	    ByteArrayOutputStream out = new ByteArrayOutputStream();
-	    Inflater decompresser = new Inflater(); 
-	    //InflaterOutputStream inf = new InflaterOutputStream(out); 
-        
-		for(int idx=0;idx<_key_block_info_list.length;idx++){//compressed_size, decompressed_size
-            //String[] infoI = _key_block_info_list.get(idx);
-            byte[] key_block = new byte[1];
-            long start = _key_block_info_list[idx].key_block_compressed_size_accumulator;
-            long compressedSize;
-            if(idx==_key_block_info_list.length-1)
-            	compressedSize = _key_block_compressed.length - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
-            else
-            	compressedSize = _key_block_info_list[idx+1].key_block_compressed_size_accumulator-_key_block_info_list[idx].key_block_compressed_size_accumulator;
-            
-            // 4 bytes : compression type
-            String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) start],_key_block_compressed[(int) (start+1)],_key_block_compressed[(int) (start+2)],_key_block_compressed[(int) (start+3)]});
-            
-            // 4 bytes : adler checksum of decompressed key block
-            int adler32 = getInt(_key_block_compressed[(int) (start+4)],_key_block_compressed[(int) (start+5)],_key_block_compressed[(int) (start+6)],_key_block_compressed[(int) (start+7)]);
-            if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
-                //无需解压
-            	System.out.println("no compress!");
-            	key_block = new byte[(int) (_key_block_compressed.length-start-8)];
-            	System.arraycopy(_key_block_compressed, (int)(start+8), key_block, 0,(int) (_key_block_compressed.length-start-8));
-            }else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
-            {
-            	System.out.println("LZO compression is not supported");
-                break;
-            }
-            else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
-                //解压当前块
-    	        long start2=System.currentTimeMillis(); //获取开始时间  zlib_decompress
-                key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
-    			long end2=System.currentTimeMillis(); //获取结束时间  
-    			dprssTime+=end2-start2;
-            }
-            // extract one single key block into a key list
-        	//System.out.println("key_block.length is:"+key_block.length);
-            //!!spliting Key block
-            long start2=System.currentTimeMillis();                                                     //获取开始时间  
-                int key_start_index = 0;
-                String delimiter;
-                int width = 0,i1=0,key_end_index=0;
-                ByteBuffer sf = ByteBuffer.wrap(key_block);
-                String key_block_str = new String(key_block,"ASCII");
-                
-            //不遍历整个block
-            long start3=System.currentTimeMillis();                                             //获取开始时间  
-            	
-                String key_id = String.valueOf(sf.getLong(key_start_index)) ;
-                if(_encoding == "UTF-16"){
-                    width = 2;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0,0}),i1);
-                    i1 = key_start_index + _number_width;  
-                }else{
-                    width = 1;
-                    i1 = key_start_index + _number_width;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0}),i1);
-                }
-                String key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width));//[key_start_index+_number_width:key_end_index]
-                  try {
-    				key_text = new String(key_text.getBytes(),_encoding);
-    			} catch (UnsupportedEncodingException e) {
-    				e.printStackTrace();
-    			}
-                key_start_index = key_end_index + width;
-                key_list.add(new String[]{key_id, key_text});
-                //if(key_list.size()==122165)
-                //System.out.println("key_start_index"+key_id+" "+key_text);
-            long end3=System.currentTimeMillis();                                           //获取结束时间  
-
-            long end2=System.currentTimeMillis();                                                   //获取结束时间 start2
-            
-            splTime += end2-start2;
-            blocktrieTime += end3-start3;
-            // notice that adler32 returns signed value
-            assert(adler32 == (calcChecksum(key_block)));//& Long.valueOf("ffffffff",16)
-        }
-		System.out.println("解压总时间： "+(dprssTime)+"ms");  
-		System.out.println("split时间： "+(splTime)+"ms");  
-		System.out.println("遍历block时间： "+(blocktrieTime)+"ms"); 
-        return key_list;
-        
-        
-        
-	}    
+    //binary_find_closest: with_charset! with_charset! with_charset!
+    public static int  binary_find_closest2(String[] array,String val) throws UnsupportedEncodingException{
+    	int middle = 0;
+    	int iLen = array.length;
+    	int low=0,high=iLen-1;
+    	if(array==null || iLen<1){
+    		return -1;
+    	}
+    	if(iLen==1){
+    		return 0;
+    	}
+    	byte[] valBA = val.getBytes(_encoding);
+    	
+    	if(compareByteArray(valBA,array[0].toLowerCase().replaceAll("[: . , - ]","").getBytes(_encoding))<=0){
+    		return 0;
+    	}else if(compareByteArray(valBA,array[iLen-1].toLowerCase().replaceAll("[: . , - ]","").getBytes(_encoding))>=0){
+    		System.out.println("执行了几asdas次：");
+    		return iLen-1;
+    	}
+    	int counter=0;
+    	int subStrLen1,subStrLen0,cprRes1,cprRes0,cprRes;
+    	byte[] houXuan1BA,houXuan0BA;
+    	while(low<high){
+    		counter+=1;
+    		//System.out.println(low+":"+high);
+    		middle = (low+high)/2;
+    		houXuan1BA = array[middle+1].toLowerCase().replaceAll("[: . , - ]","").getBytes(_encoding);
+    		houXuan0BA = array[middle  ].toLowerCase().replaceAll("[: . , - ]","").getBytes(_encoding);
+    		cprRes1=compareByteArray(houXuan1BA,valBA);
+        	cprRes0=compareByteArray(houXuan0BA,valBA);
+        	if(cprRes1>0&&cprRes0>=0){
+        		high=middle;
+        	}else if(cprRes1<=0&&cprRes0<0){
+        		//System.out.println("cprRes1<=0 && cprRes0<0");
+        		//System.out.println(houXuan1BA);
+        		//System.out.println(houXuan0BA);
+        		low=middle+1;
+        	}else if(cprRes1>=0 && cprRes0<0){
+        		low=middle+1;
+        	}else{
+        		high=middle;
+        	}
+    	}
+    	
+    	int resPreFinal;
+    	if(low==high) resPreFinal = high;
+    	else{
+    		resPreFinal = Math.abs(compareByteArray(array[low].toLowerCase().replaceAll("[: . , - ]","").getBytes(_encoding),valBA))>Math.abs(compareByteArray(array[high].toLowerCase().replaceAll("[: . , - ]","").getBytes(_encoding),valBA))?high:low;
+    	}
+		//System.out.println(resPreFinal);
+		//System.out.println("执行了几次："+counter);
+    	String houXuan1 = array[resPreFinal].toLowerCase().replaceAll("[: . , - ]","");
+//show("houXuan1"+houXuan1);
+    	if(val.length()>houXuan1.length())
+    		return -1;//判为矢匹配.
+    	else{
+    		if(houXuan1.substring(0,val.length()).compareTo(val)!=0)
+    			return -1;//判为矢匹配.
+    		else return resPreFinal;//
+    	}
+    }
+    //per-byte comparing byte array
+    static int compareByteArray(byte[] A,byte[] B){
+    	int la = A.length,lb = B.length;
+    	for(int i=0;i<Math.min(la, lb);i++){
+    		int cpr = (int)(A[i]&0xff)-(int)(B[i]&0xff);
+    		if(cpr==0)
+    			continue;
+    		return cpr;
+    	}
+    	if(la==lb)
+    		return 0;
+    	else return la>lb?1:-1;
+    }
     
-    
-    
-    private static ArrayList<String[]> _decode_key_block(byte[] _key_block_compressed,ArrayList<String[]> _key_block_info_list) throws UnsupportedEncodingException {
-    	ArrayList<String[]> key_list = new ArrayList<String[]>();
-        int i = 0;
-        int dprssTime = 0;
-        int splTime = 0;
-        long blocktrieTime = 0;
-	    ByteArrayOutputStream out = new ByteArrayOutputStream();
-	    Inflater decompresser = new Inflater(); 
-	    //InflaterOutputStream inf = new InflaterOutputStream(out); 
-	    byte[] buf = new byte[10240];
-        
-		for(int idx=0;idx<_key_block_info_list.size();idx++){//compressed_size, decompressed_size
-            String[] infoI = _key_block_info_list.get(idx);
-            byte[] key_block = new byte[1];
-            long start = i;
-            long end = i + Long.valueOf(infoI[0]);
-            // 4 bytes : compression type
-            String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) start],_key_block_compressed[(int) (start+1)],_key_block_compressed[(int) (start+2)],_key_block_compressed[(int) (start+3)]});
-            
-            // 4 bytes : adler checksum of decompressed key block
-            int adler32 = getInt(_key_block_compressed[(int) (start+4)],_key_block_compressed[(int) (start+5)],_key_block_compressed[(int) (start+6)],_key_block_compressed[(int) (start+7)]);
-            if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
-            	System.out.println("no compress!");
-            	key_block = new byte[(int) (_key_block_compressed.length-start-8)];
-            	System.arraycopy(_key_block_compressed, (int)(start+8), key_block, 0,(int) (_key_block_compressed.length-start-8));
-            }else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
-            {
-                //if lzo is None:
-            	System.out.println("LZO compression is not supported");
-                break;
-            }
-            else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
-                //解压当前块
-    	        long start2=System.currentTimeMillis(); //获取开始时间  zlib_decompress
-                key_block = zlib_decompress(_key_block_compressed,(int) (start+8));
-    			long end2=System.currentTimeMillis(); //获取结束时间  
-    			dprssTime+=end2-start2;
-            }
-            // extract one single key block into a key list
-        	//System.out.println("key_block.length is:"+key_block.length);
-            //!!spliting Key block
-            long start2=System.currentTimeMillis(); //获取开始时间  
-            //key_list.putAll(_split_key_block(key_block));
-            //INCONGRUENT putAll will consume 3* time.don't use that
-            int key_start_index = 0;
-            String delimiter;
-            int width = 0;
-            ByteBuffer sf = ByteBuffer.wrap(key_block);
-            String key_block_str = new String(key_block,"ASCII");
-
-            if(_encoding == "UTF-16"){
-                //delimiter = "  ";
-                width = 2;}else{
-                	 width = 1;
-                }
-
-            //遍历整个block
-            long start3=System.currentTimeMillis(); //获取开始时间  
-            while(key_start_index < key_block.length){
-                // the corresponding record"s offset in record block
-            	//System.out.println("key_start_index"+key_start_index);
-            	int i1;
-                String key_id = String.valueOf(sf.getLong(key_start_index)) ;
-                // key text ends with "\x00"
-                int key_end_index = 0;
-                //System.out.println(_encoding);
-                if(_encoding == "UTF-16"){
-                    //delimiter = "  ";
-                    width = 2;
-                    key_end_index = key_block_str.indexOf(' ');
-                    i1 = key_start_index + _number_width;  
-                }else{
-                    //delimiter = " ";
-                    width = 1;
-                    i1 = key_start_index + _number_width;
-                    key_end_index = key_block_str.indexOf(new String(new byte[]{0}),i1);
-   
-  
-                }
-                String key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width));//[key_start_index+_number_width:key_end_index]
-                  try {
-    				key_text = new String(key_text.getBytes(),_encoding);
-    			} catch (UnsupportedEncodingException e) {
-    				e.printStackTrace();
-    			}
-                //  .decode(self._encoding, errors="ignore").encode("utf-8").strip()
-                key_start_index = key_end_index + width;
-                if(Long.valueOf(key_id)!=0)
-                key_list.add(new String[]{key_id, key_text});
-                //if(key_list.size()==122165)
-                //System.out.println("key_start_index"+key_id+" "+key_text);
-                
-            }
-            long end3=System.currentTimeMillis(); //获取结束时间  
-
-            long end2=System.currentTimeMillis(); //获取结束时间  
-            
-            splTime += end2-start2;
-            blocktrieTime += end3-start3;
-            // notice that adler32 returns signed value
-            assert(adler32 == (calcChecksum(key_block)));//& Long.valueOf("ffffffff",16)
-            i += Long.valueOf(infoI[0]);
-        }
-		System.out.println("解压总时间： "+(dprssTime)+"ms");  
-		System.out.println("split时间： "+(splTime)+"ms");  
-		System.out.println("遍历block时间： "+(blocktrieTime)+"ms"); 
-        return key_list;
-	}
-
-
-	private static key_info_struct[] _decode_key_block_info(byte[] key_block_info_compressed) {
+    private static key_info_struct[] _decode_key_block_info(byte[] key_block_info_compressed) throws UnsupportedEncodingException {
         key_info_struct[] _key_block_info_list = new key_info_struct[(int) _num_key_blocks];
     	byte[] key_block_info;
     	if(_version >= 2)
@@ -908,6 +754,9 @@ public class mdict {
         long start1,end1,start2,end2;
         int accumulation_ = 0,num_entries=0;//how many entries before one certain block.for construction of a list.
         int byte_width = 2,text_term = 1;//DECREPTING version1...bcz I am lazy
+        if(_version<2)
+        {byte_width = 1;text_term = 0;}
+        //System.out.println("_version is"+_version+byte_width);
         //遍历blocks
         for(int i=0;i<_key_block_info_list.length;i++){
             // number of entries in current key block
@@ -916,45 +765,69 @@ public class mdict {
         	accumulation_blockId_tree.insert(new myCpr<Integer, Integer>(accumulation_,i));
             end1=System.currentTimeMillis(); //获取结束时间
             accumulation_blockId_tree_TIME+=end1-start1;
+            if(_version<2)
+            _key_block_info_list[i] = new key_info_struct(sf.getInt(),accumulation_);
+            else
             _key_block_info_list[i] = new key_info_struct(sf.getLong(),accumulation_);
+
             key_info_struct infoI = _key_block_info_list[i];
             accumulation_ += infoI.num_entries;
             
             //![0] head word text
-            int text_head_size = sf.getChar();
-            if(_encoding != "UTF-16"){
+            int text_head_size;
+            if(_version<2)
+            	text_head_size = sf.get();
+        	else
+        		text_head_size = sf.getChar();
+            if(!_encoding.startsWith("UTF-16")){
                 textbuffer = new byte[text_head_size];
                 sf.get(textbuffer, 0,text_head_size);
+                if(_version>=2)
                 sf.get();                
             }else{
                 textbuffer = new byte[text_head_size*2];
                 sf.get(textbuffer, 0, text_head_size*2);
-                sf.get();sf.get();                
+                if(_version>=2)
+                sf.get();if(_version>=2)sf.get();                
             }
-            infoI.headerKeyText = new String(textbuffer);
-            System.out.println(infoI.headerKeyText);
+            
+            infoI.headerKeyText = new String(textbuffer,_encoding);
+            show(infoI.headerKeyText);
             
             //![1]  tail word text
-            int text_tail_size = sf.getChar();
-            if(_encoding != "UTF-16"){
+            int text_tail_size;
+            if(_version<2)
+            	text_tail_size = sf.get();
+        	else
+        		text_tail_size = sf.getChar();
+            if(!_encoding.startsWith("UTF-16")){
                 textbuffer = new byte[text_tail_size];
                 sf.get(textbuffer, 0, text_tail_size);
+                if(_version>=2)
                 sf.get();         
             }else{
                 textbuffer = new byte[text_tail_size*2];
                 sf.get(textbuffer, 0, text_tail_size*2);
-                sf.get();sf.get();             
+                if(_version>=2)
+                sf.get();if(_version>=2)sf.get();             
             }
-            infoI.tailerKeyText = new String(textbuffer);
-            System.out.println(infoI.tailerKeyText);
+            
+            infoI.tailerKeyText = new String(textbuffer,_encoding);
+            show(infoI.tailerKeyText);
             
             //infoI = new key_info_struct(headerKeyText,
             //		tailerKeyText,
             //		key_block_compressed_size,
             //		key_block_decompressed_size);
+            
             infoI.key_block_compressed_size_accumulator = key_block_compressed_size;
-            key_block_compressed_size += sf.getLong();
-            infoI.key_block_decompressed_size = sf.getLong();
+            if(_version<2){
+            	key_block_compressed_size += sf.getInt();
+            	infoI.key_block_decompressed_size = sf.getInt();
+            }else{
+            	key_block_compressed_size += sf.getLong();
+            	infoI.key_block_decompressed_size = sf.getLong();
+            }
             start2=System.currentTimeMillis(); //获取开始时间  
             block_blockId_search_tree.insert(new myCpr<String, Integer>(infoI.headerKeyText,i));
             //block_blockId_search_tree.insert(new myCpr<String, Integer>(tailerKeyText,i));
@@ -966,7 +839,7 @@ public class mdict {
 	}
     
 
-    //解压
+    //解压等utils
     public static byte[] zlib_decompress(byte[] encdata,int offset) {
 	    try {
 			    ByteArrayOutputStream out = new ByteArrayOutputStream(); 
@@ -991,56 +864,9 @@ public class mdict {
 		    	return "ERR".getBytes(); 
 		    }
     }    
-    
-    public static byte[] zlib_decompress2(byte[] data,int offset) {  
-        byte[] output = new byte[0];  
+ 
   
-        Inflater decompresser = new Inflater();  
-        decompresser.reset();  
-        decompresser.setInput(data,offset,data.length-offset);  
-
-        ByteArrayOutputStream o = new ByteArrayOutputStream(data.length);  
-        try {  
-            byte[] buf = new byte[1024];  
-            while (!decompresser.finished()) {  
-                int i = decompresser.inflate(buf);  
-                o.write(buf, 0, i);  
-            }  
-            output = o.toByteArray();  
-        } catch (Exception e) {  
-            output = data;  
-            e.printStackTrace();  
-        } finally {  
-            try {  
-                o.close();  
-            } catch (IOException e) {  
-                e.printStackTrace();  
-            }  
-        }  
-  
-        decompresser.end();  
-        return output;  
-    }  
-    public static byte[] gzip_decompress(byte[] bytes,int offset) {  
-        if (bytes == null || bytes.length == 0) {  
-            return null;  
-        }  
-        ByteArrayOutputStream out = new ByteArrayOutputStream();  
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes,offset, bytes.length-offset);  
-        try {  
-            GZIPInputStream ungzip = new GZIPInputStream(in);  
-            byte[] buffer = new byte[256];  
-            int n;  
-            while ((n = ungzip.read(buffer)) >= 0) {  
-                out.write(buffer, 0, n);  
-            }  
-        } catch (IOException e) {  
-            e.printStackTrace();
-        }  
-  
-        return out.toByteArray();  
-    }  
-    
+    static void show(String val){System.out.println(val);}
 
 	private static long _read_number(ByteBuffer sf) {
     	if(_number_width==4)
@@ -1073,12 +899,8 @@ public class mdict {
         int sum = (int) a32.getValue();
         return sum;
     }
-	private static long calcChecksum2(byte[] bytes) {
-        Adler32 a32 = new Adler32();
-        a32.update(bytes);
-        return a32.getValue();
-    }
-    public static short getShort(byte buf1, byte buf2) 
+    
+	public static short getShort(byte buf1, byte buf2) 
     {
         short r = 0;
         r |= (buf1 & 0x00ff);

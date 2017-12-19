@@ -26,7 +26,7 @@ import rbtree.RBTree;
  * Mdict java : resource file (.mdd) test
  *	change the .mdd path(File in) and watch the output
  *  no o-o classes,
- *  just a straight forward test
+ *  just a streight forward test
  * @author KnIfER
  * @date 2017/12/8
  */
@@ -144,8 +144,11 @@ public class mdictRes {
     public static void main(String[] args) throws IOException  {
 //![]File in
     	//byte[] asd = new byte[]{'s',2,3,4,1,2,3,4,1,2,3,4};NameOfPlants.mdx 简明英汉汉英词典.mdx
-    	//f = new File("F:\\dictionary_wkst\\writemdict-master\\example_output\\javoice东京腔真人发音。日文汉字索引6.5w.mdd");
-    	f = new File("C:\\antiquafortuna\\MDictPC\\doc\\javoice东京腔真人发音。日文汉字索引6.5w.mdd");
+    	//f = new File("F:\\dictionary_wkst\\writemdict-master\\example_output\\mdd_file.mdd");
+    	//f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\古生物图鉴.mdd");
+    	f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdd");
+
+    	//f = new File("C:\\antiquafortuna\\MDictPC\\doc\\javoice东京腔真人发音。日文汉字索引6.5w.mdd");
     	
     	//FileInputStream data_in =new FileInputStream(f);	
     	DataInputStream data_in =new DataInputStream(new FileInputStream(f));	
@@ -302,7 +305,7 @@ System.out.println("_num_key_blocks: "+_num_key_blocks);
         
 //二、
         
-        String key = "\\吸入.spx";
+        String key = "\\046.jpg";
         FileOutputStream fos = new FileOutputStream(new File("C:"+key));  
         start=System.currentTimeMillis(); //获取开始时间 
         System.out.println("查询"+key+" ： "+getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list)));
