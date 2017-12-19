@@ -46,7 +46,7 @@ public class mdict {
 	
 	private static final int BlockID = 0;
 
-	static String key = "红树";//abduco@拉丁语英语		马连鞍@有毒植物		happy@简明英汉
+	static String key = "马连鞍";//abduco@拉丁语英语		马连鞍@有毒植物		happy@简明英汉
     
     static File f;
     
@@ -56,9 +56,9 @@ public class mdict {
     //f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdx");
     //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\neo\\拉丁语英语[31655](091009).mdx");
     //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\neo\\英语拉丁语字典【匿名原创】【版本日期未注明】.mdx");
-    f = new File("C:\\antiquafortuna\\MDictPC\\doc\\古生物图鉴.mdx");
+    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\古生物图鉴.mdx");
     //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\NameOfPlants.mdx");
-    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\有毒植物,J.Huang.mdx");
+    f = new File("C:\\antiquafortuna\\MDictPC\\doc\\有毒植物,J.Huang.mdx");
     }
 
     
@@ -580,7 +580,12 @@ System.out.println("_num_key_blocks: "+_num_key_blocks);
         key_info_struct infoI = _key_block_info_list[blockId];
 
         prepareItemByKeyInfo(infoI,blockId);
-        int res = binary_find_closest2(infoI.keys,keyword);//keyword
+        int res;
+        if(_encoding.equals("GB18030")){
+            res = binary_find_closest2(infoI.keys,keyword);//keyword
+        }else
+        	res = binary_find_closest(infoI.keys,keyword);//keyword
+
         if (res==-1){
         	System.out.println("search failed!");
         	return -1;
