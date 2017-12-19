@@ -1,5 +1,5 @@
 # mdict-parsr-java
-.no lzo  
+.now supports lzo  
 .no encryption other than ripemd128 key-info encryption.
 .durty code
 # 一、mdx parse && search
