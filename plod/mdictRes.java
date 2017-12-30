@@ -23,20 +23,12 @@ import rbtree.RBTree;
 
 
 /**
- * Mdict java : resource file (.mdd) test
- *	change the .mdd path(File in) and watch the output
- *  no o-o classes,
- *  just a streight forward test
+ * Mdict java : resource file (.mdd)
  * @author KnIfER
  * @date 2017/12/8
  */
 
 public class mdictRes {
-	private static final int BlockID = 0;
-
-	//print key texts and content.
-	static boolean doUWantuPrintEverything=true;
-	
 	static int _encrypt=0;
 	static String _encoding="UTF-16LE";
 	static String _passcode = "";
@@ -146,7 +138,8 @@ public class mdictRes {
     	//byte[] asd = new byte[]{'s',2,3,4,1,2,3,4,1,2,3,4};NameOfPlants.mdx 简明英汉汉英词典.mdx
     	//f = new File("F:\\dictionary_wkst\\writemdict-master\\example_output\\mdd_file.mdd");
     	//f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\古生物图鉴.mdd");
-    	f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdd");
+    	//f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdd");
+    	f = new File("F:\\dictionary_wkst\\writemdict-master\\example_output\\mdd_file.mdd");
 
     	//f = new File("C:\\antiquafortuna\\MDictPC\\doc\\javoice东京腔真人发音。日文汉字索引6.5w.mdd");
     	
@@ -302,10 +295,11 @@ public class mdictRes {
 System.out.println("_num_record_blocks: "+_num_record_blocks);
 System.out.println("_num_key_blocks: "+_num_key_blocks);
         assert(size_counter == record_block_info_size);
-        
+        for(int i=0;i<mdictRes._num_entries;i++)
+        CMN.show(getEntryAt(i));
 //二、
         
-        String key = "\\046.jpg";
+        String key = "\\css";
         FileOutputStream fos = new FileOutputStream(new File("C:"+key));  
         start=System.currentTimeMillis(); //获取开始时间 
         System.out.println("查询"+key+" ： "+getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list)));
@@ -465,7 +459,7 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
     
     
     //for lv
-	public String getEntryAt(int position) {
+	public static String getEntryAt(int position) {
         int blockId = accumulation_blockId_tree.xxing(new mdictRes.myCpr(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
         long start = infoI.key_block_compressed_size_accumulator;
