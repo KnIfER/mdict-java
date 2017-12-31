@@ -73,7 +73,7 @@ public class RBTree<T extends Comparable<T>> {
     private void inOrder(RBTNode<T> tree) {
         if(tree != null) {
             inOrder(tree.left);
-            System.out.print(tree.key+" ");
+            System.out.print("【"+tree.key+"】\r\n");
             inOrder(tree.right);
         }
     }
@@ -500,8 +500,9 @@ public class RBTree<T extends Comparable<T>> {
             cmp = node.key.compareTo(x.key);
             if (cmp < 0)
                 x = x.left;
-            else
+            else if(cmp > 0)
                 x = x.right;
+            else return;
         }
 
         node.parent = y;
