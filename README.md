@@ -1,7 +1,8 @@
 # mdict-parsr-java
+.now a library!  
 .now supports lzo  
-.no encryption other than ripemd128 key-info encryption.
-.durty code
+.no encryption other than ripemd128 key-info encryption.  
+
 # 一、mdx parse && search
 ![image](https://github.com/KnIfER/mdict-parsr-java/raw/master/screenshot/Screenshot1.png)
 in above example image,it takes 5.8ms to query/locate an key entry on average ,  
