@@ -1,6 +1,10 @@
 package rbtree;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import plod.CMN;
 import plod.mdict.myCpr;
@@ -530,7 +534,17 @@ public class RBTree_additive extends RBTree<additiveMyCpr1> {
         insertFixUp(node);
     }
     
+    public ExecutorService fixedThreadPoolmy = Executors.newFixedThreadPool(1);
+    public void insert_synchronized(final String key,final int...val) {
+    	fixedThreadPoolmy.execute(new Runnable(){
+			@Override
+			public void run() {
+				insert(key,val);
+			}
+    	});
+    }
     public void insert(String key,int...val) {
+    	//lock.lock();
         int cmp;
         RBTNode<additiveMyCpr1> y = null;
         RBTNode<additiveMyCpr1> x = this.mRoot;
@@ -572,6 +586,7 @@ public class RBTree_additive extends RBTree<additiveMyCpr1> {
 
         // 3. 将它重新修正为一颗二叉查找树
         insertFixUp(node);
+        //lock.unlock();
     }
     /* 
      * 新建结点(key)，并将其插入到红黑树中
