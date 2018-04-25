@@ -14,10 +14,10 @@ import java.util.ArrayList;
 public class RBTree<T extends Comparable<T>> {
 
     private RBTNode<T> mRoot;    // 根结点
-    
+
     private static final boolean RED   = false;
     private static final boolean BLACK = true;
-    
+
 
     public RBTree() {
         mRoot=null;
@@ -73,7 +73,7 @@ public class RBTree<T extends Comparable<T>> {
     private void inOrder(RBTNode<T> tree) {
         if(tree != null) {
             inOrder(tree.left);
-            System.out.print("【"+tree.key+"】\r\n");
+            System.out.print(tree.key+" ");
             inOrder(tree.right);
         }
     }
@@ -88,46 +88,46 @@ public class RBTree<T extends Comparable<T>> {
     public int inorderCounter3 = 0;
     //![0]wrap
     public void inOrderDo() {
-    	inorderCounter = 0;//important
-    	inorderCounter2 = 0;//important
-    	inorderCounter3 = 0;//important
+        inorderCounter = 0;//important
+        inorderCounter2 = 0;//important
+        inorderCounter3 = 0;//important
         inOrderDo(mRoot);
     }
     //![1]设置接口
     public void SetInOrderDo(inOrderDo ido){
-    	mInOrderDo = ido;
+        mInOrderDo = ido;
     }
     //![2]接口
     public interface inOrderDo{
-    	void dothis(RBTNode node);
+        void dothis(RBTNode node);
     }
     private inOrderDo mInOrderDo;
     //![3]中序递归
     private void inOrderDo(RBTNode<T> node) {
         if(node != null) {
-        	inorderCounter2+=1;
-        	inOrderDo(node.left);
-        	mInOrderDo.dothis(node);
-        	inorderCounter+=1;
+            inorderCounter2+=1;
+            inOrderDo(node.left);
+            mInOrderDo.dothis(node);
+            inorderCounter+=1;
             inOrderDo(node.right);
             inorderCounter2-=1;//嘿嘿老子是天才
-            
+
         }
     }
     //![4]
     //![5]此处放大招！!
     //下行wrap :find node x,so that x.key=<val and no node with key greater that x.key satisfies this condition.
     public RBTNode<T> xxing(T val){
-    	RBTNode<T> tmpnode =downwardNeighbour(this.mRoot,val);
-    	if (tmpnode!=null) return tmpnode;
-    	else return this.minimum(this.mRoot);
+        RBTNode<T> tmpnode =downwardNeighbour(this.mRoot,val);
+        if (tmpnode!=null) return tmpnode;
+        else return this.minimum(this.mRoot);
     }
-     ///情况二///cur///情况一/
+    ///情况二///cur///情况一/
     private RBTNode<T> downwardNeighbour(RBTNode<T> du,T val) {
         int cmp;
         RBTNode<T> x = du;
         RBTNode<T> tmpnode = null;
-        
+
         if (x==null)
             return null;
 
@@ -135,55 +135,55 @@ public class RBTree<T extends Comparable<T>> {
         if (cmp < 0)//情况一
             return downwardNeighbour(x.left, val);
         else// if (cmp >= 0)//情况二
-        	{
-        	if(x.right==null ) return x;
-        	tmpnode = downwardNeighbour(x.right, val);
-        	if (tmpnode==null) return x;
-        	else return tmpnode;
-        	}
+        {
+            if(x.right==null ) return x;
+            tmpnode = downwardNeighbour(x.right, val);
+            if (tmpnode==null) return x;
+            else return tmpnode;
+        }
     }
     //上行wrap :find node x,so that x.key>=val and no node with key smaller that x.key satisfies this condition.
     public RBTNode<T> sxing(T val){
-    	RBTNode<T> tmpnode =upwardNeighbour(this.mRoot,val);
-    	if (tmpnode!=null) return tmpnode;
-    	else return this.maximum(this.mRoot);
+        RBTNode<T> tmpnode =upwardNeighbour(this.mRoot,val);
+        if (tmpnode!=null) return tmpnode;
+        else return this.maximum(this.mRoot);
     }
-     ///情况一////cur///////情况二//
+    ///情况一////cur///////情况二//
     private RBTNode<T> upwardNeighbour(RBTNode<T> du,T val) {
         int cmp;
         RBTNode<T> x = du;
         RBTNode<T> tmpnode = null;
-        
+
         if (x==null)
             return null;
 
-        cmp = val.compareTo(x.key); 
+        cmp = val.compareTo(x.key);
         if (cmp > 0)//情况一
             return upwardNeighbour(x.right, val);
         else// if (cmp =< 0)//情况二
-        	{
-        	if(x.left==null ) return x;
-        	tmpnode = upwardNeighbour(x.left, val);
-        	if (tmpnode==null) return x;
-        	else return tmpnode;
-        	}
-    }  
-    
+        {
+            if(x.left==null ) return x;
+            tmpnode = upwardNeighbour(x.left, val);
+            if (tmpnode==null) return x;
+            else return tmpnode;
+        }
+    }
+
     //![END]
     public ArrayList<T> flatten(){
-    	ArrayList<T> res = new ArrayList<T>();
-    	inOrderflatten(this.mRoot,res);
-    	return res;
-    	
+        ArrayList<T> res = new ArrayList<T>();
+        inOrderflatten(this.mRoot,res);
+        return res;
+
     }
     private void inOrderflatten(RBTNode<T> tree,ArrayList<T> res) {
         if(tree != null) {
-        	inOrderflatten(tree.left,res);
-        	res.add(tree.key);
+            inOrderflatten(tree.left,res);
+            res.add(tree.key);
             inOrderflatten(tree.right,res);
         }
     }
-    
+
     /*
      * 后序遍历"红黑树"
      */
@@ -228,9 +228,9 @@ public class RBTree<T extends Comparable<T>> {
         while (x!=null) {
             int cmp = key.compareTo(x.key);
 
-            if (cmp < 0) 
+            if (cmp < 0)
                 x = x.left;
-            else if (cmp > 0) 
+            else if (cmp > 0)
                 x = x.right;
             else
                 return x;
@@ -243,7 +243,7 @@ public class RBTree<T extends Comparable<T>> {
         return iterativeSearch(mRoot, key);
     }
 
-    /* 
+    /*
      * 查找最小结点：返回tree为根结点的红黑树的最小结点。
      */
     private RBTNode<T> minimum(RBTNode<T> tree) {
@@ -262,8 +262,8 @@ public class RBTree<T extends Comparable<T>> {
 
         return null;
     }
-     
-    /* 
+
+    /*
      * 查找最大结点：返回tree为根结点的红黑树的最大结点。
      */
     private RBTNode<T> maximum(RBTNode<T> tree) {
@@ -283,7 +283,7 @@ public class RBTree<T extends Comparable<T>> {
         return null;
     }
 
-    /* 
+    /*
      * 找结点(x)的后继结点。即，查找"红黑树中数据值大于该结点"的"最小结点"。
      */
     public RBTNode<T> successor(RBTNode<T> x) {
@@ -302,8 +302,8 @@ public class RBTree<T extends Comparable<T>> {
 
         return y;
     }
-     
-    /* 
+
+    /*
      * 找结点(x)的前驱结点。即，查找"红黑树中数据值小于该结点"的"最大结点"。
      */
     public RBTNode<T> predecessor(RBTNode<T> x) {
@@ -323,17 +323,17 @@ public class RBTree<T extends Comparable<T>> {
         return y;
     }
 
-    /* 
+    /*
      * 对红黑树的节点(x)进行左旋转
      *
      * 左旋示意图(对节点x进行左旋)：
      *      px                              px
      *     /                               /
-     *    x                               y                
+     *    x                               y
      *   /  \      --(左旋)-.           / \                #
-     *  lx   y                          x  ry     
+     *  lx   y                          x  ry
      *     /   \                       /  \
-     *    ly   ry                     lx  ly  
+     *    ly   ry                     lx  ly
      *
      *
      */
@@ -358,29 +358,29 @@ public class RBTree<T extends Comparable<T>> {
             else
                 x.parent.right = y;    // 如果 x是它父节点的左孩子，则将y设为“x的父节点的左孩子”
         }
-        
+
         // 将 “x” 设为 “y的左孩子”
         y.left = x;
         // 将 “x的父节点” 设为 “y”
         x.parent = y;
     }
 
-    /* 
+    /*
      * 对红黑树的节点(y)进行右旋转
      *
      * 右旋示意图(对节点y进行左旋)：
      *            py                               py
      *           /                                /
-     *          y                                x                  
+     *          y                                x
      *         /  \      --(右旋)-.            /  \                     #
-     *        x   ry                           lx   y  
+     *        x   ry                           lx   y
      *       / \                                   / \                   #
      *      lx  rx                                rx  ry
-     * 
+     *
      */
-    
+
     public void rrt(){//hmm...just for test(may crash)
-    	rightRotate(mRoot);
+        rightRotate(mRoot);
     }
     private void rightRotate(RBTNode<T> y) {
         // 设置x是当前节点的左孩子。
@@ -483,7 +483,7 @@ public class RBTree<T extends Comparable<T>> {
         setBlack(this.mRoot);
     }
 
-    /* 
+    /*
      * 将结点插入到红黑树中
      *
      * 参数说明：
@@ -523,7 +523,7 @@ public class RBTree<T extends Comparable<T>> {
         insertFixUp(node);
     }
 
-    /* 
+    /*
      * 新建结点(key)，并将其插入到红黑树中
      *
      * 参数说明：
@@ -554,7 +554,7 @@ public class RBTree<T extends Comparable<T>> {
             if (parent.left == node) {
                 other = parent.right;
                 if (isRed(other)) {
-                    // Case 1: x的兄弟w是红色的  
+                    // Case 1: x的兄弟w是红色的
                     setBlack(other);
                     setRed(parent);
                     leftRotate(parent);
@@ -562,15 +562,15 @@ public class RBTree<T extends Comparable<T>> {
                 }
 
                 if ((other.left==null || isBlack(other.left)) &&
-                    (other.right==null || isBlack(other.right))) {
-                    // Case 2: x的兄弟w是黑色，且w的俩个孩子也都是黑色的  
+                        (other.right==null || isBlack(other.right))) {
+                    // Case 2: x的兄弟w是黑色，且w的俩个孩子也都是黑色的
                     setRed(other);
                     node = parent;
                     parent = parentOf(node);
                 } else {
 
                     if (other.right==null || isBlack(other.right)) {
-                        // Case 3: x的兄弟w是黑色的，并且w的左孩子是红色，右孩子为黑色。  
+                        // Case 3: x的兄弟w是黑色的，并且w的左孩子是红色，右孩子为黑色。
                         setBlack(other.left);
                         setRed(other);
                         rightRotate(other);
@@ -588,7 +588,7 @@ public class RBTree<T extends Comparable<T>> {
 
                 other = parent.left;
                 if (isRed(other)) {
-                    // Case 1: x的兄弟w是红色的  
+                    // Case 1: x的兄弟w是红色的
                     setBlack(other);
                     setRed(parent);
                     rightRotate(parent);
@@ -596,15 +596,15 @@ public class RBTree<T extends Comparable<T>> {
                 }
 
                 if ((other.left==null || isBlack(other.left)) &&
-                    (other.right==null || isBlack(other.right))) {
-                    // Case 2: x的兄弟w是黑色，且w的俩个孩子也都是黑色的  
+                        (other.right==null || isBlack(other.right))) {
+                    // Case 2: x的兄弟w是黑色，且w的俩个孩子也都是黑色的
                     setRed(other);
                     node = parent;
                     parent = parentOf(node);
                 } else {
 
                     if (other.left==null || isBlack(other.left)) {
-                        // Case 3: x的兄弟w是黑色的，并且w的左孩子是红色，右孩子为黑色。  
+                        // Case 3: x的兄弟w是黑色的，并且w的左孩子是红色，右孩子为黑色。
                         setBlack(other.right);
                         setRed(other);
                         leftRotate(other);
@@ -626,7 +626,7 @@ public class RBTree<T extends Comparable<T>> {
             setBlack(node);
     }
 
-    /* 
+    /*
      * 删除结点(node)，并返回被删除的结点
      *
      * 参数说明：
@@ -718,7 +718,7 @@ public class RBTree<T extends Comparable<T>> {
         node = null;
     }
 
-    /* 
+    /*
      * 删除结点(z)，并返回被删除的结点
      *
      * 参数说明：
@@ -726,7 +726,7 @@ public class RBTree<T extends Comparable<T>> {
      *     z 删除的结点
      */
     public void remove(T key) {
-        RBTNode<T> node; 
+        RBTNode<T> node;
 
         if ((node = search(mRoot, key)) != null)
             remove(node);
@@ -755,7 +755,7 @@ public class RBTree<T extends Comparable<T>> {
     /*
      * 打印"红黑树"
      *
-     * key        -- 节点的键值 
+     * key        -- 节点的键值
      * direction  --  0，表示该节点是根节点;
      *               -1，表示该节点是它的父结点的左孩子;
      *                1，表示该节点是它的父结点的右孩子。

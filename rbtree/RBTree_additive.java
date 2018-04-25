@@ -3,11 +3,6 @@ package rbtree;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import plod.CMN;
-import plod.mdict.myCpr;
 
 /**
  * Java 语言: 红黑树
@@ -17,15 +12,16 @@ import plod.mdict.myCpr;
  * @editor KnIfER
  * @date 2017/12/26
  */
-public class RBTree_additive extends RBTree<additiveMyCpr1> {
+public class RBTree_additive {
 
-    private RBTNode<additiveMyCpr1> mRoot;    // 根结点
+    private RBTNode<additiveMyCpr1> mRoot;public RBTNode<additiveMyCpr1> getRoot(){return mRoot;}
     
     private static final boolean RED   = false;
     private static final boolean BLACK = true;
+    private final static String replaceReg = " |:|\\.|,|-|\'";
+    private final static String emptyStr = "";
+
     
-
-
     public RBTree_additive() {
         mRoot=null;
     }
@@ -533,8 +529,8 @@ public class RBTree_additive extends RBTree<additiveMyCpr1> {
         // 3. 将它重新修正为一颗二叉查找树
         insertFixUp(node);
     }
-    
     public ExecutorService fixedThreadPoolmy = Executors.newFixedThreadPool(1);
+    //well,this is very..slow
     public void insert_synchronized(final String key,final int...val) {
     	fixedThreadPoolmy.execute(new Runnable(){
 			@Override
@@ -544,15 +540,17 @@ public class RBTree_additive extends RBTree<additiveMyCpr1> {
     	});
     }
     public void insert(String key,int...val) {
-    	//lock.lock();
         int cmp;
+        //key=key.toLowerCase().replaceAll(replaceReg,emptyStr);
         RBTNode<additiveMyCpr1> y = null;
         RBTNode<additiveMyCpr1> x = this.mRoot;
 
         // 1. 将红黑树当作一颗二叉查找树，将节点添加到二叉查找树中。
         while (x != null) {
             y = x;
-            cmp = key.replaceAll(CMN.replaceReg,CMN.emptyStr).compareTo(x.key.key.replaceAll(CMN.replaceReg,CMN.emptyStr));
+            //cmp = key.toLowerCase().replace(" ",emptyStr).replace("'",emptyStr).compareTo(x.key.key.toLowerCase().replace(" ",emptyStr).replace("'",emptyStr));
+            cmp = key.toLowerCase().replace(" ",emptyStr).replace("'",emptyStr).replace(":",emptyStr).replace(".",emptyStr).replace("-",emptyStr).replace(",",emptyStr).compareTo(x.key.key.toLowerCase().replace(" ",emptyStr).replace("'",emptyStr).replace(":",emptyStr).replace(".",emptyStr).replace("-",emptyStr).replace(",",emptyStr));
+            
             if (cmp < 0)
                 x = x.left;
             else if(cmp > 0)
@@ -565,7 +563,7 @@ public class RBTree_additive extends RBTree<additiveMyCpr1> {
 
         additiveMyCpr1 node_key = new additiveMyCpr1(key,new ArrayList<Integer>());
         for(int i:val) node_key.value.add(i);
-        RBTNode<additiveMyCpr1> node=new RBTNode<additiveMyCpr1>(node_key,BLACK,null,null,null);
+        RBTNode<additiveMyCpr1> node = new RBTNode<additiveMyCpr1>(node_key,BLACK,null,null,null);
 
         // 如果新建结点失败，则返回。
         if (node == null) return;
@@ -586,7 +584,6 @@ public class RBTree_additive extends RBTree<additiveMyCpr1> {
 
         // 3. 将它重新修正为一颗二叉查找树
         insertFixUp(node);
-        //lock.unlock();
     }
     /* 
      * 新建结点(key)，并将其插入到红黑树中
