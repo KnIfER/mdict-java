@@ -1,4 +1,4 @@
-# mdict-parsr-java 
+# mdict library in java 
 supports lzo,no encryption other than ripemd128 key-info encryption.  
 
 # details
