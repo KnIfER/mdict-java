@@ -1,4 +1,4 @@
-package rbtree;
+package com.knziha.rbtree;
 
 import java.util.ArrayList;
 

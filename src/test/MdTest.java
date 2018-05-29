@@ -1,4 +1,4 @@
-package plod;
+package test;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -14,11 +14,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.zip.DataFormatException;
 
-import rbtree.RBTNode;
-import rbtree.RBTree_additive;
-import rbtree.RBTree.inOrderDo;
+import com.knziha.plod.dictionary.CMN;
+import com.knziha.plod.dictionary.mdict;
+import com.knziha.rbtree.RBTNode;
+import com.knziha.rbtree.RBTree_additive;
+import com.knziha.rbtree.RBTree.inOrderDo;
 
-import com.knziha.jt.BSTree;
 
 
 /**
@@ -27,7 +28,7 @@ import com.knziha.jt.BSTree;
  * @date 2017/12/30
  */
 public class MdTest {
-	static long stst;//static start time
+	public static long stst;//static start time
 
 	//f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\简明英汉汉英词典.mdx");
     //f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\古生物图鉴.mdx");
@@ -49,14 +50,15 @@ public class MdTest {
     	
     //A bunch of tests~
 
-    	//![0]Basic query、extract contents
+    	//![0]Basic query and extraction of contents
     	if(true)
     	{	/* false  true  */ 
+    		CMN.show("\n\n——————————————————————basic query——————————————————————");
     		key = "happy";
 	        //CMN.show("查询 "+key+" ： "+md.getEntryAt(md.lookUp(key)));
     		stst=System.currentTimeMillis();
-	        CMN.show("查询 "+key+" ： "+md.getRecordAt(md.lookUp(key)));
-	        CMN.show("查询 "+key+" time used： "+(System.currentTimeMillis()-stst)+"ms"); 
+	        CMN.show("结果html contents of "+key+" ： "+md.getRecordAt(md.lookUp(key)));
+	        CMN.show("时耗 time used： "+(System.currentTimeMillis()-stst)+"ms"); 
     	}
         
     	//![1]
@@ -75,19 +77,6 @@ public class MdTest {
 	        CMN.show("模糊匹配 Contain:"+key+" time used： "+(System.currentTimeMillis()-stst)+"ms"); 
         }       
         
-        //![4]proof:binary list is better than R-B tree this case.
-        if(false)
-        {	/* false  true  */
-	        md.block_blockId_search_tree.SetInOrderDo(new inOrderDo(){
-				@Override
-				public void dothis(RBTNode node) {
-					//CMN.show("depth is"+md.block_blockId_search_tree.inorderCounter2);
-					d=Math.max(d, md.block_blockId_search_tree.inorderCounter2);
-				}});
-	        md.block_blockId_search_tree.inOrderDo();
-	        CMN.show("depth is"+d);
-	        //md.block_blockId_search_tree.print();
-        }
                 
         //![5]
         if(false)
@@ -99,25 +88,30 @@ public class MdTest {
 	        CMN.show("多线程全文搜索测试 time usedA： "+(System.currentTimeMillis()-stst)+"ms"); 
         }   
         
-        //![6]Advanced mdicts conjunction search.
+        /*![6]Advanced mdicts conjunction search.*/
+    	/*联合搜索测试*/
         if(true)
         {	/* false  true  */
+	        CMN.show("\n\n——————————————————————searching in a bunch of dicts——————————————————————");
+	        
 	        ArrayList<mdict> mdxs = new ArrayList<mdict>();
 	        
-	        /*《English-Chinese essential》、《oxford English-Chinese advanced》*/
+	        /*somewhat《English-Chinese essential》、《oxford English-Chinese advanced》*/
 	        mdxs.add(new mdict("F:\\dictionary_wkst\\omidict-analysis-master\\简明英汉汉英词典.mdx"));
 	        mdxs.add(new mdict("C:\\antiquafortuna\\MDictPC\\doc\\牛津高阶英汉双解词典.mdx"));
 	    	
-	        CMN.show("\r\n联合搜索测试START...");
+	        
 	    	RBTree_additive combining_search_tree = new RBTree_additive();
 	    	stst=System.currentTimeMillis();
+	    	
 	    	key = "happy";// absolute
 	    	for(int i=0;i<mdxs.size();i++)
 	    	{
 	    		mdxs.get(i).size_confined_lookUp(key,combining_search_tree,i,30);
 	    	}
-	        CMN.show("联合搜索 time used： "+(System.currentTimeMillis()-stst)+"ms"); 
-	        CMN.show("联合搜索 results： "); 
+	    	
+	        CMN.show("时耗 Time used： "+(System.currentTimeMillis()-stst)+"ms"); 
+	        CMN.show("联合搜索结果 results： "); 
 	        combining_search_tree.inOrder();
         }  
 

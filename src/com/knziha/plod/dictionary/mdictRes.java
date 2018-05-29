@@ -1,4 +1,4 @@
-package plod;
+package com.knziha.plod.dictionary;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -19,7 +19,8 @@ import java.util.zip.Adler32;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
-import rbtree.RBTree;
+
+import com.knziha.rbtree.RBTree;
 
 
 /**

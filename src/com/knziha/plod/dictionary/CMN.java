@@ -1,4 +1,4 @@
-package plod;
+package com.knziha.plod.dictionary;
 
 import java.io.File;
 import java.io.IOException;

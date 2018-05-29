@@ -1,4 +1,4 @@
-package rbtree;
+package com.knziha.rbtree;
 
 public class RBTNode<T extends Comparable<T>> {
     private static final boolean RED   = false;

@@ -1,5 +1,5 @@
   
-package plod;
+package com.knziha.plod.dictionary;
 
 
 import java.io.ByteArrayOutputStream;
