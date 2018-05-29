@@ -68,9 +68,6 @@ public class mdict {
         结点形式：[ decompressed_size_accumulator,i] 且树根据decompressed_size_accumulator的int值大小排序建立。
         decompressed_size_accumulator:Record_block块i之前所有Record_block解压后的大小
     [2]record_block section:存储所有词条的具体内容。  
-    
-   NOTE: 红黑树是不必要的，接下来我会建立分支，撤销树的构建。
-   NOTE: R-B tree is not necessary when parsing key info,binary search tree will suffice,but..
 
 */
     public static class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,T2>>{
