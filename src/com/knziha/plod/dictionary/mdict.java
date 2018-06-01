@@ -5,7 +5,9 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -36,7 +38,7 @@ import test.MdTest;
  * FEATURES:
  * *********Basic parse and query functions.
  * *********Advanced mdicts conjunction search.
- * *********Search all text.(multithread)
+ * *********Search in all text.(multithread)
  * *********Match middle string of any entry.
  * @author KnIfER
  * @date 2017/12/30
@@ -77,7 +79,15 @@ public class mdict {
     		key=k;value=v;
     	}
     	public int compareTo(myCpr<T1,T2> other) {
-    		return this.key.compareTo(other.key);
+    		if(key.getClass()==String.class) {
+    			return ((String)key)
+    					.toLowerCase().replace(" ",emptyStr).replace("-",emptyStr)
+    					.compareTo(((String)other.key)    					
+						.toLowerCase().replace(" ",emptyStr).replace("-",emptyStr)
+    							);
+    		}
+    		else
+    			return this.key.compareTo(other.key);
     	}
     	public String toString(){
     		return key+"_"+value;
@@ -141,50 +151,9 @@ public class mdict {
     }    
     
     
-    //store key_block's summary and itself
-    public class key_info_struct{
-		public key_info_struct(String headerKeyText, String tailerKeyText,
-    			long key_block_compressed_size_accumulator,
-    			long key_block_decompressed_size) {
-    		this.headerKeyText=headerKeyText;
-    		this.tailerKeyText=tailerKeyText;		
-    		this.key_block_compressed_size_accumulator=key_block_compressed_size_accumulator;		
-    		this.key_block_decompressed_size=key_block_decompressed_size;		
-    	}
-    	public key_info_struct(long num_entries_,long num_entries_accumulator_) {
-    		num_entries=num_entries_;
-    		num_entries_accumulator=num_entries_accumulator_;
-        }
-		public String headerKeyText;
-    	public String tailerKeyText;
-    	public long key_block_compressed_size_accumulator;
-    	public long key_block_compressed_size;
-    	public long key_block_decompressed_size;
-        public long num_entries;
-        public long num_entries_accumulator;
-        public String[] keys;
-        public long[] key_offsets;
-        public void ini(){
-            keys =new String[(int) num_entries];
-            key_offsets =new long[(int) num_entries];
-        }
-    }
+
     //store record_block's summary
-    public class record_info_struct{
-    	public record_info_struct(long _compressed_size,long _compressed_size_accumulator,long _decompressed_size,long _decompressed_size_accumulator) {
-    		 compressed_size=                  _compressed_size;
-             compressed_size_accumulator=      _compressed_size_accumulator;
-             decompressed_size=                _decompressed_size;
-             decompressed_size_accumulator=    _decompressed_size_accumulator;
-        
-    	}
-        public long compressed_size;
-        public long compressed_size_accumulator;
-    	public long decompressed_size;
-    	public long decompressed_size_accumulator;
-        public void ini(){
-        }
-    }	
+	
 	
 	byte[] _fast_decrypt(byte[] data,byte[] key){ 
 	    long previous = 0x36;
@@ -230,12 +199,14 @@ public class mdict {
 		itemBuf = new byte[4];
 		data_in.read(itemBuf, 0, 4);
     	int alder32 = getInt(itemBuf[3],itemBuf[2],itemBuf[1],itemBuf[0]);
-		assert alder32 == (calcChecksum(header_bytes)& 0xffffffff);
+		assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
 		_key_block_offset = 4 + header_bytes_size + 4;
 		//不必关闭文件流 data_in
 		
 		Pattern re = Pattern.compile("(\\w+)=\"(.*?)\"",Pattern.DOTALL);
-		Matcher m = re.matcher(new String(header_bytes,"UTF-16LE"));
+		String headerString = new String(header_bytes,"UTF-16LE");
+		//CMN.show("headerString::"+headerString);
+		Matcher m = re.matcher(headerString);
 		_header_tag = new HashMap<String,String>();
 		while(m.find()) {
 			_header_tag.put(m.group(1), m.group(2));
@@ -260,8 +231,13 @@ public class mdict {
             _encrypt = 0;
 		else if(_header_tag.get("Encrypted") == "1")
             _encrypt = 1;
-        else
-            _encrypt = Integer.valueOf(_header_tag.get("Encrypted"));
+		else
+			try {
+				_encrypt = Integer.valueOf(_header_tag.get("Encrypted"));
+			} catch (NumberFormatException e) {
+				//e.printStackTrace();
+				_encrypt=0;
+			}
 
         // stylesheet attribute if present takes form of:
         //   style_number # 1-255
@@ -296,8 +272,9 @@ public class mdict {
         //TODO: pureSalsa20.py decryption
         if(_encrypt==1){if(_passcode==emptyStr) throw new IllegalArgumentException("_passcode未输入");}
         _num_key_blocks = _read_number(sf);                                           // 1
-        _num_entries = _read_number(sf);                                              // 2
-        if(_version >= 2.0){long key_block_info_decomp_size = _read_number(sf);}      //[3]
+        _num_entries = _read_number(sf);        
+        long key_block_info_decomp_size = 0;// 2
+        if(_version >= 2.0){key_block_info_decomp_size = _read_number(sf);}      //[3]
         
         long key_block_info_size = _read_number(sf);                                  // 4
         long key_block_size = _read_number(sf);                                       // 5
@@ -305,15 +282,17 @@ public class mdict {
         //前 5 个数据的 adler checksum
         if(_version >= 2.0)
         {
-            int adler32 = calcChecksum(itemBuf);
+            int adler32 = BU.calcChecksum(itemBuf);
     		itemBuf = new byte[4];
     		data_in.read(itemBuf, 0, 4);
             assert adler32 == (getInt(itemBuf[0],itemBuf[1],itemBuf[2],itemBuf[3])& 0xffffffff);
         }
-        
+
+		//CMN.show("key_block_info_size="+key_block_info_size);
+		//CMN.show("key_block_info_decomp_size="+key_block_info_decomp_size);
         // read key block info, which comprises each key_block's:
-        //1.(starting && ending words'shrinkedText,in the form of shrinkedTextSize-shrinkedText.name them: headerText、tailerText)、
-        //2.(compressed && decompressed size,which also have version differnence,either occupying 4 or 8 bytes)
+        //1.(starting && ending words'shrinkedText,in the form of shrinkedTextSize-shrinkedText.Name them as headerText、tailerText)、
+        //2.(compressed && decompressed size,which also have version differences, occupying either 4 or 8 bytes)
 		itemBuf = new byte[(int) key_block_info_size];
 		data_in.read(itemBuf, 0, (int) key_block_info_size);
         _key_block_info_list = _decode_key_block_info(itemBuf);// 根据头部信息建立 Red-Black树： block_blockId_search_tree
@@ -331,8 +310,8 @@ public class mdict {
 
 		_key_block_compressed = new byte[(int) key_block_size];
 		data_in.read(_key_block_compressed, 0, (int) key_block_size);
-
-    //![3]Decode_record_block_header
+	
+//![3]Decode_record_block_header
 long start = System.currentTimeMillis();
         DataInputStream data_in1 = new DataInputStream(new FileInputStream(f));
         data_in1.skipBytes((int) _record_block_offset);
@@ -445,7 +424,7 @@ long start = System.currentTimeMillis();
 				}  
             }
             // notice not that adler32 return signed value
-            //assert(adler32 == (calcChecksum(record_block) ));
+            //assert(adler32 == (BU.calcChecksum(record_block) ));
             //assert(record_block.length == decompressed_size );
  //当前内容块解压完毕
             
@@ -460,7 +439,8 @@ long start = System.currentTimeMillis();
             	record_end = record_block.length;
             }
             
-            byte[] record = new byte[(int) (record_end-record_start)];         
+            byte[] record = new byte[(int) (record_end-record_start)]; 
+            CMN.show(record.length+":"+record_block.length+":"+(record_start));
             System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
             // convert to utf-8
             String record_str = new String(record,_encoding);
@@ -476,6 +456,9 @@ long start = System.currentTimeMillis();
         
     }
   
+    public void prepareItemByKeyInfo(int blockId){
+    	prepareItemByKeyInfo(_key_block_info_list[blockId],blockId);
+    }
     public long t;
     //到底要不要将key entrys存储起来？？
     public void prepareItemByKeyInfo(key_info_struct infoI,int blockId){
@@ -505,7 +488,11 @@ long start = System.currentTimeMillis();
                 byte[] arraytmp = new byte[(int) compressedSize];
                 //show(arraytmp.length+"哈哈哈"+compressedSize);
                 System.arraycopy(_key_block_compressed, (int)(start+8), arraytmp, 0,(int) (compressedSize-8));
-            	MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block,len);
+                //CMN.show("_key_block_compressed");
+                //ripemd128.printBytes(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
+                CMN.show(infoI.key_block_decompressed_size+"~"+infoI.key_block_compressed_size);
+                CMN.show(infoI.key_block_decompressed_size+"~"+compressedSize);
+                MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block,len);
                 //System.out.println("look up LZO decompressing key blocks done!");
             }
             else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
@@ -520,7 +507,7 @@ long start = System.currentTimeMillis();
 				} catch (DataFormatException e) {e.printStackTrace();}
                 
             }
-            //!!spliting curr Key block
+            /*!!spliting curr Key block*/
             int key_start_index = 0;
             String delimiter;
             int width = 0,i1=0,key_end_index=0;
@@ -549,6 +536,7 @@ long start = System.currentTimeMillis();
                     width = 1;
                     key_end_index = key_start_index + _number_width;  
                     while(i1<key_block.length){
+                    	//CMN.show(key_block.length+"_"+key_end_index);
                     	if(key_block[key_end_index]==0)
                     		break;
                     	key_end_index+=width;
@@ -563,7 +551,6 @@ long start = System.currentTimeMillis();
 				try {
 					key_text = new String(arraytmp,_encoding);
 				} catch (UnsupportedEncodingException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
                 key_start_index = key_end_index + width;
@@ -574,7 +561,7 @@ long start = System.currentTimeMillis();
             }
             //System.out.println("耗时"+(st-System.currentTimeMillis()));
 
-            assert(adler32 == (calcChecksum(key_block)));
+            assert(adler32 == (BU.calcChecksum(key_block)));
             //System.out.println("建key表时间"+(e-st));
         }
     }
@@ -770,7 +757,7 @@ long start = System.currentTimeMillis();
                         }
                         //System.out.println("耗时"+(st-System.currentTimeMillis()));
 
-                        //assert(adler32 == (calcChecksum(key_block)));
+                        //assert(adler32 == (BU.calcChecksum(key_block)));
                         //System.out.println("建key表时间"+(e-st));
                     }else{
                             int entryIdx = 0;
@@ -936,6 +923,8 @@ long start = System.currentTimeMillis();
     }    
     
     public void printAllContents() throws IOException{
+    	OutputStreamWriter fOut = new OutputStreamWriter(new FileOutputStream(f.getAbsolutePath()+".txt"),_encoding);
+
         DataInputStream data_in = new DataInputStream(new FileInputStream(f));
         // record block info section
         data_in.skipBytes( (int) (_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width));
@@ -982,7 +971,7 @@ long start = System.currentTimeMillis();
                 record_block = zlib_decompress(record_block_compressed,8);
             }
             // notice not that adler32 return signed value
-            assert(adler32 == (calcChecksum(record_block) ));
+            assert(adler32 == (BU.calcChecksum(record_block) ));
             assert(record_block.length == decompressed_size );
  //当前内容块解压完毕
             
@@ -993,8 +982,10 @@ long start = System.currentTimeMillis();
             //    record = self._substitute_stylesheet(record);
             show(record_str);       
         	
-        	
+            fOut.append(record_str).append("\n");
+            
         }
+        fOut.close();
     }
     
     static volatile int thread_number_count = 1;
@@ -1150,10 +1141,12 @@ long start = System.currentTimeMillis();
     //for list view
 	public String getEntryAt(int position) {
         int blockId = accumulation_blockId_tree.xxing(new myCpr(position,1)).getKey().value;
+        CMN.show(blockId+"");
         key_info_struct infoI = _key_block_info_list[blockId];
         long start = infoI.key_block_compressed_size_accumulator;
         long compressedSize;
         prepareItemByKeyInfo(infoI,blockId);
+        CMN.show(infoI.keys.length+":"+(position-infoI.num_entries_accumulator));
         return infoI.keys[(int) (position-infoI.num_entries_accumulator)];
 		
 	}
@@ -1555,9 +1548,11 @@ long start = System.currentTimeMillis();
     	byte[] key_block_info;
     	if(_version >= 2)
         {   //zlib压缩
+    		//CMN.show("yes!");
     		byte[] asd = new byte[]{key_block_info_compressed[0],key_block_info_compressed[1],key_block_info_compressed[2],key_block_info_compressed[3]};
     		assert(new String(asd).equals(new String(new byte[]{2,0,0,0})));
-            //处理 Ripe128md 加密的 key_block_info
+            //CMN.show((new String(asd).equals(new String(new byte[]{2,1,0,0})))+"");
+    		//处理 Ripe128md 加密的 key_block_info
     		if(_encrypt==2){try{
                 key_block_info_compressed = _mdx_decrypt(key_block_info_compressed);
                 } catch (IOException e) {e.printStackTrace();}}
@@ -1565,7 +1560,9 @@ long start = System.currentTimeMillis();
     		//!!!MAY HAVE BUG
             int adler32 = getInt(key_block_info_compressed[4],key_block_info_compressed[5],key_block_info_compressed[6],key_block_info_compressed[7]);
             key_block_info = zlib_decompress(key_block_info_compressed,8);
-            assert(adler32 == (calcChecksum(key_block_info) ));
+            assert(adler32 == (BU.calcChecksum(key_block_info) ));
+            //ripemd128.printBytes(key_block_info,0, key_block_info.length);
+            //CMN.show("yes!");
         }
         else
             key_block_info = key_block_info_compressed;
@@ -1582,23 +1579,24 @@ long start = System.currentTimeMillis();
         //遍历blocks
         int bytePointer =0 ;
         for(int i=0;i<_key_block_info_list.length;i++){
-            // number of entries in current key block
         	int textbufferST,textbufferLn;
             start1=System.currentTimeMillis(); //获取开始时间  
         	accumulation_blockId_tree.insert(new myCpr<Integer, Integer>(accumulation_,i));
             end1=System.currentTimeMillis(); //获取结束时间
             accumulation_blockId_tree_TIME+=end1-start1;
+            //read in number of entries in current key block
             if(_version<2) {
 	            _key_block_info_list[i] = new key_info_struct(toInt(key_block_info,bytePointer),accumulation_);
 	            bytePointer+=4;
             }
             else {
+            	//CMN.show(key_block_info_compressed.length+":"+key_block_info.length+":"+bytePointer);
             	_key_block_info_list[i] = new key_info_struct(toLong(key_block_info,bytePointer),accumulation_);
             	bytePointer+=8;
             }
             key_info_struct infoI = _key_block_info_list[i];
             accumulation_ += infoI.num_entries;
-            
+            //CMN.show("infoI.num_entries::"+infoI.num_entries);
             //![0] head word text
             int text_head_size;
             if(_version<2)
@@ -1619,10 +1617,13 @@ long start = System.currentTimeMillis();
                 if(_version>=2)
                 bytePointer+=2;           
             }
-            
+
             infoI.headerKeyText = new String(key_block_info,textbufferST,textbufferLn,_encoding);
         	bytePointer+=textbufferLn;
-            //show(infoI.headerKeyText+"\n");
+        	
+            //CMN.show(key_block_info.length+":"+textbufferST+":"+textbufferLn+":"+bytePointer);
+
+            //show(infoI.headerKeyText);
             
             //![1]  tail word text
             int text_tail_size;
@@ -1644,23 +1645,27 @@ long start = System.currentTimeMillis();
                 if(_version>=2)
             	bytePointer+=2;       
             }
-            
+            //CMN.show(key_block_info.length+":"+textbufferST+":"+text_tail_size);
             infoI.tailerKeyText = new String(key_block_info,textbufferST,text_tail_size,_encoding);
         	bytePointer+=textbufferLn;
             //show(infoI.tailerKeyText+"~tailerKeyText");
 
             infoI.key_block_compressed_size_accumulator = key_block_compressed_size;
-            if(_version<2){
-            	key_block_compressed_size += toInt(key_block_info,bytePointer);
+            if(_version<2){//may reduce
+            	infoI.key_block_compressed_size = toInt(key_block_info,bytePointer);
+            	key_block_compressed_size += infoI.key_block_compressed_size;
             	bytePointer+=4;
             	infoI.key_block_decompressed_size = toInt(key_block_info,bytePointer);
             	bytePointer+=4;
             }else{
-            	key_block_compressed_size += toLong(key_block_info,bytePointer);
+            	infoI.key_block_compressed_size = toLong(key_block_info,bytePointer);
+            	key_block_compressed_size += infoI.key_block_compressed_size;
             	bytePointer+=8;
             	infoI.key_block_decompressed_size = toLong(key_block_info,bytePointer);
             	bytePointer+=8;
             }
+            //CMN.show("infoI.key_block_decompressed_size::"+infoI.key_block_decompressed_size);
+            //CMN.show("infoI.key_block_compressed_size::"+infoI.key_block_compressed_size);
             block_blockId_search_list[i] = infoI.headerKeyText;
             //CMN.show(bytePointer+"sd");
         }
@@ -1752,12 +1757,6 @@ long start = System.currentTimeMillis();
 			}
 	}
 
-	private static int calcChecksum(byte[] bytes) {
-        Adler32 a32 = new Adler32();
-        a32.update(bytes);
-        int sum = (int) a32.getValue();
-        return sum;
-    }
     
 	public static short getShort(byte buf1, byte buf2) 
     {
@@ -1844,6 +1843,13 @@ long start = System.currentTimeMillis();
         show("|_num_record_blocks: "+this._num_record_blocks);
         show("|maxComRecSize: "+this.maxComRecSize);
         show("|maxDecompressedSize: "+this.maxDecompressedSize);
+        if(false) {
+	        int counter=0;
+	        for(key_info_struct infoI:_key_block_info_list) {
+	        	show("|"+infoI.num_entries+"@No."+counter+"||header~"+infoI.headerKeyText+"||tailer~"+infoI.tailerKeyText);
+	        	counter++;
+	        }
+        }
         show("——————————————————————Info of Dict ——————————————————————\r\n");
     }
 

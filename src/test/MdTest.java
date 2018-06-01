@@ -42,7 +42,7 @@ public class MdTest {
     static int d=0;
     public static void main(String[] args) throws IOException, DataFormatException  {
     //assign Mdx File here!
-    	final mdict md = new mdict("C:\\antiquafortuna\\MDictPC\\doc\\简明英汉汉英词典.mdx ");
+    	final mdict md = new mdict("C:\\antiquafortuna\\MDictPC\\doc\\en-irish.mdx");
     //A keyword to search!			//简明英汉汉英词典.mdx      古生物图鉴.mdx
     	String key = "happy";//abduco@拉丁语英语		马连鞍@有毒植物		happy@English-Chinese 
     	
@@ -65,7 +65,7 @@ public class MdTest {
     	//md.printAllKeys();
         
         //![2]
-        //md.printAllContents();
+        md.printAllContents();
     	
     	//![3]match middle pattern
         if(false)
@@ -90,7 +90,7 @@ public class MdTest {
         
         /*![6]Advanced mdicts conjunction search.*/
     	/*联合搜索测试*/
-        if(true)
+        if(false)
         {	/* false  true  */
 	        CMN.show("\n\n——————————————————————searching in a bunch of dicts——————————————————————");
 	        
