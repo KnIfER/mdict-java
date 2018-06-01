@@ -33,7 +33,7 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 */
 ```
 
-# Console output:
+# Sample Console output:
 
 ```
 ——————————————————————Dict Info——————————————————————
@@ -91,7 +91,8 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 ```
 
 # details
-* use red-black tree and binary searching list to implement dict funcitons.  
+* This project was initially converted from xiaoqiangWang's [python analyzer](https://bitbucket.org/xwang/mdict-analysis). 
+* use [red-black tree](http://www.cnblogs.com/skywang12345/p/3245399.html) and binary searching list to implement dict funcitons.  
 * credits to wang's [python mdict parser](https://bitbucket.org/xwang/mdict-analysis) and Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js)).  
 
 ![image](https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg)
