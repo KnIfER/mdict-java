@@ -94,8 +94,7 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 * This project was initially converted from xiaoqiangWang's [python analyzer](https://bitbucket.org/xwang/mdict-analysis). 
 * Use [red-black tree](http://www.cnblogs.com/skywang12345/p/3245399.html) and binary searching list to implement dict funcitons.  
 * Thanks to Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js)),although I cant read tough javascript,his help have encouraged me.  
-MDX File Format
-===============
+
 <img src="https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg">
 
 # an android demo,based on [anki-helper](https://github.com/mmjang/ankihelper),is under development
