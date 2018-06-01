@@ -18,7 +18,7 @@ public class BuilderT {
     static int d=0;
     public static void main(String[] args) throws IOException{
     	mdictBuilder mdxBD = new mdictBuilder("hellowrld","ooooo","UTF-8");
-    	mdxBD.insert("happy", "happy means I posses you");
+    	mdxBD.insert("happy", "happy means I possess you");
     	mdxBD.insert("sad", "sad means I lose you");
     	mdxBD.insert("aasadad", "sad means I lose you");
     	mdxBD.insert("basdad", "sad means I lose you");
