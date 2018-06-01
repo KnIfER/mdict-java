@@ -2,7 +2,7 @@
 supports lzo,no encryption other than ripemd128 key-info encryption.  
 
 # Usage:
-### 1.Basic query.
+### 1.Basic query:
 ```
 String key = "happy";
 mdict md = new mdict(path);
@@ -13,7 +13,7 @@ if(search_result!=-1){
   //TODO handle html_contents and entry_name_at_pos
 }
 ```
-### 2.Search in a bunch of dicts.
+### 2.Search in a bunch of dicts:
 ```
 String key = "happy";
 ArrayList<mdict> mdxs = new ArrayList<mdict>();
