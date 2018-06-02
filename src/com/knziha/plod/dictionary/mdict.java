@@ -199,7 +199,8 @@ public class mdict {
 		itemBuf = new byte[4];
 		data_in.read(itemBuf, 0, 4);
     	int alder32 = getInt(itemBuf[3],itemBuf[2],itemBuf[1],itemBuf[0]);
-		assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
+		//CMN.show(alder32+":"+BU.calcChecksum(header_bytes));
+    	assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
 		_key_block_offset = 4 + header_bytes_size + 4;
 		//不必关闭文件流 data_in
 		
@@ -215,6 +216,7 @@ public class mdict {
 			_Dictionary_Name=_header_tag.get("Title");
 		
 		_encoding = _header_tag.get("Encoding");
+		//CMN.show(_encoding);
         // GB18030 > GBK > GB2312
         if(_encoding.equals("GBK")|| _encoding.equals("GB2312"))
         	_encoding = "GB18030";
@@ -385,10 +387,10 @@ long start = System.currentTimeMillis();
             
         // split record block according to the offset info from key block
         //String key_text = key_list[i];
-        long record_start = Long.valueOf(infoI.key_offsets[i])-RinfoI.decompressed_size_accumulator;
+        long record_start = infoI.key_offsets[i]-RinfoI.decompressed_size_accumulator;
         long record_end;
         if (i < key_list.length-1){
-        	record_end = Long.valueOf(infoI.key_offsets[i+1])-RinfoI.decompressed_size_accumulator; 	
+        	record_end = infoI.key_offsets[i+1]-RinfoI.decompressed_size_accumulator; 	
         }//TODO construct a margin checker
         else{
         	if(blockId+1<_key_block_info_list.length) {
@@ -399,7 +401,7 @@ long start = System.currentTimeMillis();
         		record_end = rec_decompressed_size;
         	//CMN.show(record_block.length+":"+compressed_size+":"+decompressed_size);
         }
-        
+        //CMN.show(record_start+"!"+record_end);
         byte[] record = new byte[(int) (record_end-record_start)]; 
         //CMN.show(record.length+":"+record_block.length+":"+(record_start));
         System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
@@ -445,6 +447,7 @@ long start = System.currentTimeMillis();
         	// 4 bytes adler checksum of uncompressed content
         	ByteBuffer sf1 = ByteBuffer.wrap(record_block_compressed);
             int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
+            adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
             // no compression
             if(record_block_type_str.equals(new String(new byte[]{0,0,0,0}))){
             	System.arraycopy(record_block_compressed, 8, record_block, 0, compressed_size-8);
@@ -470,7 +473,9 @@ long start = System.currentTimeMillis();
 				}  
             }
             // notice not that adler32 return signed value
-            //assert(adler32 == (BU.calcChecksum(record_block) ));
+            
+            CMN.show(adler32+"'''"+(BU.calcChecksum(record_block,0,decompressed_size)));
+            assert(adler32 == (BU.calcChecksum(record_block,0,decompressed_size) ));
             //assert(record_block.length == decompressed_size );
  //当前内容块解压完毕		
             prepared_RecordBlock_ID=Rinfo_id;
@@ -993,6 +998,7 @@ long start = System.currentTimeMillis();
                 record_block = zlib_decompress(record_block_compressed,8);
             }
             // notice not that adler32 return signed value
+            CMN.show(adler32+"!:"+BU.calcChecksum(record_block) );
             assert(adler32 == (BU.calcChecksum(record_block) ));
             assert(record_block.length == decompressed_size );
  //当前内容块解压完毕

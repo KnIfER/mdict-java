@@ -24,7 +24,7 @@ public class key_info_struct{
     public long num_entries_accumulator;
     public String[] keys;
     public long[] key_offsets;
-	public byte[] key_block_data;
+	//public byte[] key_block_data;
     public void ini(){
         keys =new String[(int) num_entries];
         key_offsets =new long[(int) num_entries];

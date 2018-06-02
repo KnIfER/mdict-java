@@ -17,15 +17,17 @@ import com.knziha.plod.dictionaryBuilder.mdictBuilder;
  */
 public class Example_build_irish2English_from_english2irish {
 	
-    static String source = "F:\\video_wrkst\\javaStation\\github\\mdict-parser-java\\assets\\en-irish.mdx";
+    static String source = "F:\\video_wrkst\\javaStation\\github\\mdict-parser-java\\assets\\En-Irish(by Pat Griffin 2007).mdx";
     public static void main(String[] args) throws IOException{
     	mdict md = new mdict(source);
     	//CMN.show(md.getEntryAt(1347));
     	//CMN.show(md.getRecordAt(1347));
     	//md.printDictInfo();
     	
-    	if(false) {
-        	mdictBuilder mdxBD = new mdictBuilder("Irish-En(converted from Pat Griffin's En-Irish by k)","Pat Griffin 2007-k 2018<br>k's dictionary factory 出品","UTF-8");
+    	if(true) {
+        	mdictBuilder mdxBD = new mdictBuilder("Irish-En(converted from Pat Griffin's En-Irish by k)",
+        			"Pat Griffin 2007-k 2018<br>k's dictionary factory 出品"
+        			,"UTF-8");
         	///*
         	 OutputStreamWriter fOut = new OutputStreamWriter(new FileOutputStream("C:\\debug.txt"));
         	 //*/	
@@ -62,10 +64,13 @@ public class Example_build_irish2English_from_english2irish {
     	
     	mdict md2 = new mdict("C:\\Irish-En.mdx");
     	md2.printDictInfo();
-    	//md.printAllKeys();
-    	//TODO 词条过长时会出错
-    	CMN.show(md2.getRecordAt(md2.lookUp("rite")));
-    	CMN.show(md2.getEntryAt(32000));//TODO add border check
+    	
+    	//CMN.show(md2.getEntryAt(1328));
+    	CMN.show(md2.getRecordAt(13280));
+    	//md.printAllKeys();//md2.lookUp("úth")
+    	//TODO entry过长时会出错 record
+    	//CMN.show(md2.getRecordAt(md2.lookUp("rite")));
+    	//CMN.show(md2.getEntryAt(32000));//TODO add border check
     	
     }
 }

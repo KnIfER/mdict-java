@@ -39,13 +39,14 @@ public class BuilderT {
     	md.printDictInfo();
     	
     	//md.printAllContents();
-    	//CMN.show(md.getRecordAt(md.lookUp("happy")));
-    	CMN.show(md.getRecordAt(md.lookUp("zz7n5uibth")));
+    	CMN.show(md.getRecordAt(md.lookUp("happy")));
+    	CMN.show(md.getRecordAt(1024));
+    	//CMN.show(md.getRecordAt(md.lookUp("zz7n5uibth")));
     	//CMN.show(md.getEntryAt(100));
     	//CMN.show(md.lookUp("happy")+"");
     	//CMN.show(mdxBD.data_tree.xxing(new myCpr("happy","")).getKey().key);
     	//CMN.show(md.getEntryAt(534));
-    	//md.printAllKeys();
+    	//md.printAllContents();
     	//md.prepareItemByKeyInfo(7);
     }
 }

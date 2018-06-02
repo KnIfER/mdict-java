@@ -46,7 +46,7 @@ public class MdTest {
     //A keyword to search!			//简明英汉汉英词典.mdx      古生物图鉴.mdx
     	String key = "happy";//abduco@拉丁语英语		马连鞍@有毒植物		happy@English-Chinese 
     	
-    	md.printDictInfo();
+    	//md.printDictInfo();
     	
     //A bunch of tests~
 
@@ -65,7 +65,7 @@ public class MdTest {
     	//md.printAllKeys();
         
         //![2]
-        md.printAllContents();
+        //md.printAllContents();
     	
     	//![3]match middle pattern
         if(false)
