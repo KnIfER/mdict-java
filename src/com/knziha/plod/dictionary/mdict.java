@@ -362,6 +362,7 @@ long start = System.currentTimeMillis();
     private void postIni() {
 	record_block = new byte[(int) maxDecompressedSize];		
 	}
+    int rec_decompressed_size;
     long maxComRecSize;
     long maxDecompressedSize;
 	private byte[] record_block;
@@ -374,19 +375,64 @@ long start = System.currentTimeMillis();
         prepareItemByKeyInfo(infoI,blockId);
         String[] key_list = infoI.keys;
 //decode record block
-        DataInputStream data_in = new DataInputStream(new FileInputStream(f));
+        // actual record block data
+        int i = (int) (position-infoI.num_entries_accumulator);
+        int Rinfo_id = accumulation_RecordB_tree.xxing(new myCpr(infoI.key_offsets[i],1)).getKey().value;
+        record_info_struct RinfoI = _record_info_struct_list[Rinfo_id];
+        
+        prepareRecordBlock(RinfoI,Rinfo_id);
+        
+            
+        // split record block according to the offset info from key block
+        //String key_text = key_list[i];
+        long record_start = Long.valueOf(infoI.key_offsets[i])-RinfoI.decompressed_size_accumulator;
+        long record_end;
+        if (i < key_list.length-1){
+        	record_end = Long.valueOf(infoI.key_offsets[i+1])-RinfoI.decompressed_size_accumulator; 	
+        }//TODO construct a margin checker
+        else{
+        	if(blockId+1<_key_block_info_list.length) {
+        		prepareItemByKeyInfo(null,blockId+1);//没办法只好重新准备一个咯
+        		//难道还能根据text末尾的0a 0d 00来分？不大好吧、
+            	record_end = _key_block_info_list[blockId+1].key_offsets[0]-RinfoI.decompressed_size_accumulator;
+        	}else
+        		record_end = rec_decompressed_size;
+        	//CMN.show(record_block.length+":"+compressed_size+":"+decompressed_size);
+        }
+        
+        byte[] record = new byte[(int) (record_end-record_start)]; 
+        //CMN.show(record.length+":"+record_block.length+":"+(record_start));
+        System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
+        // convert to utf-8
+        String record_str = new String(record,_encoding);
+        // substitute styles
+        //if self._substyle and self._stylesheet:
+        //    record = self._substitute_stylesheet(record);
+        return	record_str;           	
+
+        
+        
+        
+        
+        
+    }
+  
+    int prepared_RecordBlock_ID=-1;
+    private void prepareRecordBlock(record_info_struct RinfoI, int Rinfo_id) throws IOException {
+    	if(prepared_RecordBlock_ID==Rinfo_id)
+    		return;
+    	if(RinfoI==null)
+    		RinfoI = _record_info_struct_list[Rinfo_id];
+    	DataInputStream data_in = new DataInputStream(new FileInputStream(f));
         // record block info section
         data_in.skipBytes( (int) (_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width));
         
-        // actual record block data
-        int i = (int) (position-infoI.num_entries_accumulator);
         
-        record_info_struct RinfoI = _record_info_struct_list[accumulation_RecordB_tree.xxing(new myCpr(infoI.key_offsets[i],1)).getKey().value];
         data_in.skipBytes((int) RinfoI.compressed_size_accumulator);
         //whole section of record_blocks;
        // for(int i123=0; i123<record_block_info_list.size(); i123++){
         	int compressed_size = (int) RinfoI.compressed_size;
-        	int decompressed_size = (int) RinfoI.decompressed_size;//用于验证
+        	int decompressed_size = rec_decompressed_size = (int) RinfoI.decompressed_size;//用于验证
         	byte[] record_block_compressed = new byte[(int) compressed_size];
         	//System.out.println(compressed_size) ;
         	//System.out.println(decompressed_size) ;
@@ -426,43 +472,17 @@ long start = System.currentTimeMillis();
             // notice not that adler32 return signed value
             //assert(adler32 == (BU.calcChecksum(record_block) ));
             //assert(record_block.length == decompressed_size );
- //当前内容块解压完毕
-            
-            // split record block according to the offset info from key block
-            //String key_text = key_list[i];
-            long record_start = Long.valueOf(infoI.key_offsets[i])-RinfoI.decompressed_size_accumulator;
-            long record_end;
-            if (i < key_list.length-1){
-            	record_end = Long.valueOf(infoI.key_offsets[i+1])-RinfoI.decompressed_size_accumulator; 	
-            }
-            else{
-            	record_end = record_block.length;
-            }
-            
-            byte[] record = new byte[(int) (record_end-record_start)]; 
-            CMN.show(record.length+":"+record_block.length+":"+(record_start));
-            System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
-            // convert to utf-8
-            String record_str = new String(record,_encoding);
-            // substitute styles
-            //if self._substyle and self._stylesheet:
-            //    record = self._substitute_stylesheet(record);
-            return	record_str;           	
+ //当前内容块解压完毕		
+            prepared_RecordBlock_ID=Rinfo_id;
+	}
 
-        
-        
-        
-        
-        
-    }
-  
-    public void prepareItemByKeyInfo(int blockId){
-    	prepareItemByKeyInfo(_key_block_info_list[blockId],blockId);
-    }
+
     public long t;
     //到底要不要将key entrys存储起来？？
     public void prepareItemByKeyInfo(key_info_struct infoI,int blockId){
-        if(infoI.keys==null){
+        if(infoI==null)
+        	infoI = _key_block_info_list[blockId];
+    	if(infoI.keys==null){
         	long st=System.currentTimeMillis();
             long start = infoI.key_block_compressed_size_accumulator;
             long compressedSize;
@@ -490,8 +510,8 @@ long start = System.currentTimeMillis();
                 System.arraycopy(_key_block_compressed, (int)(start+8), arraytmp, 0,(int) (compressedSize-8));
                 //CMN.show("_key_block_compressed");
                 //ripemd128.printBytes(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
-                CMN.show(infoI.key_block_decompressed_size+"~"+infoI.key_block_compressed_size);
-                CMN.show(infoI.key_block_decompressed_size+"~"+compressedSize);
+                //CMN.show(infoI.key_block_decompressed_size+"~"+infoI.key_block_compressed_size);
+                //CMN.show(infoI.key_block_decompressed_size+"~"+compressedSize);
                 MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block,len);
                 //System.out.println("look up LZO decompressing key blocks done!");
             }
@@ -553,7 +573,9 @@ long start = System.currentTimeMillis();
 				} catch (UnsupportedEncodingException e1) {
 					e1.printStackTrace();
 				}
+				//CMN.show(keyCounter+":::"+key_text);
                 key_start_index = key_end_index + width;
+                //CMN.show(infoI.keys.length+"~~~"+keyCounter+"~~~"+infoI.num_entries);
                 infoI.keys[keyCounter]=key_text;
                 
                 infoI.key_offsets[keyCounter]=key_id;
@@ -1141,12 +1163,12 @@ long start = System.currentTimeMillis();
     //for list view
 	public String getEntryAt(int position) {
         int blockId = accumulation_blockId_tree.xxing(new myCpr(position,1)).getKey().value;
-        CMN.show(blockId+"");
+        //CMN.show(blockId+"");
         key_info_struct infoI = _key_block_info_list[blockId];
         long start = infoI.key_block_compressed_size_accumulator;
         long compressedSize;
         prepareItemByKeyInfo(infoI,blockId);
-        CMN.show(infoI.keys.length+":"+(position-infoI.num_entries_accumulator));
+        //CMN.show(infoI.keys.length+":"+(position-infoI.num_entries_accumulator));
         return infoI.keys[(int) (position-infoI.num_entries_accumulator)];
 		
 	}
@@ -1843,7 +1865,7 @@ long start = System.currentTimeMillis();
         show("|_num_record_blocks: "+this._num_record_blocks);
         show("|maxComRecSize: "+this.maxComRecSize);
         show("|maxDecompressedSize: "+this.maxDecompressedSize);
-        if(false) {
+        if(true) {
 	        int counter=0;
 	        for(key_info_struct infoI:_key_block_info_list) {
 	        	show("|"+infoI.num_entries+"@No."+counter+"||header~"+infoI.headerKeyText+"||tailer~"+infoI.tailerKeyText);
@@ -1888,7 +1910,11 @@ long start = System.currentTimeMillis();
             values <<= 8; values|= (buffer[offset+i] & 0xff);   
         }   
         return values;  
-     }     
+     }
+
+	public String getCodec() {
+		return _encoding;
+	}     
     
 }
 

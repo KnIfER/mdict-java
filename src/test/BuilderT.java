@@ -30,7 +30,7 @@ public class BuilderT {
     	mdxBD.insert("haasddd", "sad means I lose you");
     	mdxBD.insert("iaasdadd", "sad means I lose you");
     	mdxBD.insert("jaasdsadd", "sad means I lose you");
-    	//for(int i=0;i<1024;i++) mdxBD.insert(CU.getRandomString2(10), "randomly lose heart");
+    	for(int i=0;i<1024;i++) mdxBD.insert(CU.getRandomString2(10), "randomly lose heart megamegamega");
     	
     	
     	mdxBD.write("C:\\123Test.mdx");
@@ -39,7 +39,9 @@ public class BuilderT {
     	md.printDictInfo();
     	
     	//md.printAllContents();
-    	CMN.show(md.getRecordAt(11));
+    	//CMN.show(md.getRecordAt(md.lookUp("happy")));
+    	CMN.show(md.getRecordAt(md.lookUp("zz7n5uibth")));
+    	//CMN.show(md.getEntryAt(100));
     	//CMN.show(md.lookUp("happy")+"");
     	//CMN.show(mdxBD.data_tree.xxing(new myCpr("happy","")).getKey().key);
     	//CMN.show(md.getEntryAt(534));

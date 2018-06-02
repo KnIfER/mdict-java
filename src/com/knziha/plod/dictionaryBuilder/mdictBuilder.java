@@ -88,7 +88,7 @@ public class mdictBuilder{
 	    			.append(" Description=")
 	    			.append("\"").append(_about).append("\"")
 	    			.append(" Encrypted=")
-	    			.append("\"").append("NO").append("\"")
+	    			.append("\"").append("0").append("\"")//is NO valid?
 	    			.append(" Encoding=")
 	    			.append("\"").append(encoding).append("\"")
 	    			.append(" Title=")
@@ -161,7 +161,7 @@ public class mdictBuilder{
 	    	for(int blockInfo_L_I:blockInfo_L) {//写入记录块
 	    		record_info_struct RinfoI = new record_info_struct();
 	    		if(grossCompressionType==1) {//lzo压缩
-	    			dict=new int[10240];
+	    			dict=new int[102400];
 		    		ByteArrayOutputStream data_raw = new ByteArrayOutputStream();
 	    			//CMN.show(blockInfo_L[i]+":"+values.length);
 		    		for(int entryC=0;entryC<blockInfo_L_I;entryC++) {//压入内容
@@ -202,7 +202,7 @@ public class mdictBuilder{
 
 	    	for(record_info_struct RinfoI:eu_RecordblockInfo) {
 		    	fOut.writeLong(RinfoI.compressed_size+8);//INCONGRUNENTSVG unmarked
-		    	fOut.writeLong(RinfoI.decompressed_size);
+		    	fOut.writeLong(RinfoI.decompressed_size+8);//!!!INCONGRUNENTSVG unmarked
 	    	}
 	    	
 	    	FileInputStream tmpIn = new FileInputStream("C:\\\\record_tmp.mdict");  
@@ -319,7 +319,7 @@ public class mdictBuilder{
 			ArrayList<key_info_struct> list = new ArrayList<key_info_struct>();
 			key_block_compressed_size_accumulator=0;
 			while(counter>0) {
-				dict = new int[10240];//TODO reuse
+				dict = new int[102400];//TODO reuse
 				ByteBuffer key_block_data = ByteBuffer.wrap(new byte[1024*perKeyBlockSize_IE_IndexBlockSize]);
 				key_info_struct infoI = new key_info_struct();
 				long number_entries_counter = 0;
