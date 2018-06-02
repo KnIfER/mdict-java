@@ -2,7 +2,7 @@
 supports lzo,no encryption other than ripemd128 key-info encryption.  
 
 # Usage:
-### 1.Basic query.
+### 1.Basic query:
 ```
 String key = "happy";
 mdict md = new mdict(path);
@@ -13,7 +13,7 @@ if(search_result!=-1){
   //TODO handle html_contents and entry_name_at_pos
 }
 ```
-### 2.Search in a bunch of dicts.
+### 2.Search in a bunch of dicts:
 ```
 String key = "happy";
 ArrayList<mdict> mdxs = new ArrayList<mdict>();
@@ -33,7 +33,7 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 */
 ```
 
-# Console output:
+# Sample Console output:
 
 ```
 ——————————————————————Dict Info——————————————————————
@@ -91,9 +91,10 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 ```
 
 # details
-* use red-black tree and binary searching list to implement dict funcitons.  
-* credits to wang's [python mdict parser](https://bitbucket.org/xwang/mdict-analysis) and Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js)).  
+* This project was initially converted from xiaoqiangWang's [python analyzer](https://bitbucket.org/xwang/mdict-analysis). 
+* Use [red-black tree](http://www.cnblogs.com/skywang12345/p/3245399.html) and binary searching list to implement dict funcitons.  
+* Thanks to Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js)),although I cant read tough javascript,his help have encouraged me.  
 
-![image](https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg)
+<img src="https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg">
 
 # an android demo,based on [anki-helper](https://github.com/mmjang/ankihelper),is under development
