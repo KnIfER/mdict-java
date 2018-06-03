@@ -1,5 +1,6 @@
-# mdict library in java 
-supports lzo,no encryption other than ripemd128 key-info encryption.  
+# MDict Library in java 
+It supports lzo,and no encryption other than ripemd128 key-info encryption has been imple..ed now.  
+The Builder is ready to use now. An example has been uploaded in the folder /src/test/.  
 
 # Usage:
 ### 1.Basic query:
