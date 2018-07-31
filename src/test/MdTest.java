@@ -1,24 +1,12 @@
 package test;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.zip.DataFormatException;
 
 import com.knziha.plod.dictionary.CMN;
 import com.knziha.plod.dictionary.mdict;
-import com.knziha.rbtree.RBTNode;
 import com.knziha.rbtree.RBTree_additive;
-import com.knziha.rbtree.RBTree.inOrderDo;
 
 
 
@@ -42,7 +30,7 @@ public class MdTest {
     static int d=0;
     public static void main(String[] args) throws IOException, DataFormatException  {
     //assign Mdx File here!
-    	final mdict md = new mdict("C:\\antiquafortuna\\MDictPC\\doc\\en-irish.mdx");
+    	final mdict md =  new mdict("E:\\assets\\mdicts\\牛津高阶英汉双解词典.mdx");
     //A keyword to search!			//简明英汉汉英词典.mdx      古生物图鉴.mdx
     	String key = "happy";//abduco@拉丁语英语		马连鞍@有毒植物		happy@English-Chinese 
     	
@@ -76,6 +64,15 @@ public class MdTest {
 	        md.findAllKeys(key);
 	        CMN.show("模糊匹配 Contain:"+key+" time used： "+(System.currentTimeMillis()-stst)+"ms"); 
         }       
+        
+        if(true)
+        {	/* false  true  */
+	    	CMN.show("\r\n糊匹配测试START...");
+	    	key = "stizo";
+	    	stst=System.currentTimeMillis();
+	        md.findAllKeys(key);
+	        CMN.show("模糊匹配 Contain:"+key+" time used： "+(System.currentTimeMillis()-stst)+"ms"); 
+        }   
         
                 
         //![5]

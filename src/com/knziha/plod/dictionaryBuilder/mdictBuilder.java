@@ -159,7 +159,7 @@ public class mdictBuilder{
     			fOut.write(infoI.key_block_data,0,(int) infoI.key_block_compressed_size);
 	    		
 	    	}*/
-	    	FileInputStream tmpIn = new FileInputStream("C:\\\\index_tmp.mdict");  
+	    	FileInputStream tmpIn = new FileInputStream("F:\\index_tmp.mdict");  
             byte[] buf=new byte[1024];  
             int n=0;//记录实际读取到的字节数  
             while((n=tmpIn.read(buf))!=-1)  
@@ -171,7 +171,7 @@ public class mdictBuilder{
 	    	
 //![3]Encoding_record_block_header
 	    	/*numer of record blocks*/
-	    	DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream("C:\\record_tmp.mdict"));
+	    	DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream("F:\\record_tmp.mdict"));
 	    	
 	    	int posB = fOutTmp.size();
 	    	//写入内容
@@ -226,7 +226,7 @@ public class mdictBuilder{
 		    	fOut.writeLong(RinfoI.decompressed_size);//!!!INCONGRUNENTSVG unmarked
 	    	}
 	    	
-	    	tmpIn = new FileInputStream("C:\\\\record_tmp.mdict");  
+	    	tmpIn = new FileInputStream("F:\\record_tmp.mdict");  
             buf=new byte[1024];  
             n=0;//记录实际读取到的字节数  
             while((n=tmpIn.read(buf))!=-1)  
@@ -352,7 +352,7 @@ public class mdictBuilder{
 			counter=_num_entries;
 			ArrayList<key_info_struct> list = new ArrayList<key_info_struct>();
 			key_block_compressed_size_accumulator=0;
-			DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream("C:\\index_tmp.mdict"));
+			DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream("F:\\index_tmp.mdict"));
 			while(counter>0) {
 				dict = new int[102400];//TODO reuse
 				ByteBuffer key_block_data_wrap = ByteBuffer.wrap(new byte[1024*perKeyBlockSize_IE_IndexBlockSize]);

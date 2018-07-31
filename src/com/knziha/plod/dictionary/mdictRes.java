@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.Adler32;
+import java.util.zip.DataFormatException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
@@ -23,33 +24,39 @@ import java.util.zip.InflaterOutputStream;
 import com.knziha.rbtree.RBTree;
 
 
+
 /**
- * Mdict java : resource file (.mdd)
+ * Mdict java : resource file (.mdd) test
+ *	change the .mdd path(File in) and watch the output
  * @author KnIfER
  * @date 2017/12/8
  */
 
 public class mdictRes {
-	static int _encrypt=0;
-	static String _encoding="UTF-16LE";
-	static String _passcode = "";
-	static HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
-	static float _version;
-	static int _number_width;
-	static int _key_block_offset;
-	static long _record_block_offset;
-	static byte[] _key_block_compressed;
-	static key_info_struct[] _key_block_info_list;
-	static record_info_struct[] _record_info_struct_list;
-	static long _num_entries;
-    static long _num_key_blocks;
-    static long _num_record_blocks;
-    static RBTree<myCpr<Integer, Integer>> accumulation_blockId_tree = new RBTree<myCpr<Integer, Integer>>();
-    static RBTree<myCpr<Long   , Integer>> accumulation_RecordB_tree = new RBTree<myCpr<Long   , Integer>>();
-    static RBTree<myCpr<String , Integer>> block_blockId_search_tree = new RBTree<myCpr<String , Integer>>();
-    static long accumulation_blockId_tree_TIME = 0;
-    static long block_blockId_search_tree_TIME = 0;
-    static File f;
+    File f;
+	
+	int _encrypt=0;
+	String _encoding="UTF-16LE";
+	String _passcode = "";
+	HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
+	float _version;
+	int _number_width;
+	int _key_block_offset;
+	long _record_block_offset;
+	long _num_entries;public long getNumberEntrys(){return _num_entries;}
+    long _num_key_blocks;
+    long _num_record_blocks;
+    
+	byte[] _key_block_compressed;
+	key_info_struct[] _key_block_info_list;
+	record_info_struct[] _record_info_struct_list;
+
+    RBTree<myCpr<Integer, Integer>> accumulation_blockId_tree = new RBTree<myCpr<Integer, Integer>>();
+    RBTree<myCpr<Long   , Integer>> accumulation_RecordB_tree = new RBTree<myCpr<Long   , Integer>>();
+    RBTree<myCpr<String , Integer>> block_blockId_search_tree = new RBTree<myCpr<String , Integer>>();
+    long accumulation_blockId_tree_TIME = 0;
+    long block_blockId_search_tree_TIME = 0;
+    
     public static class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,T2>>{
     	public T1 key;
     	public T2 value;
@@ -134,16 +141,16 @@ public class mdictRes {
 	    return data.toByteArray();
     }
 
-    public static void main(String[] args) throws IOException  {
-//![]File in
+    //构造
+	public mdictRes(String fn) throws IOException{
+        //String url = "file:///android_asset/index.html";
+        //if (!TextUtils.isEmpty(url))
+        //    mWebView.loadUrl(url);
+        
+		//![]File in
     	//byte[] asd = new byte[]{'s',2,3,4,1,2,3,4,1,2,3,4};NameOfPlants.mdx 简明英汉汉英词典.mdx
-    	//f = new File("F:\\dictionary_wkst\\writemdict-master\\example_output\\mdd_file.mdd");
-    	//f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\古生物图鉴.mdd");
-    	//f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdd");
-    	f = new File("F:\\dictionary_wkst\\writemdict-master\\example_output\\mdd_file.mdd");
-
-    	//f = new File("C:\\antiquafortuna\\MDictPC\\doc\\javoice东京腔真人发音。日文汉字索引6.5w.mdd");
-    	
+    	//File f = new File("/sdcard/BlueDict/Dicts/简明英汉汉英词典.mdx");
+    	f = new File(fn);
     	//FileInputStream data_in =new FileInputStream(f);	
     	DataInputStream data_in =new DataInputStream(new FileInputStream(f));	
 //![0]read_header 
@@ -176,41 +183,23 @@ public class mdictRes {
             if(_encoding =="GBK"|| _encoding =="GB2312")
             	_encoding = "GB18030";
 		}
-        // encryption flag
-        //   0x00 - no encryption
-        //   0x01 - encrypt record block
-        //   0x02 - encrypt key info block
 		if(!header_tag.containsKey("Encrypted") || header_tag.get("Encrypted") == "0")
             _encrypt = 0;
 		else if(header_tag.get("Encrypted") == "1")
             _encrypt = 1;
         else
             _encrypt = Integer.valueOf(header_tag.get("Encrypted"));
-
-        // stylesheet attribute if present takes form of:
-        //   style_number # 1-255
-        //   style_begin  # or ''
-        //   style_end    # or ''
-        // store stylesheet in dict in the form of
-        // {'number' : ('style_begin', 'style_end')}
         
         if(header_tag.containsKey("StyleSheet")){
             String[] lines = header_tag.get("StyleSheet").split("[\r\n \r \n]");
             for(int i=0;i<=lines.length-3;i+=3)
                 _stylesheet.put(i,new String[]{lines[i+1],lines[i+2]});
         }
-        // before version 2.0, number is 4 bytes integer
-        // version 2.0 and above uses 8 bytes
         _version = Float.valueOf(header_tag.get("GeneratedByEngineVersion"));
-        System.out.println("_version is:"+_version);
         if(_version < 2.0)
             _number_width = 4;
-            //self._number_format = '>I'
         else
             _number_width = 8;
-            //self._number_format = '>Q'
-
-        //return header_tag
 //![0]HEADER 分析完毕 
 //_read_keys START
         //size (in bytes) of previous 5 numbers (can be encrypted)
@@ -220,7 +209,9 @@ public class mdictRes {
         else
             num_bytes = 4 * 4;
 		itemBuf = new byte[num_bytes];
-		data_in.read(itemBuf, 0, num_bytes);
+
+			data_in.read(itemBuf, 0, num_bytes);
+
         ByteBuffer sf = ByteBuffer.wrap(itemBuf);
         //TODO: pureSalsa20.py decryption
         if(_encrypt==1){if(_passcode=="") throw new IllegalArgumentException("_passcode未输入");}
@@ -230,6 +221,7 @@ public class mdictRes {
         
         long key_block_info_size = _read_number(sf);
         long key_block_size = _read_number(sf);
+        
         // adler checksum of previous 5 numbers
         if(_version >= 2.0){
             int adler32 = calcChecksum(itemBuf);
@@ -241,36 +233,20 @@ public class mdictRes {
         // read key block info, which comprises each key block's starting&&ending words' textSize&&shrinkedText、compressed && decompressed size
 		itemBuf = new byte[(int) key_block_info_size];
 		data_in.read(itemBuf, 0, (int) key_block_info_size);
-        _key_block_info_list = _decode_key_block_info(itemBuf);
+        _key_block_info_list = _decode_key_block_info(itemBuf); // key_block_info_list
         assert(_num_key_blocks == _key_block_info_list.length);
+        System.out.println("num_key_blocks ="+_num_key_blocks);  
         // read key block
-		//itemBuf = new byte[(int) key_block_size];
-		//data_in.read(itemBuf, 0, (int) key_block_size);
-        //long start=System.currentTimeMillis(); //获取开始时间  
-		//ArrayList<String[]> key_list = _decode_key_block2(itemBuf, _key_block_info_list);
-		//long end=System.currentTimeMillis(); //获取结束时间
-		//System.out.println("_decode_key_block时间： "+(end-start)+"ms"); 
-		//System.out.println(key_list.size()+":"+_num_entries); 
         _record_block_offset = _key_block_offset+num_bytes+4+key_block_info_size+key_block_size;
 //_read_keys END
-        
-		//for(myCpr<String,Integer> i:block_blockId_search_tree.flatten())
-		//	System.out.println(i);
-		
+		System.out.println(block_blockId_search_tree.sxing(new myCpr("rmt",1)) );
+		System.out.println(block_blockId_search_tree.sxing(new myCpr("rmt",1)).getKey().value );
 		System.out.println("accumulation_blockId_tree_TIME 建树时间="+accumulation_blockId_tree_TIME);
 		System.out.println("block_blockId_search_tree_TIME 建树时间="+block_blockId_search_tree_TIME); 
         
-		_key_block_compressed = new byte[(int) key_block_size];
+        _key_block_compressed = new byte[(int) key_block_size];
 		data_in.read(_key_block_compressed, 0, (int) key_block_size);
-//一、
-		long start=System.currentTimeMillis(); //获取开始时间 
-		//for(int i=0;i<26;i++){
-        lookUp(new String("red"),_key_block_compressed, _key_block_info_list);
-        //System.out.println(new String(new byte[]{(byte) ('a'+i)})); 
-        //}
-        long end=System.currentTimeMillis(); //获取结束时间
-        System.out.println("平均查询时间： "+(end-start)*1.f/26+"ms"); 
-        
+		
 //Decode record block header
         DataInputStream data_in1 = new DataInputStream(new FileInputStream(f));
         data_in1.skipBytes((int) _record_block_offset);
@@ -293,28 +269,16 @@ public class mdictRes {
             decompressed_size_accumulator+=decompressed_size;
             size_counter += _number_width * 2;
 		}
-System.out.println("_num_record_blocks: "+_num_record_blocks);
-System.out.println("_num_key_blocks: "+_num_key_blocks);
-        assert(size_counter == record_block_info_size);
-        for(int i=0;i<mdictRes._num_entries;i++)
-        CMN.show(getEntryAt(i));
-//二、
-        
-        String key = "\\css";
-        FileOutputStream fos = new FileOutputStream(new File("C:"+key));  
-        start=System.currentTimeMillis(); //获取开始时间 
-        System.out.println("查询"+key+" ： "+getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list)));
-        end=System.currentTimeMillis(); //获取结束时间
-System.out.println("查询"+key+"时间： "+(end-start)+"ms"); 
-        fos.write(getRecordAt(lookUp(key,_key_block_compressed, _key_block_info_list)));  
-        fos.close();  
-        
-        
-}
+		
+		
+		
+	}
+//构造结束
+	
     
     
 
-    public static byte[] getRecordAt(int position) throws IOException {
+    public byte[] getRecordAt(int position) throws IOException {
         int blockId = accumulation_blockId_tree.xxing(new mdictRes.myCpr(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
         long start = infoI.key_block_compressed_size_accumulator;
@@ -341,7 +305,7 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
             }
             else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
                 
-                key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
+                //key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
                 //System.out.println("zip!");
             }
             //!!spliting curr Key block
@@ -426,7 +390,15 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
             // zlib compression
             else if(record_block_type_str.equals(new String(new byte[]{02,00,00,00}))){
                 // decompress
-                record_block = zlib_decompress(record_block_compressed,8);
+                //record_block = zlib_decompress(record_block_compressed,8);
+            	record_block = new byte[(int) (decompressed_size)];
+                Inflater inf = new Inflater();
+                inf.setInput(record_block_compressed,8,(int) (compressed_size-8));
+                try {
+					int ret = inf.inflate(record_block,0,(int) decompressed_size);
+				} catch (DataFormatException e) {
+					e.printStackTrace();
+				}  
             }
             // notice not that adler32 return signed value
             assert(adler32 == (calcChecksum(record_block) ));
@@ -460,7 +432,7 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
     
     
     //for lv
-	public static String getEntryAt(int position) {
+	public String getEntryAt(int position) {
         int blockId = accumulation_blockId_tree.xxing(new mdictRes.myCpr(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
         long start = infoI.key_block_compressed_size_accumulator;
@@ -537,12 +509,10 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
 
    
     
-    public static int lookUp(String keyword,
-                            byte[] _key_block_compressed,
-                            key_info_struct[] _key_block_info_list)
+    public int lookUp(String keyword)
                             throws UnsupportedEncodingException
     {
-    	keyword = keyword.toLowerCase().replace(" ","").replace("-","");
+    	keyword = keyword.replace(" ","_");//.toLowerCase().replace(" ","").replace("-","");
         int blockId = block_blockId_search_tree.sxing(new myCpr(keyword,1)).getKey().value;
         
         while(_key_block_info_list[blockId].headerKeyText.compareTo(keyword)>0)
@@ -632,9 +602,9 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
     	if(iLen==1){
     		return 0;
     	}
-    	if(val.compareTo(array[0].toLowerCase().replace(" ","").replace("-",""))<=0){
+    	if(val.compareTo(array[0].replace(" ","_"))<=0){
 			return 0;
-    	}else if(val.compareTo(array[iLen-1].toLowerCase().replace(" ","").replace("-",""))>=0){
+    	}else if(val.compareTo(array[iLen-1].replace(" ","_"))>=0){
     		return iLen-1;
     	}
     	int counter=0;
@@ -643,8 +613,8 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
     		counter+=1;
     		//System.out.println(low+":"+high);
     		middle = (low+high)/2;
-    		houXuan1 = array[middle+1].toLowerCase().replace(" ","").replace("-","");
-    		houXuan0 = array[middle  ].toLowerCase().replace(" ","").replace("-","");
+    		houXuan1 = array[middle+1].replace(" ","_");
+    		houXuan0 = array[middle  ].replace(" ","_");
     		cprRes1=houXuan1.compareTo(val);
         	cprRes0=houXuan0.compareTo(val);
         	if(cprRes1>0&&cprRes0>=0){
@@ -662,23 +632,23 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
     	int resPreFinal;
     	if(low==high) resPreFinal = high;
     	else{
-    		resPreFinal = Math.abs(array[low].toLowerCase().replace(" ","").replace("-","").compareTo(val))>Math.abs(array[high].toLowerCase().replace(" ","").replace("-","").compareTo(val))?high:low;
+    		resPreFinal = Math.abs(array[low].replace(" ","_").compareTo(val))>Math.abs(array[high].replace(" ","_").compareTo(val))?high:low;
     	}
 		//System.out.println(resPreFinal);
 		//System.out.println("执行了几次："+counter);
-    	houXuan1 = array[resPreFinal].toLowerCase().replace(" ","").replace("-","");
+    	houXuan1 = array[resPreFinal].replace(" ","_");
 
     	if(val.length()>houXuan1.length())
     		return -1;//判为矢匹配.
     	else{
-    		if(houXuan1.substring(0,val.length()).compareTo(val)!=0)
+    		if(houXuan1.compareTo(val)!=0)
     			return -1;//判为矢匹配.
     		else return resPreFinal;//
     	}
     }
     
     
-	private static key_info_struct[] _decode_key_block_info(byte[] key_block_info_compressed) throws UnsupportedEncodingException {
+	private key_info_struct[] _decode_key_block_info(byte[] key_block_info_compressed) throws UnsupportedEncodingException {
         key_info_struct[] _key_block_info_list = new key_info_struct[(int) _num_key_blocks];
     	byte[] key_block_info;
     	if(_version >= 2)
@@ -841,13 +811,13 @@ System.out.println("查询"+key+"时间： "+(end-start)+"ms");
     }  
     
 
-	private static long _read_number(ByteBuffer sf) {
+	private long _read_number(ByteBuffer sf) {
     	if(_number_width==4)
     		return sf.getInt();
     	else
     		return sf.getLong();
 	}
-	private static long _read_number(DataInputStream  sf) {
+	private long _read_number(DataInputStream  sf) {
     	if(_number_width==4)
 			try {
 				return sf.readInt();

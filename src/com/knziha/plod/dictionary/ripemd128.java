@@ -111,6 +111,11 @@ public class ripemd128 {
     static byte[] packIntBE(int l){
     	return ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(l).array();
     }    
+	public static void printBytes2(byte[] b) {
+		for(int i=0;i<b.length;i++)
+    		System.out.print((int)(b[i]&0xff)+",");
+    	System.out.println();
+	}
     public static void printBytes(byte[] b){
     	for(int i=0;i<b.length;i++)
     		System.out.print(byteTo16(b[i])+",");
@@ -207,6 +212,8 @@ public class ripemd128 {
     	data.write(packIntLE((int) h3));
     	return data.toByteArray();
     }
+
+
 
 
 }
