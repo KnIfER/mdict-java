@@ -3,6 +3,8 @@ package com.knziha.plod.dictionary;
 
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -116,6 +118,15 @@ public class ripemd128 {
     		System.out.print((int)(b[i]&0xff)+",");
     	System.out.println();
 	}
+	public static void printBytes3(byte[] recordAt, String string) {
+		try {
+			FileOutputStream ou = new FileOutputStream(new File(string));
+			ou.write(recordAt);
+			ou.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
     public static void printBytes(byte[] b){
     	for(int i=0;i<b.length;i++)
     		System.out.print(byteTo16(b[i])+",");
@@ -212,6 +223,8 @@ public class ripemd128 {
     	data.write(packIntLE((int) h3));
     	return data.toByteArray();
     }
+
+
 
 
 

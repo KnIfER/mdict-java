@@ -2,6 +2,7 @@ package com.knziha.plod.dictionary;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.zip.Adler32;
 import java.util.zip.InflaterOutputStream;
 
@@ -47,6 +48,50 @@ public class  BU{//byteUtils
     	  return b;  
     	} 
 	
+    
+    
+    
+    public static long toLong(byte[] buffer,int offset) {   
+        long  values = 0;   
+        for (int i = 0; i < 8; i++) {    
+            values <<= 8; values|= (buffer[offset+i] & 0xff);   
+        }   
+        return values;  
+     } 
+    public static int toInt(byte[] buffer,int offset) {   
+        int  values = 0;   
+        for (int i = 0; i < 4; i++) {    
+            values <<= 8; values|= (buffer[offset+i] & 0xff);   
+        }   
+        return values;  
+     }     
+    
+    
+	static byte[] _fast_decrypt(byte[] data,byte[] key){ 
+	    long previous = 0x36;
+	    for(int i=0;i<data.length;i++){
+	    	//INCONGRUENT CONVERTION FROM byte to int
+	    	int ddd = data[i]&0xff;
+	    	long t = (ddd >> 4 | ddd << 4) & 0xff;
+	        t = t ^ previous ^ (i & 0xff) ^ (key[(i % key.length)]&0xff);
+	        previous = ddd;
+	        data[i] = (byte) t;
+        }
+	    return data;
+    }
+	
+	static byte[] _mdx_decrypt(byte[] comp_block) throws IOException{
+		ByteArrayOutputStream data = new ByteArrayOutputStream() ;
+		data.write(comp_block,4,4);
+		data.write(ripemd128.packIntLE(0x3695));
+	    byte[]  key = ripemd128.ripemd128(data.toByteArray());
+	    data.reset();
+	    data.write(comp_block,0,8);
+	    byte[] comp_block2 = new byte[comp_block.length-8];
+	    System.arraycopy(comp_block, 8, comp_block2, 0, comp_block.length-8);
+	    data.write(_fast_decrypt(comp_block2, key));
+	    return data.toByteArray();
+    }
 }
 	
 

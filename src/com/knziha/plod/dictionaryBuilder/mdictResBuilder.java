@@ -26,19 +26,21 @@ import com.knziha.rbtree.RBTree.inOrderDo;
 
 /**
  * @author KnIfER
- * @date 2018/05/31
+ * @date 2018/08/17
  */
 
-public class mdictBuilder{
+public class mdictResBuilder{
+	
+		private final String _encoding="UTF-16LE";
+		private final float _version=2.0f;
+	
     	private String _Dictionary_Name;
     	private String _about;
-		String _encoding="";
 	    private int _encrypt=0;
-	    private int grossCompressionType=1;
+	    private int grossCompressionType=2;
 		private int _number_width;
 		private String _passcode = "";
 		private HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
-		private float _version=2.0f;
 		private long _num_entries;public long getNumberEntries(){return _num_entries;}
 		private long _num_key_blocks;
 	    private long _num_record_blocks;
@@ -51,29 +53,22 @@ public class mdictBuilder{
 	    private key_info_struct[] _key_block_info_list;
 	    
 	    
-	    public RBTree<myCpr<String, String>> data_tree;
+	    public RBTree<myCpr<String, byte[]>> data_tree;
 	    
-	    public mdictBuilder(String Dictionary_Name,
-	    		String about,
-	    		String codec
+	    public mdictResBuilder(String Dictionary_Name,
+	    		String about
 	    		) {
-	    	data_tree=new RBTree<myCpr<String, String>>();
+	    	data_tree=new RBTree<myCpr<String, byte[]>>();
 	    	_Dictionary_Name=Dictionary_Name;
-	    	_about=about;
-	    	_encoding=codec;
-	    }
+	    	_about=about;	    }
 
-	    public int insert(String key,String data) {
+	    public int insert(String key,byte[] data) {
 	    	data_tree.insert(new myCpr(key,data));
 	    	return 0;
 	    }
 	    
 	    private String constructHeader() {
-	    	String encoding = _encoding;
-	        if(encoding.equals("UTF-16LE"))
-	        	encoding = "UTF-16"; //INCONGRUENT java charset          
-	        if (encoding.equals(""))
-	        	encoding = "UTF-8";
+	    	
 	    	StringBuilder sb = new StringBuilder()
 	    			.append("<Dictionary GeneratedByEngineVersion=")//v
 	    			.append("\"").append(_version).append("\"")
@@ -82,21 +77,13 @@ public class mdictBuilder{
 	    			.append(" Encrypted=")
 	    			.append("\"").append("0").append("\"")//is NO valid?
 	    			.append(" Encoding=")
-	    			.append("\"").append(encoding).append("\"")
-	    			.append(" Format=")//Format
-	    			.append("\"").append("Html").append("\"")
-	    			.append(" Compact=")//c
-	    			.append("\"").append("No").append("\"")
-	    			.append(" Compat=")//c
-	    			.append("\"").append("No").append("\"")
+	    			.append("\"").append(_encoding).append("\"")
 	    			.append(" KeyCaseSensitive=")//k
 	    			.append("\"").append("No").append("\"")
 	    			.append(" Description=")
 	    			.append("\"").append(_about).append("\"")
 	    			.append(" Title=")
 	    			.append("\"").append(_Dictionary_Name).append("\"")
-	    			.append(" StyleSheet=")
-	    			.append("\"").append("").append("\"")
 	    			.append("/>");
 	    	//sb.append()
 			return sb.toString();
@@ -184,21 +171,20 @@ public class mdictBuilder{
 		    		ByteArrayOutputStream data_raw = new ByteArrayOutputStream();
 	    			//CMN.show(blockInfo_L[i]+":"+values.length);
 		    		for(int entryC=0;entryC<blockInfo_L_I;entryC++) {//压入内容
-		    			byte[] byteContent = values[baseCounter+entryC].getBytes(_encoding);
+		    			byte[] byteContent = values.get(baseCounter+entryC);
 		    			data_raw.write(byteContent);
-		    			data_raw.write(new byte[] {0x0d,0x0a,0});
+		    			//data_raw.write(new byte[] {0x0d,0x0a,0}); no intervals here
 		    		}
 	    			
 	    			byte[] data_raw_out = data_raw.toByteArray();
 	    			RinfoI.decompressed_size = data_raw_out.length;
-	    			
-	    			if(grossCompressionType==1) {
+	    			int in_len = data_raw_out.length;
+					int out_len_preEmpt =  (in_len + in_len / 16 + 64);// + 3
+					byte[] record_block_data = new byte[out_len_preEmpt]; 
+					//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
+					if(grossCompressionType==1) {
 						fOutTmp.write(new byte[]{1,0,0,0});
 						MInt out_len = new MInt();   
-		    			int in_len = data_raw_out.length;
-						int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);
-						byte[] record_block_data = new byte[out_len_preEmpt]; 
-						//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
 		                MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
 						RinfoI.compressed_size = out_len.v;
 						//xxx
@@ -206,7 +192,7 @@ public class mdictBuilder{
 						fOutTmp.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
 						fOutTmp.write(record_block_data,0,out_len.v);
 						fOutTmp.flush();
-	    			}else if(grossCompressionType==2) {
+					}else  if(grossCompressionType==2) {
 						fOutTmp.write(new byte[]{2,0,0,0});
 						
 						byte[] buffer = new byte[1024];
@@ -260,7 +246,6 @@ public class mdictBuilder{
             tmpIn.close();
             new File(dirP,"index_tmp.mdict").delete();
             new File(dirP,"record_tmp.mdict").delete();
-            
 	    }
 	    
 	    
@@ -276,7 +261,7 @@ public class mdictBuilder{
 	    	for(key_info_struct infoI:_key_block_info_list) {
 	    		raw_data.putLong(infoI.num_entries);
 	    		byte[] hTextArray = infoI.headerKeyText.getBytes(_encoding);
-	    		raw_data.putChar((char) (_encoding.startsWith("UTF-16")?hTextArray.length/2:hTextArray.length));//TODO recollate
+	    		raw_data.putChar((char) (_encoding.startsWith("UTF-16")?hTextArray.length/2:hTextArray.length));
 	    		raw_data.put(hTextArray);
 	    		hTextArray = infoI.tailerKeyText.getBytes(_encoding);
 		    		if(!_encoding.startsWith("UTF-16")){
@@ -326,27 +311,27 @@ public class mdictBuilder{
 		long record_block_decompressed_size_accumulator;
 	    int[] dict;
 	    int [] offsets;
-	    String[] values;
+	    ArrayList<byte[]> values;
 	    Integer[] blockDataInfo_L;
 		Integer[] blockInfo_L;
 		
 		
 		
 		private void splitKeys() throws IOException {
-			final ArrayList<String> keyslist = new ArrayList<String>();
-			final ArrayList<String> valslist = new ArrayList<String>();
+			final ArrayList<String> keyslist = new ArrayList<>();
+			final ArrayList<byte[]> valslist = new ArrayList<>();
 			data_tree.SetInOrderDo(new inOrderDo() {
 				@Override
 				public void dothis(RBTNode node) {
-					keyslist.add(((myCpr<String,String>)node.getKey()).key);
-					valslist.add(((myCpr<String,String>)node.getKey()).value);
+					keyslist.add(((myCpr<String,byte[]>)node.getKey()).key);
+					valslist.add(((myCpr<String,byte[]>)node.getKey()).value);
 			}});
 			data_tree.inOrderDo();
 			long counter=
 					_num_entries=keyslist.size();
 			//calc record split
 			offsets = new int[(int) _num_entries];
-			values = valslist.toArray(new String[] {});
+			values = valslist;
 			ArrayList<Integer> blockInfo = new ArrayList<Integer>();
 			ArrayList<Integer> blockDataInfo = new ArrayList<Integer>();
 			while(counter>0) {
@@ -359,10 +344,10 @@ public class mdictBuilder{
 				blockInfo.add(0);
 				while(true) {
 					if(counter<=0) break;
-					byte[] record_data = values[(int) (_num_entries-counter)].getBytes(_encoding);
+					byte[] record_data = values.get((int) (_num_entries-counter));
 					int preJudge = blockDataInfo.get(idx)+record_data.length;
 					if(preJudge<1024*perRecordBlockSize) {//可以放入
-						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+3*((int) (_num_entries-counter));//xxx
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx  +3*((int) (_num_entries-counter))
 						record_block_decompressed_size_accumulator+=record_data.length;
 						blockDataInfo.set(idx, preJudge);
 						blockInfo.set(idx, blockInfo.get(idx)+1);//累积
@@ -410,14 +395,12 @@ public class mdictBuilder{
 				infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr);
 				infoI.key_block_decompressed_size = key_block_data_wrap.position();
 				if(grossCompressionType==1) {//lzo压缩全部
+					fOutTmp.write(new byte[]{1,0,0,0});
+					
 					int in_len = (int) infoI.key_block_decompressed_size;
-					int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);
+					int out_len_preEmpt =  (in_len + in_len / 16 + 64 );//+ 3
 					byte[] compressed_key_block_data = new byte[out_len_preEmpt]; 
 					
-					if(grossCompressionType==1) {
-						fOutTmp.write(new byte[]{1,0,0,0});
-		    	    	//fOut.write(new byte[] {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,9,9,9,9,9});
-	    			}
 					byte[] key_block_data = key_block_data_wrap.array();
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,(int) infoI.key_block_decompressed_size));
 					MInt out_len = new MInt();   
@@ -425,6 +408,27 @@ public class mdictBuilder{
 	                MiniLZO.lzo1x_1_compress(key_block_data, in_len, compressed_key_block_data, out_len, dict);
 					infoI.key_block_compressed_size = out_len.v;
 					fOutTmp.write(compressed_key_block_data,0,out_len.v);
+					fOutTmp.flush();
+				}else  if(grossCompressionType==2) {
+					fOutTmp.write(new byte[]{2,0,0,0});
+					
+					byte[] key_block_data = key_block_data_wrap.array();
+					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,(int) infoI.key_block_decompressed_size));
+					
+					byte[] buffer = new byte[1024];
+			    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			    	Deflater df = new Deflater();
+			    	df.setInput(key_block_data, 0,  (int) infoI.key_block_decompressed_size);
+			    	
+			    	df.finish();
+			    	//ripemd128.printBytes(raw_data.array(),0, raw_data.position());
+			    	//KeyBlockInfoDataLN = df.deflate(KeyBlockInfoData);
+			    	while (!df.finished()) {
+				    	  int n1 = df.deflate(buffer);
+				    	  baos.write(buffer, 0, n1);
+			    	}
+			    	infoI.key_block_compressed_size = baos.size();
+			    	fOutTmp.write(baos.toByteArray());
 					fOutTmp.flush();
 				}
 

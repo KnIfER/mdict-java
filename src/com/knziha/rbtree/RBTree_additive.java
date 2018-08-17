@@ -492,6 +492,7 @@ public class RBTree_additive {
      * 参数说明：
      *     node 插入的结点        // 对应《算法导论》中的node
      */
+    //here
     private void insert(RBTNode<additiveMyCpr1> node) {
         int cmp;
         RBTNode<additiveMyCpr1> y = null;
@@ -506,8 +507,10 @@ public class RBTree_additive {
             else if(cmp > 0)
                 x = x.right;
             else{//key 相等，value数组叠加
-            	for(Integer val:node.key.value)
-            		x.key.value.add(val);
+            	
+            	//for(Integer val:node.key.value)
+            	//	x.key.value.add(val);
+            	//x.key.value.add(val);
             	return;
             }
         }
@@ -556,13 +559,13 @@ public class RBTree_additive {
             else if(cmp > 0)
                 x = x.right;
             else{//key 相等，value数组叠加
-        		for(int i:val) x.key.value.add(i);
-            	return;
+        		for(int i:val) ((ArrayList<Integer>) x.key.value).add(i);
+            	return;//here
             }
         }
 
         additiveMyCpr1 node_key = new additiveMyCpr1(key,new ArrayList<Integer>());
-        for(int i:val) node_key.value.add(i);
+        for(int i:val) ((ArrayList<Integer>) node_key.value).add(i);//here
         RBTNode<additiveMyCpr1> node = new RBTNode<additiveMyCpr1>(node_key,BLACK,null,null,null);
 
         // 如果新建结点失败，则返回。
