@@ -46,38 +46,18 @@ import com.knziha.rbtree.additiveMyCpr1;
  * FEATURES:
  * 1. Basic parse and query functions.
  * 2. Mdicts conjunction search.
- * 3. Multithreaded search in all context text.
- * 4. Multithreaded fuzzy search in all key entries.
+ * 3. Multi-threaded search in all context text.
+ * 4. Multi-threaded fuzzy search in all key entries.
  * @author KnIfER
  * @date 2017/12/30
  */
 
 public class mdict {
 	public mdict(){};
-    public static class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,T2>>{
-    	public T1 key;
-    	public T2 value;
-    	public myCpr(T1 k,T2 v){
-    		key=k;value=v;
-    	}
-    	public int compareTo(myCpr<T1,T2> other) {
-    		if(key.getClass()==String.class) {
-    			return ((String)key)
-    					.toLowerCase().replace(" ",emptyStr).replace("-",emptyStr)
-    					.compareTo(((String)other.key)    					
-						.toLowerCase().replace(" ",emptyStr).replace("-",emptyStr)
-    							);
-    		}
-    		else
-    			return this.key.compareTo(other.key);
-    	}
-    	public String toString(){
-    		return key+"_"+value;
-    	}
-    }
+
     
-    private final static String replaceReg = " |:|\\.|,|-|\'|(|)";
-    private final static String emptyStr = "";
+    public final static String replaceReg = " |:|\\.|,|-|\'|(|)";
+    public final static String emptyStr = "";
     private final static String linkRenderStr = "@@@LINK=";
     final static byte[] _zero4 = new byte[]{0,0,0,0};
     final static byte[] _1zero3 = new byte[]{1,0,0,0};
@@ -91,7 +71,7 @@ public class mdict {
     //private RBTree<myCpr<Long   , Integer>> accumulation_RecordB_tree = new RBTree<myCpr<Long   , Integer>>();
     //RBTree<myCpr<String , Integer>> block_blockId_search_tree = new RBTree<myCpr<String , Integer>>();
     //RBTree<myCprStr<Integer>> block_blockId_search_tree = new RBTree<myCprStr<Integer>>();
-    String[] block_blockId_search_list;
+    //String[] block_blockId_search_list;
     
     protected File f;
     public String _Dictionary_fName;
@@ -101,10 +81,12 @@ public class mdict {
 	private int _number_width;
 	private String _encoding=emptyStr;
 	private Charset _charset;
+	private int delimiter_width = 1;
 	private String _passcode = emptyStr;
 	private HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
 	private float _version;
 	private long _num_entries;public long getNumberEntries(){return _num_entries;}
+	private long _key_block_info_decomp_size;
 	private long _num_key_blocks;
     private long _num_record_blocks;
     
@@ -186,14 +168,18 @@ public class mdict {
 		if(_header_tag.containsKey("Title"))
 			_Dictionary_Name=_header_tag.get("Title");
 		
-		_encoding = _header_tag.get("Encoding");
-
-		// GB18030 > GBK > GB2312
-        if(_encoding.equals("GBK")|| _encoding.equals("GB2312")) _encoding = "GB18030";
-        if(_encoding.equals("UTF-16")) _encoding = "UTF-16LE"; //INCONGRUENT java charset          
+		_encoding = _header_tag.get("Encoding").toUpperCase();
+				
+        if(_encoding.equals("GBK")|| _encoding.equals("GB2312")) _encoding = "GB18030";// GB18030 > GBK > GB2312
         if (_encoding.equals(emptyStr)) _encoding = "UTF-8";
+        if(_encoding.equals("UTF-16")) _encoding = "UTF-16LE"; //INCONGRUENT java charset
         
         _charset = Charset.forName(_encoding);
+        
+        if(_encoding.startsWith("UTF-16"))//TODO optimize
+			delimiter_width = 2;
+		else
+			delimiter_width = 1;
         
         /* encryption flag
            0x00 - no encryption
@@ -231,7 +217,7 @@ public class mdict {
             _number_width = 8;
     //![1]HEADER 分析完毕 
     //![2]_read_keys_info START
-		long st = System.currentTimeMillis();
+		//stst = System.currentTimeMillis();
         //size (in bytes) of previous 5 or 4 numbers (can be encrypted)
         int num_bytes;
         if(_version >= 2)
@@ -247,9 +233,7 @@ public class mdict {
         if(_encrypt==1){if(_passcode==emptyStr) throw new IllegalArgumentException("_passcode未输入");}
         _num_key_blocks = _read_number(sf);                                           // 1
         _num_entries = _read_number(sf);                                          // 2
-        long key_block_info_decomp_size = 0;
-        if(_version >= 2.0){key_block_info_decomp_size = _read_number(sf);}      //[3]
-        
+        if(_version >= 2.0){_key_block_info_decomp_size = _read_number(sf);}      //[3]
         _key_block_info_size = _read_number(sf);                                  // 4
         _key_block_size = _read_number(sf);                                       // 5
         
@@ -294,6 +278,130 @@ public class mdict {
 		}
     }
 
+	    private void _decode_key_block_info(byte[] key_block_info_compressed) {
+    	key_info_struct[] _key_block_info_list = new key_info_struct[(int) _num_key_blocks];
+        //block_blockId_search_list = new String[(int) _num_key_blocks];
+    	byte[] key_block_info;
+    	if(_version >= 2)
+        {   //zlib压缩
+    		//CMN.show("yes!");
+    		//byte[] asd = new byte[]{key_block_info_compressed[0],key_block_info_compressed[1],key_block_info_compressed[2],key_block_info_compressed[3]};
+    		//assert(new String(asd).equals(new String(new byte[]{2,0,0,0})));
+
+    		//处理 Ripe128md 加密的 key_block_info
+    		if(_encrypt==2){try{
+                key_block_info_compressed = BU._mdx_decrypt(key_block_info_compressed);
+                } catch (IOException e) {e.printStackTrace();}}
+			//!!!getInt CAN BE NEGTIVE ,INCONGRUENT to python CODE
+    		//!!!MAY HAVE BUG
+            //int adler32 = getInt(key_block_info_compressed[4],key_block_info_compressed[5],key_block_info_compressed[6],key_block_info_compressed[7]);
+            key_block_info = zlib_decompress(key_block_info_compressed,8);
+            //assert(adler32 == (BU.calcChecksum(key_block_info) ));
+            //ripemd128.printBytes(key_block_info,0, key_block_info.length);
+        }
+        else
+            key_block_info = key_block_info_compressed;
+    	// decoding……
+        //ByteBuffer sf = ByteBuffer.wrap(key_block_info);
+        long key_block_compressed_size = 0;
+        int accumulation_ = 0;//how many entries before one certain block.for construction of a list.
+        //遍历blocks
+        int bytePointer =0 ;
+        for(int i=0;i<_key_block_info_list.length;i++){
+        	int textbufferST,textbufferLn;
+        	accumulation_blockId_tree.insert(new myCpr<Integer, Integer>(accumulation_,i));
+            //read in number of entries in current key block
+            if(_version<2) {
+	            _key_block_info_list[i] = new key_info_struct(BU.toInt(key_block_info,bytePointer),accumulation_);
+	            bytePointer+=4;
+            }
+            else {
+            	//CMN.show(key_block_info_compressed.length+":"+key_block_info.length+":"+bytePointer);
+            	_key_block_info_list[i] = new key_info_struct(BU.toLong(key_block_info,bytePointer),accumulation_);
+            	bytePointer+=8;
+            }
+            key_info_struct infoI = _key_block_info_list[i];
+            accumulation_ += infoI.num_entries;
+            //CMN.show("infoI.num_entries::"+infoI.num_entries);
+        //![0] head word text
+            int text_head_size;
+            if(_version<2)
+            	text_head_size = key_block_info[bytePointer++];
+        	else {
+        		text_head_size = toChar(key_block_info,bytePointer);
+        		bytePointer+=2;
+        	}
+        	textbufferST=bytePointer;
+            if(!_encoding.startsWith("UTF-16")){
+            	textbufferLn=text_head_size;
+                if(_version>=2)
+            	bytePointer++;         
+            }else{
+            	textbufferLn=text_head_size*2;
+                if(_version>=2)
+                bytePointer+=2;           
+            }
+
+            infoI.headerKeyText = new byte[textbufferLn];
+            System.arraycopy(key_block_info, textbufferST, infoI.headerKeyText, 0, textbufferLn);
+            
+            
+        	bytePointer+=textbufferLn;
+        	
+            
+        //![1]  tail word text
+            int text_tail_size;
+            if(_version<2)
+            	text_tail_size = key_block_info[bytePointer++];
+        	else {
+        		text_tail_size = toChar(key_block_info,bytePointer);
+        		bytePointer+=2;
+        	}
+            textbufferST=bytePointer;
+            if(!_encoding.startsWith("UTF-16")){
+            	textbufferLn=text_tail_size;
+                if(_version>=2)
+            	bytePointer++;         
+            }else{
+            	textbufferLn=text_tail_size*2;
+                if(_version>=2)
+            	bytePointer+=2;       
+            }
+
+            infoI.tailerKeyText = new byte[textbufferLn];
+            System.arraycopy(key_block_info, textbufferST, infoI.tailerKeyText, 0, textbufferLn);
+            
+        	bytePointer+=textbufferLn;
+        	
+            //show(infoI.tailerKeyText+"~tailerKeyText");
+
+            infoI.key_block_compressed_size_accumulator = key_block_compressed_size;
+            if(_version<2){//may reduce
+            	infoI.key_block_compressed_size = BU.toInt(key_block_info,bytePointer);
+            	key_block_compressed_size += infoI.key_block_compressed_size;
+            	bytePointer+=4;
+            	infoI.key_block_decompressed_size = BU.toInt(key_block_info,bytePointer);
+            	bytePointer+=4;
+            }else{
+            	infoI.key_block_compressed_size = BU.toLong(key_block_info,bytePointer);
+            	maxComKeyBlockSize = Math.max(infoI.key_block_compressed_size, maxComKeyBlockSize);
+            	key_block_compressed_size += infoI.key_block_compressed_size;
+            	bytePointer+=8;
+            	infoI.key_block_decompressed_size = BU.toLong(key_block_info,bytePointer);
+            	maxDecomKeyBlockSize = Math.max(infoI.key_block_decompressed_size, maxDecomKeyBlockSize);
+
+            	bytePointer+=8;
+            }
+            //CMN.show("infoI.key_block_decompressed_size::"+infoI.key_block_decompressed_size);
+            //CMN.show("infoI.key_block_compressed_size::"+infoI.key_block_compressed_size);
+            
+            //block_blockId_search_list[i] = infoI.headerKeyText;
+        }
+        key_block_info=null;
+        //assert(accumulation_ == self._num_entries)
+        this._key_block_info_list =  _key_block_info_list;
+	}
+	
     void decode_record_block_header() throws IOException{
         //![3]Decode_record_block_header
         long start = System.currentTimeMillis();
@@ -370,12 +478,12 @@ public class mdict {
     	if(record_block==null)
     		decode_record_block_header();
     	if(position<0||position>=_num_entries) return null;
-        int blockId = accumulation_blockId_tree.xxing(new myCpr(position,1)).getKey().value;
+        int blockId = accumulation_blockId_tree.xxing(new myCpr<Integer,Integer>(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
         
         //准备
         prepareItemByKeyInfo(infoI,blockId,null);
-        String[] key_list = infoI_cache_.keys;
+        //String[] key_list = infoI_cache_.keys;
         
         //decode record block
         // actual record block data
@@ -390,7 +498,7 @@ public class mdict {
         //String key_text = key_list[i];
         long record_start = infoI_cache_.key_offsets[i]-RinfoI.decompressed_size_accumulator;
         long record_end;
-        if (i < key_list.length-1){
+        if (i < infoI.num_entries-1){
         	record_end = infoI_cache_.key_offsets[i+1]-RinfoI.decompressed_size_accumulator; 	
         }//TODO construct a margin checker
         else{
@@ -480,9 +588,9 @@ public class mdict {
 	}
 
     class cached_key_block{
-    	String[] keys;
+    	byte[][] keys;
     	long[] key_offsets;
-    	String hearderText="";
+    	byte[] hearderText=null;
     	int blockID=-1;
     }
     final private cached_key_block infoI_cache_ = new cached_key_block();
@@ -496,7 +604,7 @@ public class mdict {
     	  try {
 	        if(infoI==null)
 	        	infoI = _key_block_info_list[blockId];
-    		infoI_cache.keys = new String[(int) infoI.num_entries];
+    		infoI_cache.keys = new byte[(int) infoI.num_entries][];
 			infoI_cache.key_offsets = new long[(int) infoI.num_entries];
 			infoI_cache.blockID = blockId;
             infoI_cache.hearderText = infoI.headerKeyText;
@@ -550,8 +658,7 @@ public class mdict {
             }
             /*!!spliting curr Key block*/
             int key_start_index = 0;
-            String delimiter;
-            int width = 0,i1=0,key_end_index=0;
+            int key_end_index=0;
             
             int keyCounter = 0;
             
@@ -564,24 +671,17 @@ public class mdict {
             	else
             		key_id = sf.getLong(key_start_index);//Key_ID
                 //show("key_id"+key_id);
-                if(_encoding.startsWith("UTF-16")){//TODO optimize
-                    width = 2;
-                    key_end_index = key_start_index + _number_width;  
-                    while(i1<key_block.length){
-                    	if(key_block[key_end_index]==0 && key_block[key_end_index+1]==0)
-                    		break;
-                    	key_end_index+=width;
-                    }
-                }else{
-                    width = 1;
-                    key_end_index = key_start_index + _number_width;  
-                    while(i1<key_block.length){
-                    	//CMN.show(key_block.length+"_"+key_end_index);
-                    	if(key_block[key_end_index]==0)
-                    		break;
-                    	key_end_index+=width;
-                    }
-                }
+                key_end_index = key_start_index + _number_width;  
+                SK_DELI:
+				  while(key_end_index+delimiter_width<key_block.length){
+					for(int sker=0;sker<delimiter_width;sker++) {
+						if(key_block[key_end_index+sker]!=0) {
+							key_end_index+=delimiter_width;
+							continue SK_DELI;
+						}
+					}
+					break;
+				 }
 
                 //show("key_start_index"+key_start_index);
                 //byte[] arraytmp = new byte[key_end_index-(key_start_index+_number_width)];
@@ -589,17 +689,19 @@ public class mdict {
 
 
                 String key_text = null;
-				try {
-					//key_text = new String(arraytmp,_encoding);
-					key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset);
-				} catch (Exception e1) {
-					e1.printStackTrace();
-				}
+
+				//key_text = new String(arraytmp,_encoding);
+				//key_text = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width));
+
+                infoI_cache.keys[keyCounter] = new byte[key_end_index-(key_start_index+_number_width)];
+                System.arraycopy(key_block, key_start_index+_number_width, infoI_cache.keys[keyCounter], 0, key_end_index-(key_start_index+_number_width));
+                
+                
 				//CMN.show(keyCounter+":::"+key_text);
-                key_start_index = key_end_index + width;
+                key_start_index = key_end_index + delimiter_width;
                 
                 //CMN.show(infoI.keys.length+"~~~"+keyCounter+"~~~"+infoI.num_entries);
-                infoI_cache.keys[keyCounter]=key_text;
+                //infoI_cache.keys[keyCounter]=key_text;
                 infoI_cache.key_offsets[keyCounter]=key_id;
                 keyCounter++;
             }
@@ -633,7 +735,7 @@ public class mdict {
 			data_in.skip(_key_block_offset+start);
 			byte[]  _key_block_compressed = new byte[(int) compressedSize];
 			data_in.read(_key_block_compressed, (int)(0), _key_block_compressed.length);
-			
+			data_in.close();
 			
             byte[] key_block_compression_type = new byte[]{_key_block_compressed[(int) 0],_key_block_compressed[(int) (+1)],_key_block_compressed[(int) (+2)],_key_block_compressed[(int) (+3)]};
             if(compareByteArrayIsPara(key_block_compression_type, _zero4)){
@@ -671,10 +773,10 @@ public class mdict {
                 blockId++;
 
 			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
         }
@@ -686,8 +788,9 @@ public class mdict {
     	int blockCounter = 0;
     	for(key_info_struct infoI:_key_block_info_list){
     		prepareItemByKeyInfo(infoI,blockCounter,null);
-    		for(String entry:infoI_cache_.keys){
-    			show(entry);
+    		for(byte[] entry:infoI_cache_.keys){
+    			String kk = new String(entry);
+    				show(kk);
     		}
     		show("block no."+(blockCounter++)+"printed");
     	}
@@ -698,9 +801,10 @@ public class mdict {
     	int blockCounter = 0;
     	for(key_info_struct infoI:_key_block_info_list){
     		prepareItemByKeyInfo(infoI,blockCounter,null);
-    		for(String entry:infoI_cache_.keys){
-    			if(entry.contains(keyword))
-    				show(entry);
+    		for(byte[] entry:infoI_cache_.keys){
+    			String kk = new String(entry);
+    			if(kk.contains(keyword))
+    				show(kk);
     		}
     		blockCounter++;
     	}
@@ -751,7 +855,7 @@ public class mdict {
             }
             // lzo compression
             else if(record_block_type_str.equals(new String(new byte[]{1,0,0,0}))){
-                long st=System.currentTimeMillis(); //获取开始时间 
+                //stst=System.currentTimeMillis(); //获取开始时间 
                 record_block = new byte[(int) decompressed_size];
                 MInt len = new MInt((int) decompressed_size);
                 byte[] arraytmp = new byte[(int) compressed_size];
@@ -780,289 +884,12 @@ public class mdict {
             fOut.append(record_str).append("\n");
             
         }
+        data_in.close();
         fOut.close();
     }
     
     volatile int thread_number_count = 1;
-
-    //find in all texts(multithread)
-    public void findAllContents_MT(String keyword) throws IOException, DataFormatException{
-    	
-    	//final byte[] key = _key.getBytes(_encoding);
-    	final byte[][] keys = new byte[][] {keyword.getBytes(_encoding),keyword.toUpperCase().getBytes(_encoding),(keyword.substring(0,1).toUpperCase()+keyword.substring(1)).getBytes(_encoding)};
-
- 	    if(_key_block_info_list==null) read_key_block_info();
-
-    	if(record_block==null)
-    		decode_record_block_header();
-    	
-        fetch_keyBlocksHeaderTextKeyID();
-        
-        final int thread_number = 5;
-        thread_number_count = thread_number;
-        final int step = (int) (_num_record_blocks/thread_number);
-    	final int yuShu=(int) (_num_record_blocks%thread_number);
-        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(thread_number);
-        for(int ti=0; ti<thread_number; ti++){//分  thread_number 股线程运行
-	    	final int it = ti;
-	        fixedThreadPool.execute(
-	        new Runnable(){@Override public void run() 
-	        {
-	            final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
-	            final byte[] record_block = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
-	            final cached_key_block infoI_cacheI = new cached_key_block();
-	            try 
-	            {
-		            FileInputStream data_in = new FileInputStream(f);
-		            data_in.skip(_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width);
-		            int jiaX=0;
-		            if(it==thread_number-1) jiaX=yuShu;
-	            	for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
-	            	{
-	                    final int RidxI=i;
-	                    record_info_struct RinfoI = _record_info_struct_list[i];
-	                    
-	                    int compressed_size = (int) RinfoI.compressed_size;
-	                    int decompressed_size = (int) RinfoI.decompressed_size;
-	                    data_in.read(record_block_compressed,0, compressed_size);//,0, compressed_size
-	                    byte[] record_block_type = new byte[4];
-	                    System.arraycopy(record_block_compressed, 0, record_block_type, 0, 4);
-	                    
-	                    //解压开始
-	                    if(compareByteArrayIsPara(record_block_type,_zero4)){
-	                        System.arraycopy(record_block_compressed, 8, record_block, 0, compressed_size-8);
-	                    }
-	                    else if(compareByteArrayIsPara(record_block_type,_1zero3)){
-	                        MInt len = new MInt((int) decompressed_size);
-	                        byte[] arraytmp = new byte[ compressed_size];
-	                        System.arraycopy(record_block_compressed, 8, arraytmp, 0, (compressed_size-8));
-	                        MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block,len);
-	                    }
-	                    else if(compareByteArrayIsPara(record_block_type,_2zero3)){    
-	                        Inflater inf = new Inflater();
-	                        inf.setInput(record_block_compressed,8,compressed_size-8);
-	                        int ret = inf.inflate(record_block,0,decompressed_size);  				
-	                    }
-	                    //内容块解压完毕
-	                    for(byte[] keyI:keys) 
-	                    {
-		                    int idx = indexOf(record_block,0,decompressed_size,keyI,0,keyI.length,0);
-		                    while(idx!=-1){
-		                        long off = RinfoI.decompressed_size_accumulator+idx;
-		                        int key_block_id = binary_find_closest(keyBlocksHeaderTextKeyID,off);
-		                        prepareItemByKeyInfo(null,key_block_id,infoI_cacheI);
-		                        long[] ko = infoI_cacheI.key_offsets;
-		                        int relative_pos = binary_find_closest(ko,off);
-		                        int pos = (int) (_key_block_info_list[key_block_id].num_entries_accumulator+relative_pos);
-		                        show(getEntryAt(pos,infoI_cacheI));
-		                        //show(idx+" "+RidxI);
-		                        //byte[] digest = new byte[512];
-		                        //System.arraycopy(record_block, idx, digest, 0, digest.length);
-		                        //show(new String(digest,_encoding));
-		                        int recordodKeyLen = 0;
-		                        if(relative_pos<ko.length-1){//不是最后一个entry
-		                        	recordodKeyLen=(int) (ko[relative_pos+1]-ko[relative_pos]);
-				                    idx = indexOf(record_block,0,decompressed_size,keyI,0,keyI.length,idx+recordodKeyLen);
-		                        }
-		                        else if(key_block_id<keyBlocksHeaderTextKeyID.length-1){//不是最后一块key block
-		                        	recordodKeyLen=(int) (keyBlocksHeaderTextKeyID[key_block_id+1]-ko[relative_pos]);
-				                    idx = indexOf(record_block,0,decompressed_size,keyI,0,keyI.length,idx+recordodKeyLen);
-		                        }
-	                        	else
-	    		                    idx = -1;
-		                    }	    
-	                    }
-	                }
-	                
-	            }catch (FileNotFoundException e) {
-	                e.printStackTrace();
-	            } catch (DataFormatException e) {
-	                e.printStackTrace();
-	            } catch (IOException e) {
-	                e.printStackTrace();
-	            }finally{
-	            	thread_number_count--;
-	            }
-	        }});
-        }
-        fixedThreadPool.execute(
-        new Runnable(){@Override public void run() 
-        {
-        	while(thread_number_count>0){
-        		try {
-					Thread.sleep(5);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-        	}
-        	show("done! time cosumption is :"+(System.currentTimeMillis()-stst));
-        }});
-        fixedThreadPool.shutdown();
-    }
-    
-    
-    
     int split_recs_thread_number;
-    public void flowerFindAllContents_mega(String key,int selfAtIdx,int theta) throws IOException, DataFormatException{
-    	final byte[][] keys = new byte[][] {key.getBytes(_encoding),key.toUpperCase().getBytes(_encoding),(key.substring(0,1).toUpperCase()+key.substring(1)).getBytes(_encoding)};
-
-    	
-    	final byte[][][] matcher = new byte[2][][];
-    	key = key.toLowerCase();
-		matcher[0] = flowerSanLieZhi(key);
-		String upperKey = key.toUpperCase();
-		if(!upperKey.equals(key))
-		matcher[1] = flowerSanLieZhi(upperKey);
-		
- 	    if(_key_block_info_list==null) read_key_block_info();
-
-    	if(record_block==null)
-    		decode_record_block_header();
-    	
-        fetch_keyBlocksHeaderTextKeyID();
-        
-
-        show("availableProcessors: "+Runtime.getRuntime().availableProcessors());
-        show("_num_record_blocks: "+_num_record_blocks);
-        
-        split_recs_thread_number = _num_record_blocks<6?1:(int) (_num_record_blocks/6);//Runtime.getRuntime().availableProcessors()/2*2+10;
-        split_recs_thread_number = split_keys_thread_number>16?16:split_keys_thread_number;
-        
-        final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+2, split_recs_thread_number);	     
-	     
-        final int step = (int) (_num_record_blocks/split_recs_thread_number);
-    	final int yuShu=(int) (_num_record_blocks%split_recs_thread_number);
-    	
-		if(combining_search_tree_4==null)
-			combining_search_tree_4 = new ArrayList[split_recs_thread_number];
-    	
-		poolEUSize = dirtykeyCounter =0;
-		
-        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(thread_number);
-        for(int ti=0; ti<split_recs_thread_number; ti++){//分  thread_number 股线程运行
-        	if(searchCancled) break;
-	    	final int it = ti;
-	    	if(split_recs_thread_number>thread_number) while (poolEUSize>=thread_number) {
-				  try {
-					Thread.sleep(5);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}  
-				} 
-
-            if(combining_search_tree_4[it]==null)
-            	combining_search_tree_4[it] = new ArrayList<Integer>();
-            
-            if(split_recs_thread_number>thread_number) countDelta(1);
-	        fixedThreadPool.execute(
-	        new Runnable(){@Override public void run() 
-	        {
-	        	if(searchCancled) { poolEUSize=0; return; }
-	            byte[] record_block = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
-	            cached_key_block infoI_cacheI = new cached_key_block();
-	            try 
-	            {
-	            	int jiaX=0;
-		            if(it==split_recs_thread_number-1) jiaX=yuShu;
-		            
-	            	//小循环	
-	            	long compressedSize_many=0;
-					for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
-						   //prepareItemByKeyInfo(_key_block_info_list[blockCounter],blockCounter);
-						   record_info_struct RinfoI = _record_info_struct_list[blockId];
-						   if(blockId==_record_info_struct_list.length-1)
-							   compressedSize_many += _record_block_size - _record_info_struct_list[_record_info_struct_list.length-1].compressed_size_accumulator;
-						   else
-							   compressedSize_many += _record_info_struct_list[blockId+1].compressed_size_accumulator-RinfoI.compressed_size_accumulator;
-					}
-					byte[] record_block_compressed = new byte[(int) compressedSize_many];
-		            FileInputStream data_in = new FileInputStream(f);
-	            	long offStart = _record_info_struct_list[it*step].compressed_size_accumulator;
-		            data_in.skip(offStart+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width);
-		            data_in.read(record_block_compressed);
-	            	data_in.close();
-		            
-	            	
-	            	for(int i=it*step; i<it*step+step+jiaX; i++)//大循环
-	            	{
-	            		if(searchCancled) { poolEUSize=0; return; }
-	                    record_info_struct RinfoI = _record_info_struct_list[i];
-	                    
-	                    int compressed_size = (int) RinfoI.compressed_size;
-	                    int decompressed_size = (int) RinfoI.decompressed_size;
-	                    
-	                    int currOff = (int)(RinfoI.compressed_size_accumulator-offStart);
-	                    //解压开始
-	                    if(compareByteArrayIsPara(record_block_compressed,currOff,_zero4)){
-	                        System.arraycopy(record_block_compressed, currOff+8, record_block, 0, compressed_size-8);
-	                    }
-	                    else if(compareByteArrayIsPara(record_block_compressed,currOff,_1zero3)){
-	                    	//MInt len = new MInt((int) decompressed_size);
-	                        //byte[] arraytmp = new byte[ compressed_size];
-	                        //System.arraycopy(record_block_compressed, currOff+8, arraytmp, 0, (compressed_size-8));
-	                        //MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block,len);
-	                        new LzoDecompressor1x().decompress(record_block_compressed, currOff+8, (compressed_size-8), record_block, 0, new lzo_uintp());
-	                    }
-	                    else if(compareByteArrayIsPara(record_block_compressed,currOff,_2zero3)){    
-	                        Inflater inf = new Inflater();
-	                        inf.setInput(record_block_compressed,currOff+8,compressed_size-8);
-	                        inf.inflate(record_block,0,decompressed_size);  				
-	                    }
-	                    //内容块解压完毕
-                    	long off = RinfoI.decompressed_size_accumulator;
-                    	int key_block_id = binary_find_closest(keyBlocksHeaderTextKeyID,off);
-                    	OUT:
-                    	while(true) {
-                    		if(key_block_id>=_key_block_info_list.length) break;
-                    		prepareItemByKeyInfo(null,key_block_id,infoI_cacheI);
-                    		long[] ko = infoI_cacheI.key_offsets;
-                    		//show("binary_find_closest "+binary_find_closest(ko,off)+"  :  "+off);
-	                    	for(int relative_pos=binary_find_closest(ko,off);relative_pos<ko.length;relative_pos++) {
-	                    		int recordodKeyLen = 0;
-		                    	if(relative_pos<ko.length-1){//不是最后一个entry
-		                    		recordodKeyLen=(int) (ko[relative_pos+1]-ko[relative_pos]);
-		                    	}
-		                    	else if(key_block_id<keyBlocksHeaderTextKeyID.length-1){//不是最后一块key block
-		                    		recordodKeyLen=(int) (keyBlocksHeaderTextKeyID[key_block_id+1]-ko[relative_pos]);
-		                    	}else {
-		                    		recordodKeyLen = (int) (decompressed_size-ko[ko.length-1]);
-		                    	}
-		                    	//show(getEntryAt(relative_pos,infoI_cacheI));
-		                    	//CMN.show(record_block.length-1+" ko[relative_pos]: "+ko[relative_pos]+" recordodKeyLen: "+recordodKeyLen+" end: "+(ko[relative_pos]+recordodKeyLen-1));
-		                    	if(ko[relative_pos]-RinfoI.decompressed_size_accumulator+recordodKeyLen>decompressed_size-1) {
-		                    		//show("break OUT");
-		                    		break OUT;
-		                    	}
-		                    	
-		                    	//if(indexOf(record_block,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,keys[0],0,keys[0].length,0)!=-1) {
-		                    	if(flowerIndexOf(record_block,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,matcher,0,0)!=-1) {
-		                    		int pos = (int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator);
-		                    		//String LexicalEntry = getEntryAt(pos,infoI_cacheI);
-		                    		fuzzyKeyCounter++;
-		                    		//show(pos);
-		                    		//ripemd128.printBytes(record_block,offIdx,recordodKeyLen);
-		                    		//CMN.show(new String(record_block,offIdx,recordodKeyLen));
-		                    		//combining_search_tree233[it].add(new additiveMyCpr1(LexicalEntry,pos));
-		                    		combining_search_tree_4[it].add(pos);
-		                    	}
-		                    	dirtykeyCounter++;
-	                    	}
-	                    	key_block_id++;
-                    	}
-	                }
-	            } catch (Exception e) {e.printStackTrace();}
-            	//thread_number_count--;
-	            if(split_recs_thread_number>thread_number) countDelta(-1);
-	        }});
-        }
-        fixedThreadPool.shutdown();
-		try {
-			fixedThreadPool.awaitTermination(1, TimeUnit.MINUTES);
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
-		}
-    }
-    
     public void flowerFindAllContents(String key,int selfAtIdx,int theta) throws IOException, DataFormatException{
     	final byte[][] keys = new byte[][] {key.getBytes(_charset),key.toUpperCase().getBytes(_charset),(key.substring(0,1).toUpperCase()+key.substring(1)).getBytes(_charset)};
 
@@ -1200,10 +1027,12 @@ public class mdict {
 		                    	//if(indexOf(record_block,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,keys[0],0,keys[0].length,0)!=-1) {
 		                    	if(flowerIndexOf(record_block,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,matcher,0,0)!=-1) {
 		                    		int pos = (int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator);
-		                    		//String LexicalEntry = getEntryAt(pos,infoI_cacheI);
 		                    		fuzzyKeyCounter++;
+		                    		
+		                    		//String LexicalEntry = getEntryAt(pos,infoI_cacheI);
 		                    		//show(getEntryAt(pos,infoI_cacheI));
 		                    		//ripemd128.printBytes(record_block,offIdx,recordodKeyLen);
+		                    		
 		                    		combining_search_tree_4[it].add(pos);
 		                    	}
 		                    	dirtykeyCounter++;
@@ -1227,7 +1056,7 @@ public class mdict {
     }
     
     
-
+	
     /*
      * https://stackoverflow.com/questions/21341027/find-indexof-a-byte-array-within-another-byte-array
      * Gustavo Mendoza's Answer*/
@@ -1278,15 +1107,15 @@ public class mdict {
         key_info_struct infoI = _key_block_info_list[blockId];
         prepareItemByKeyInfo(infoI,blockId,null);
         //CMN.show(infoI.keys.length+":"+(position-infoI.num_entries_accumulator));
-        return infoI_cache_.keys[(int) (position-infoI.num_entries_accumulator)];
+        return new String(infoI_cache_.keys[(int) (position-infoI.num_entries_accumulator)],_charset);
 	}
 	
-	public String getEntryAt(int position,cached_key_block infoI_cacheI) throws UnsupportedEncodingException {
+	public String getEntryAt(int position,cached_key_block infoI_cacheI) {
 		if(_key_block_info_list==null) read_key_block_info();
         int blockId = accumulation_blockId_tree.xxing(new myCpr(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
-        String pre = infoI_cacheI.keys[(int) (position-infoI.num_entries_accumulator)];
-        return new String(pre.getBytes(_encoding),_charset);
+        String pre = new String(infoI_cacheI.keys[(int) (position-infoI.num_entries_accumulator)],_charset);
+        return pre;
 	}
 	
 	public int split_keys_thread_number;
@@ -1335,13 +1164,6 @@ public class mdict {
 	 	 
   }
   
-
- 
-
-
-
-
-
 //XXX2
 public void flowerFindAllKeys(String key,
         final int SelfAtIdx,int theta) throws UnsupportedEncodingException
@@ -1487,7 +1309,7 @@ int flowerIndexOf(byte[] source, int sourceOffset, int sourceCount, byte[][][] m
 	int lastSeekLetSize=0;
 	while(fromIndex<sourceCount) {
 		//CMN.show("==");
-		int idx = -1;
+		//int idx = -1;
 		int fromIndex_=fromIndex;
 		boolean isSeeking=true;
 		boolean Matched = false;
@@ -1509,7 +1331,7 @@ int flowerIndexOf(byte[] source, int sourceOffset, int sourceCount, byte[][][] m
 				if(newSrcCount<=0)
 					return -1;
 				String c = new String(source,sourceOffset+fromIndex_,newSrcCount,_charset);
-				int jumpShort = c.substring(0, 1).getBytes(_encoding).length;
+				int jumpShort = c.substring(0, 1).getBytes(_charset).length;
 				fromIndex_+=jumpShort;
 				continue;
 			}else if(yueji.contains(lexiPartIdx)) {
@@ -1590,20 +1412,11 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 }
  
  
- 
- 
- 
- 
- 
- 
- 
- 
- 
     protected void find_in_keyBlock(byte[] key_block,key_info_struct infoI,byte[][][] matcher,int SelfAtIdx,int it) {
 	 //!!spliting curr Key block
        int key_start_index = 0;
-       String delimiter;
-       int width = 0,i1=0,key_end_index=0;
+       //String delimiter;
+       int key_end_index=0;
        //int keyCounter = 0;
        
        ByteBuffer sf = ByteBuffer.wrap(key_block);//must outside of while...
@@ -1617,24 +1430,20 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
         	   	  sf.position(8);
                //key_id = sf.getLong(key_start_index);//Key_ID
            //show("key_id"+key_id);
-           if(_encoding.startsWith("UTF-16")){//TODO optimize
-               width = 2;
-               key_end_index = key_start_index + _number_width;  
-               while(i1<key_block.length){
-                   if(key_block[key_end_index]==0 && key_block[key_end_index+1]==0)
-                       break;
-                   key_end_index+=width;
-               }
-           }else{
-               width = 1;
-               key_end_index = key_start_index + _number_width;  
-               while(i1<key_block.length){
-                   if(key_block[key_end_index]==0)
-                       break;
-                   key_end_index+=width;
-               }
-           }
-     if(true)
+           key_end_index = key_start_index + _number_width;  
+
+           SK_DELI:
+		  while(true){
+			for(int sker=0;sker<delimiter_width;sker++) {
+				if(key_block[key_end_index+sker]!=0) {
+					key_end_index+=delimiter_width;
+					continue SK_DELI;
+				}
+			}
+			break;
+		  }
+           
+           if(true)
 		try {
 			//TODO: alter
 			//xxxx
@@ -1664,162 +1473,22 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 		}
 
 
-           key_start_index = key_end_index + width;
+           key_start_index = key_end_index + delimiter_width;
            keyCounter++;dirtykeyCounter++;
        }
        //assert(adler32 == (calcChecksum(key_block)));	
 }
- 
-   
-  //XXX2
-    public void findAllKeysOld(final String keyword,
-            final int SelfAtIdx,int theta) throws UnsupportedEncodingException
-    	{		
-    	  if(_key_block_info_list==null) read_key_block_info();
-       
-       keywordArray = keyword.getBytes(_encoding);
-       keywordArrayC1 = keyword.length()>0?(keyword.substring(0,1).toUpperCase()+keyword.substring(1)).getBytes(_encoding):   keyword.toUpperCase().getBytes(_encoding);
-       keywordArrayCA = keyword.length()>0?keyword.toUpperCase().getBytes(_encoding):null;
-
-       //final String fkeyword = keyword.toLowerCase().replaceAll(replaceReg,emptyStr);
-       //int entryIdx = 0;
-       show("availableProcessors: "+Runtime.getRuntime().availableProcessors());
-       show("keyBLockN: "+_key_block_info_list.length);
-       split_keys_thread_number = _num_key_blocks<6?1:(int) (_num_key_blocks/6);//Runtime.getRuntime().availableProcessors()/2*2+10;
-       final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+5, split_keys_thread_number);
-       
-       poolEUSize = dirtykeyCounter =0;
-       
-       thread_number_count = split_keys_thread_number;
-       final int step = (int) (_num_key_blocks/split_keys_thread_number);
-    	  final int yuShu=(int) (_num_key_blocks%split_keys_thread_number);
-
-    	  ExecutorService fixedThreadPoolmy = Executors.newFixedThreadPool(thread_number);
-    	   
-    	  show("~"+step+"~"+split_keys_thread_number+"~"+_num_key_blocks);
-    	  if(combining_search_tree2==null)
-    		  combining_search_tree2 = new ArrayList[split_keys_thread_number];
-    	  
-       for(int ti=0; ti<split_keys_thread_number; ti++){//分  thread_number 股线程运行
-    	         if(split_keys_thread_number>thread_number) while (true) {  
-    	              if (poolEUSize<=thread_number) {
-    	                  break;  
-    	              }  
-    	              try {
-    	    			Thread.sleep(1);
-    		    		} catch (InterruptedException e) {
-    		    			e.printStackTrace();
-    		    		}  
-    	          } 
-     	  
-    	    	final int it = ti;
-    	        fixedThreadPoolmy.execute(
-    	        new Runnable(){@Override public void run() 
-    	        {
-    	        	if(split_keys_thread_number>thread_number) countDelta(1);
-    	            int jiaX=0;
-    	            if(it==split_keys_thread_number-1) jiaX=yuShu;
-    	            final byte[] key_block = new byte[65536];/*分配资源 32770   65536*/
-    	            if(combining_search_tree2[it]==null)
-    	            	combining_search_tree2[it] = new ArrayList<additiveMyCpr1>();
-               	
-    	            
-    	            int compressedSize_many = 0;
-    	           //小循环	
-    	            for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
-    	                   //prepareItemByKeyInfo(_key_block_info_list[blockCounter],blockCounter);
-    	                   key_info_struct infoI = _key_block_info_list[blockId];
-    	                   if(blockId==_key_block_info_list.length-1)
-    	                	   compressedSize_many += _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
-    	                   else
-    	                	   compressedSize_many += _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
-    	            }
-    	            
-                long start = _key_block_info_list[it*step].key_block_compressed_size_accumulator;
-
-                try {
-    					DataInputStream data_in = new DataInputStream(new FileInputStream(f));
-    					data_in.skip(_key_block_offset+start);
-    					byte[]  _key_block_compressed_many = new byte[ compressedSize_many];
-    					data_in.read(_key_block_compressed_many, 0, _key_block_compressed_many.length);
-    					data_in.close();
-    					
-    					//大循环	
-    					for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
-    						
-    						int compressedSize;
-    						key_info_struct infoI = _key_block_info_list[blockId];
-    						if(blockId==_key_block_info_list.length-1)
-    							compressedSize = (int) (_key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator);
-    						else
-    							compressedSize = (int) (_key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator);
-    						
-    						int startI = (int) (infoI.key_block_compressed_size_accumulator-start);
-    						   
-    						
-    						//byte[] record_block_type = new byte[]{_key_block_compressed_many[(int) startI],_key_block_compressed_many[(int) (startI+1)],_key_block_compressed_many[(int) (startI+2)],_key_block_compressed_many[(int) (startI+3)]};
-    						//int adler32 = getInt(_key_block_compressed_many[(int) (startI+4)],_key_block_compressed_many[(int) (startI+5)],_key_block_compressed_many[(int)(startI+6)],_key_block_compressed_many[(int) (startI+7)]);
-    	
-    						if(compareByteArrayIsPara(_key_block_compressed_many,startI,_zero4)){
-    							  System.arraycopy(_key_block_compressed_many, (startI+8), key_block, 0, (int)(_key_block_size-8));
-    							  find_in_keyBlock(key_block,infoI,keyword,SelfAtIdx,it);
-    						}else if(compareByteArrayIsPara(_key_block_compressed_many,startI,_1zero3))
-    						{
-    							  MInt len = new MInt();//(int) infoI.key_block_decompressed_size
-    							  byte[] arraytmp = new byte[(int) compressedSize];
-    							  System.arraycopy(_key_block_compressed_many, (startI+8), arraytmp, 0, (compressedSize-8));
-    							  MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block,len);
-    							  find_in_keyBlock(key_block,infoI,keyword,SelfAtIdx,it);
-    						}
-    						else if(compareByteArrayIsPara(_key_block_compressed_many,startI,_2zero3))
-    						{
-    								//byte[] key_block2 = zlib_decompress(_key_block_compressed_many,(int) (startI+8),(int)(compressedSize-8));
-    								//System.arraycopy(key_block2, 0, key_block, 0, key_block2.length);
-    								//find_in_keyBlock(key_block2,infoI,keyword,SelfAtIdx,it);
-    								
-    								Inflater inf = new Inflater();
-    								//CMN.show(_key_block_compressed_many.length+";;"+(startI+8)+";;"+(compressedSize-8));
-    								inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
-    								//key_block = new byte[(int) infoI.key_block_decompressed_size];
-    								try {
-    								  //CMN.show(""+infoI.key_block_decompressed_size);
-    									int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
-    								} catch (DataFormatException e) {e.printStackTrace();}
-    								find_in_keyBlock(key_block,infoI,keyword,SelfAtIdx,it);
-    						}
-    					} 
-    	            }
-                catch (Exception e1) {e1.printStackTrace();}
-               thread_number_count--;
-               if(split_keys_thread_number>thread_number) countDelta(-1);
-    	        }});
-       }//任务全部分发完毕
-    	fixedThreadPoolmy.shutdown();
-    	try {
-    		fixedThreadPoolmy.awaitTermination(1, TimeUnit.MINUTES);
-    	} catch (InterruptedException e1) {
-    		e1.printStackTrace();
-    	}
-    }  
-
-    
-    
-    
-    
-    
-    
 
    protected void find_in_keyBlock(byte[] key_block,key_info_struct infoI,String keyword,int SelfAtIdx,int it) {
 	 //!!spliting curr Key block
        int key_start_index = 0;
-       String delimiter;
-       int width = 0,i1=0,key_end_index=0;
+       int key_end_index=0;
        //int keyCounter = 0;
        
        ByteBuffer sf = ByteBuffer.wrap(key_block);//must outside of while...
        int keyCounter = 0;
        while(key_start_index < infoI.key_block_decompressed_size){
-     	  long key_id;
+     	   //long key_id;
            if(_version<2)
         	      sf.position(4);
                //key_id = sf.getInt(key_start_index);//Key_ID
@@ -1827,23 +1496,19 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
         	   	  sf.position(8);
                //key_id = sf.getLong(key_start_index);//Key_ID
            //show("key_id"+key_id);
-           if(_encoding.startsWith("UTF-16")){//TODO optimize
-               width = 2;
+           
                key_end_index = key_start_index + _number_width;  
-               while(i1<key_block.length){
-                   if(key_block[key_end_index]==0 && key_block[key_end_index+1]==0)
-                       break;
-                   key_end_index+=width;
-               }
-           }else{
-               width = 1;
-               key_end_index = key_start_index + _number_width;  
-               while(i1<key_block.length){
-                   if(key_block[key_end_index]==0)
-                       break;
-                   key_end_index+=width;
-               }
-           }
+               SK_DELI:
+     		  while(true){
+     			for(int sker=0;sker<delimiter_width;sker++) {
+     				if(key_block[key_end_index+sker]!=0) {
+     					key_end_index+=delimiter_width;
+     					continue SK_DELI;
+     				}
+     			}
+     			break;
+     		  }
+               
      if(true)
 		try {
 			//TODO: alter
@@ -1860,7 +1525,7 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 				String LexicalEntry = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset);
 				int LexicalEntryIdx = LexicalEntry.toLowerCase().indexOf(keyword.toLowerCase());
 	         	if(LexicalEntryIdx==-1) {
-	         		key_start_index = key_end_index + width;
+	         		key_start_index = key_end_index + delimiter_width;
 	         		dirtykeyCounter++;continue;
 	         	}
 	         	
@@ -1879,37 +1544,30 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 		}
 
 
-           key_start_index = key_end_index + width;
+           key_start_index = key_end_index + delimiter_width;
            keyCounter++;dirtykeyCounter++;
        }
        //assert(adler32 == (calcChecksum(key_block)));	
 }
 
-public interface findAllDoneListener{
-   	   void cancelBefore(long Time);
-	   void harvest(long Time);
-   }public static findAllDoneListener fod;
     
   
   byte[] key_block_cache = null;
   int key_block_cacheId=-1;
+  int key_block_Splitted_flag=-1;
   //Advanced mdict conjunction search. 33nd
   public void size_confined_lookUp(String keyword,
           RBTree_additive combining_search_tree, int SelfAtIdx, int theta) 
-			throws UnsupportedEncodingException 
 		{
 		if(_key_block_info_list==null) read_key_block_info();
-		int blockId = 0;
-		blockId = binary_find_closest_loose(block_blockId_search_list,keyword);
+		//int blockId = 0;
+		//blockId = binary_find_closest_loose(block_blockId_search_list,keyword);
+	    int blockId = _encoding.startsWith("GB")?reduce2(keyword.getBytes(_charset),0,_key_block_info_list.length):reduce(keyword,0,_key_block_info_list.length);
 		if(blockId==-1) return;
 		//show(_Dictionary_fName+_key_block_info_list[blockId].tailerKeyText+"1~"+_key_block_info_list[blockId].headerKeyText);
-		int res;
-		if(_encoding.equals("GB18030"))
-		while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText.getBytes(),keyword.getBytes())>=0)
+		while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,keyword.getBytes())>=0)
 			blockId--;
-		else
-		while(blockId!=0 &&  _key_block_info_list[blockId-1].tailerKeyText.compareTo(keyword)>=0)
-			blockId--; 
+
       
 		byte[][][] matcher = new byte[2][][];
 		matcher[0] = SanLieZhi(keyword);
@@ -1958,34 +1616,22 @@ public interface findAllDoneListener{
 				}
 				/*!!spliting curr Key block*/
 				int key_start_index = 0;
-				int width = 0,i1=0,key_end_index=0;
+				int key_end_index=0;
 				int keyCounter = 0;
-	
-				ByteBuffer sf = ByteBuffer.wrap(key_block_cache);
-	
+		
 				while(key_start_index < key_block_cache.length){
-					long key_id;
-					if(_version<2)
-						key_id = sf.getInt(key_start_index);//Key_ID
-					else
-						key_id = sf.getLong(key_start_index);//Key_ID
-					if(_encoding.startsWith("UTF-16")){//TODO optimize
-						  width = 2;
-						  key_end_index = key_start_index + _number_width;  
-						  while(i1<key_block_cache.length){
-							if(key_block_cache[key_end_index]==0 && key_block_cache[key_end_index+1]==0)
-								break;
-							key_end_index+=width;
-						  }
-					}else{
-						width = 1;
-						key_end_index = key_start_index + _number_width;  
-						while(i1<key_block_cache.length){
-							if(key_block_cache[key_end_index]==0)
-								break;
-							key_end_index+=width;
-						}
-					}
+				    key_end_index = key_start_index + _number_width;  
+					
+				    SK_DELI:
+		     		  while(true){
+		     			for(int sker=0;sker<delimiter_width;sker++) {
+		     				if(key_block_cache[key_end_index+sker]!=0) {
+		     					key_end_index+=delimiter_width;
+		     					continue SK_DELI;
+		     				}
+		     			}
+		     			break;
+		     		  }
 					
 					if(!doHarvest)
 					if(EntryStartWith(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
@@ -2009,7 +1655,7 @@ public interface findAllDoneListener{
 							break OUT;
 					}
 					
-					key_start_index = key_end_index + width;
+					key_start_index = key_end_index + delimiter_width;
 					keyCounter++;
 				}
 	  			} catch (Exception e2) {
@@ -2019,58 +1665,391 @@ public interface findAllDoneListener{
 				break OUT;
 			++blockId;
 		}
+	}
+
+  //联合搜索  4th gen
+  public void size_confined_lookUp_neo2(String keyword,
+          RBTree_additive combining_search_tree, int SelfAtIdx, int theta) 
+		{
+		if(_key_block_info_list==null) read_key_block_info();
+		//int blockId = 0;
+		//blockId = binary_find_closest_loose(block_blockId_search_list,keyword);
+	    int blockId = _encoding.startsWith("GB")?reduce2(keyword.getBytes(_charset),0,_key_block_info_list.length):reduce(keyword,0,_key_block_info_list.length);
+		if(blockId==-1) return;
+		//show(_Dictionary_fName+_key_block_info_list[blockId].tailerKeyText+"1~"+_key_block_info_list[blockId].headerKeyText);
+		while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,keyword.getBytes())>=0)
+			blockId--;
+
+    
+		byte[][][] matcher = new byte[2][][];
+		matcher[0] = SanLieZhi(keyword);
+		String upperKey = keyword.toUpperCase();
+		if(!upperKey.equals(keyword))
+			matcher[1] = SanLieZhi(upperKey);
 		
+		OUT:
+		while(theta>0) {
+			key_info_struct infoI = _key_block_info_list[blockId];
+			boolean doHarvest=false;
+			try {
+				long start = infoI.key_block_compressed_size_accumulator;
+				long compressedSize;
+				if(!(key_block_cacheId==blockId && key_block_cache!=null)) {
+					if(blockId==_key_block_info_list.length-1)
+						compressedSize = _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
+					else
+						compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
+		             
+		  			DataInputStream data_in =new DataInputStream(new FileInputStream(f));
+		  			data_in.skip(_key_block_offset+start);
+		  			byte[]  _key_block_compressed = new byte[(int) compressedSize];
+		  			data_in.read(_key_block_compressed, (int)(0), _key_block_compressed.length);
+		  			data_in.close();
+		              
+					String key_block_compression_type = new String(new byte[]{_key_block_compressed[0],_key_block_compressed[(int) (+1)],_key_block_compressed[(int) (+2)],_key_block_compressed[(int) (+3)]});
+					//int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
+					if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
+					    //无需解压
+						System.out.println("no compress!");
+						key_block_cache = new byte[(int) (_key_block_compressed.length-start-8)];
+						System.arraycopy(_key_block_compressed, (int)(start+8), key_block_cache, 0,key_block_cache.length);
+					}else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
+					{
+						MInt len = new MInt((int) infoI.key_block_decompressed_size);
+						key_block_cache = new byte[len.v];
+						byte[] arraytmp = new byte[(int) compressedSize];
+						System.arraycopy(_key_block_compressed, (int)(+8), arraytmp, 0,(int) (compressedSize-8));
+						MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block_cache,len);
+					}
+					else if(key_block_compression_type.equals(new String(new byte[]{02,00,00,00}))){
+						key_block_cache = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
+					}
+					key_block_cacheId = blockId;
+				}
+				/*!!spliting curr Key block*/
+				int key_start_index = 0;
+				int key_end_index=0;
+				int keyCounter = 0;
+	
+	
+				while(key_start_index < key_block_cache.length){
+					key_end_index = key_start_index + _number_width;  
+				    SK_DELI:
+		     		  while(true){
+		     			for(int sker=0;sker<delimiter_width;sker++) {
+		     				if(key_block_cache[key_end_index+sker]!=0) {
+		     					key_end_index+=delimiter_width;
+		     					continue SK_DELI;
+		     				}
+		     			}
+		     			break;
+		     		  }
+					
+					if(!doHarvest)
+					if(EntryStartWith(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
+						doHarvest=true;
+					}
+					if(doHarvest) {
+						String key_text = new String(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset);				
+						
+						if(key_text.toLowerCase().startsWith(keyword)) {
+							combining_search_tree.insert(key_text,SelfAtIdx,(int)(infoI.num_entries_accumulator+keyCounter));
+						}else {//失匹配
+							theta=0;
+							break OUT;
+						}
+						if(--theta<0)
+							break OUT;
+					}
+					
+					key_start_index = key_end_index + delimiter_width;
+					keyCounter++;
+				}
+	  			} catch (Exception e2) {
+	  				e2.printStackTrace();
+	  			}	
+			if(!doHarvest)
+				break OUT;
+			++blockId;
+		}
 	}   
+    //联合搜索  4th gen
+  public void size_confined_lookUp_neo(String keyword,
+          RBTree_additive combining_search_tree, int SelfAtIdx, int theta) 
+		{
+  			keyword = keyword.toLowerCase().replaceAll(replaceReg,emptyStr);
+  			
+			int idx = lookUp(keyword);
+			if(idx!=-1) {
+				for(int i=0;i<theta;i++) {
+					String shouxiang = getEntryAt(idx+i);
+					if(shouxiang.toLowerCase().replaceAll(replaceReg,emptyStr).startsWith(keyword)) {
+						if(combining_search_tree!=null)
+							combining_search_tree.insert(shouxiang,SelfAtIdx,idx+i);
+						else
+							combining_search_list.add(new myCpr(shouxiang,idx+i));
+					}else
+						break;
+				}
+			}	
+			//combining_search_tree.insert(key_text,SelfAtIdx,(int)(infoI.num_entries_accumulator+keyCounter));
+	}  
+  
+  
 
+  int[][] scaler;
+  public ArrayList<myCpr<String, Integer>> combining_search_list;
+  //联合搜索  555
+public void size_confined_lookUp5(String keyword,
+        RBTree_additive combining_search_tree, int SelfAtIdx, int theta) 
+		{
+	keyword = keyword.toLowerCase().replaceAll(replaceReg,emptyStr);
+	byte[] kAB = keyword.getBytes(_charset);
+	if(_encoding.startsWith("GB")) {
+		if(compareByteArray(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,kAB)<0)
+			return;
+		if(compareByteArray(_key_block_info_list[0].headerKeyText,kAB)>0)
+			return;
+	}else {
+		if(new String(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,_charset).compareTo(keyword)<0)
+			return;
+		if(new String(_key_block_info_list[0].headerKeyText,_charset).compareTo(keyword)>0)
+			return;
+	}
+	if(_key_block_info_list==null) read_key_block_info();
+    int blockId = _encoding.startsWith("GB")?reduce2(kAB,0,_key_block_info_list.length):reduce(keyword,0,_key_block_info_list.length);
+	if(blockId==-1) return;
+	//show(_Dictionary_fName+_key_block_info_list[blockId].tailerKeyText+"1~"+_key_block_info_list[blockId].headerKeyText);
+	//while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,kAB)>=0)
+	//	blockId--;
+
+	boolean doHarvest=false;
+	
+	//OUT:
+	while(theta>0) {
+		key_info_struct infoI = _key_block_info_list[blockId];
+		try {
+			long start = infoI.key_block_compressed_size_accumulator;
+			long compressedSize;
+			if(!(key_block_cacheId==blockId && key_block_cache!=null)) {
+				if(blockId==_key_block_info_list.length-1)
+					compressedSize = _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
+				else
+					compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
+	             
+	  			DataInputStream data_in =new DataInputStream(new FileInputStream(f));
+	  			data_in.skip(_key_block_offset+start);
+	  			byte[]  _key_block_compressed = new byte[(int) compressedSize];
+	  			data_in.read(_key_block_compressed, (int)(0), _key_block_compressed.length);
+	  			data_in.close();
+	  			
+	            //int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
+				if(compareByteArrayIsPara(_zero4, _key_block_compressed)){
+					//System.out.println("no compress!");
+					key_block_cache = new byte[(int) (_key_block_compressed.length-start-8)];
+					System.arraycopy(_key_block_compressed, (int)(start+8), key_block_cache, 0,key_block_cache.length);
+				}else if(compareByteArrayIsPara(_1zero3, _key_block_compressed))
+				{
+					MInt len = new MInt((int) infoI.key_block_decompressed_size);
+					key_block_cache = new byte[len.v];
+					byte[] arraytmp = new byte[(int) compressedSize];
+					System.arraycopy(_key_block_compressed, (int)(+8), arraytmp, 0,(int) (compressedSize-8));
+					MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block_cache,len);
+					//key_block_cache =  new byte[(int) infoI.key_block_decompressed_size];
+                    //new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block_cache, 0, new lzo_uintp());
+				}
+				else if(compareByteArrayIsPara(_2zero3, _key_block_compressed)){
+					//key_block_cache = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
+					key_block_cache =  new byte[(int) infoI.key_block_decompressed_size];
+					Inflater inf = new Inflater();
+                    inf.setInput(_key_block_compressed,8,(int)compressedSize-8);
+                    int ret = inf.inflate(key_block_cache,0,key_block_cache.length);  
+				}
+				key_block_cacheId = blockId;
+			}
+			/*!!spliting curr Key block*/
+			if(key_block_Splitted_flag!=blockId) {
+				if(!doHarvest)
+					scaler = new int[(int) infoI.num_entries][2];
+				int key_start_index = 0;
+				int key_end_index=0;
+				int keyCounter = 0;
+				
+				while(key_start_index < key_block_cache.length){
+					  key_end_index = key_start_index + _number_width;
+					  SK_DELI:
+					  while(true){
+						for(int sker=0;sker<delimiter_width;sker++) {
+							if(key_block_cache[key_end_index+sker]!=0) {
+								key_end_index+=delimiter_width;
+								continue SK_DELI;
+							}
+						}
+						break;
+					  }
+					//CMN.show(new String(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset));
+					//if(EntryStartWith(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
+					if(doHarvest) {
+						String kI = new String(key_block_cache, key_start_index+_number_width,key_end_index-(key_start_index+_number_width), _charset);
+						if(kI.toLowerCase().replaceAll(replaceReg,emptyStr).startsWith(keyword)) {
+							if(combining_search_tree!=null)
+								combining_search_tree.insert(kI,SelfAtIdx,(int)(keyCounter+infoI.num_entries_accumulator));
+							else
+								combining_search_list.add(new myCpr(kI,(int)(keyCounter+infoI.num_entries_accumulator)));
+							theta--;
+						}else return;
+						if(theta<=0) return;
+					}else {
+						scaler[keyCounter][0] = key_start_index+_number_width;
+						scaler[keyCounter][1] = key_end_index-(key_start_index+_number_width);
+					}
+	
+					key_start_index = key_end_index + delimiter_width;
+					keyCounter++;
+				}
+				if(!doHarvest) key_block_Splitted_flag=blockId;
+			}
+  			} catch (Exception e2) {
+  				e2.printStackTrace();
+  			}
+		
+		
+		if(!doHarvest) {
+			int idx;
+			if(_encoding.startsWith("GB"))
+				idx = reduce2(kAB, key_block_cache, scaler, 0, (int) infoI.num_entries);
+			else
+				idx = reduce(keyword, key_block_cache, scaler, 0, (int) infoI.num_entries);
+			//CMN.show(new String(key_block_cache, scaler[idx][0],scaler[idx][1], _charset));
+			//CMN.show(new String(key_block_cache, scaler[idx+1][0],scaler[idx+1][1], _charset));
+			
+			String kI = new String(key_block_cache, scaler[idx][0],scaler[idx][1], _charset);
+			while(true) {
+				if(kI.toLowerCase().replaceAll(replaceReg,emptyStr).startsWith(keyword)) {
+					if(combining_search_tree!=null)
+						combining_search_tree.insert(kI,SelfAtIdx,(int)(idx+infoI.num_entries_accumulator));
+					else
+						combining_search_list.add(new myCpr<String,Integer>(kI,(int)(idx+infoI.num_entries_accumulator)));
+					theta--;
+				}else
+					return;
+				idx++;
+				//if(idx>=infoI.num_entries) CMN.show("nono!");
+				if(theta<=0)
+					return;
+				if(idx>=infoI.num_entries) {
+					break;
+				}
+				kI = new String(key_block_cache, scaler[idx][0],scaler[idx][1], _charset);
+			}
+			doHarvest=true;
+		}
+		++blockId;
+		if(_key_block_info_list.length<=blockId) return;
+	}
+}
+public int reduce(String phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
+    int len = end-start;
+    if (len > 1) {
+      len = len >> 1;
+	  //int iI = start + len - 1;
+      return phrase.compareTo(new String(data, scaler[start + len - 1][0], scaler[start + len - 1][1], _charset).toLowerCase().replaceAll(replaceReg,emptyStr))>0
+                ? reduce(phrase,data,scaler,start+len,end)
+                : reduce(phrase,data,scaler,start,start+len);
+    } else {
+      return start;
+    }
+}
+
+public int reduce2(byte[] phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
+    int len = end-start;
+    if (len > 1) {
+      len = len >> 1;
+	  //int iI = start + len - 1;
+	  byte[] sub_data = new String(data, scaler[start + len - 1][0], scaler[start + len - 1][1], _charset).toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_charset);
+      return compareByteArray(phrase, sub_data)>0
+                ? reduce2(phrase,data,scaler,start+len,end)
+                : reduce2(phrase,data,scaler,start,start+len);
+    } else {
+      return start;
+    }
+}
+
+	public int reduce2(byte[] phrase,int start,int end) {//via mdict-js
+        int len = end-start;
+        if (len > 1) {
+          len = len >> 1;
+          return compareByteArray(phrase, _key_block_info_list[start + len - 1].tailerKeyText)>0
+                    ? reduce2(phrase,start+len,end)
+                    : reduce2(phrase,start,start+len);
+        } else {
+          return start;
+        }
+    }
+	public int reduce(String phrase,int start,int end) {//via mdict-js
+        int len = end-start;
+        if (len > 1) {
+          len = len >> 1;
+          return phrase.compareTo(new String(_key_block_info_list[start + len - 1].tailerKeyText,_charset))>0
+                    ? reduce(phrase,start+len,end)
+                    : reduce(phrase,start,start+len);
+        } else {
+          return start;
+        }
+    }
+	
     public int lookUp(String keyword)
-                            throws UnsupportedEncodingException
     {
-
     	if(_key_block_info_list==null) read_key_block_info();
     	keyword = keyword.toLowerCase().replaceAll(replaceReg,emptyStr);
-        //int blockId = block_blockId_search_tree.sxing(new myCprStr(keyword,1)).getKey().value;
-        int blockId = 0;
-        blockId = binary_find_closest_loose(block_blockId_search_list,keyword);
+    	byte[] kAB = keyword.getBytes(_charset);
+    	
+    	if(_encoding.startsWith("GB")) {
+    		if(compareByteArray(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,kAB)<0)
+    			return -1;
+    		if(compareByteArray(_key_block_info_list[0].headerKeyText,kAB)>0)
+    			return -1;
+    	}else {
+    		if(new String(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,_charset).compareTo(keyword)<0)
+    			return -1;
+    		if(new String(_key_block_info_list[0].headerKeyText,_charset).compareTo(keyword)>0)
+    			return -1;
+    	}
+    	
+        int blockId = _encoding.startsWith("GB")?reduce2(keyword.getBytes(_charset),0,_key_block_info_list.length):reduce(keyword,0,_key_block_info_list.length);
         if(blockId==-1) return blockId;
-        //for(String strI:block_blockId_search_list) CMN.show(strI);
-        //CMN.show("blockId is:"+blockId+":"+block_blockId_search_list.length);
-        //int blockId = binary_find_closest_HTText_blockId_List(keyword);
+
         //show("blockId:"+blockId);
         int res;
-        if(_encoding.equals("GB18030"))
-        while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText.getBytes("GB18030"),keyword.getBytes("GB18030"))>=0)
+        while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,kAB)>=0)
         	blockId--;
-        else
-        while(blockId!=0 &&  _key_block_info_list[blockId-1].tailerKeyText.compareTo(keyword)>=0)
-        	blockId--;
-        //CMN.show("finally blockId is:"+blockId+":"+block_blockId_search_list.length);
-        //show(blockId+"blockId");
+        //CMN.show("finally blockId is:"+blockId+":"+_key_block_info_list.length);
+
         key_info_struct infoI = _key_block_info_list[blockId];
 
         prepareItemByKeyInfo(infoI,blockId,null);
-        
-        if(_encoding.equals("GB18030")){
-            res = binary_find_closest2(infoI_cache_.keys,keyword);//keyword
-        }else
-        	res = binary_find_closest(infoI_cache_.keys,keyword);//keyword
 
+        if(_encoding.startsWith("GB"))
+        	res = binary_find_closest2(infoI_cache_.keys,keyword);//keyword
+        else
+        	res = binary_find_closest(infoI_cache_.keys,keyword);//keyword
+        	
         if (res==-1){
         	System.out.println("search failed!"+keyword);
         	return -1;
         }
         else{
-        	String KeyText= infoI_cache_.keys[res];
+        	//String KeyText= infoI_cache_.keys[res];
         	//for(String ki:infoI.keys) CMN.show(ki);
         	//show("match key "+KeyText+" at "+res);
         	long lvOffset = infoI.num_entries_accumulator+res;
-        	long wjOffset = infoI.key_block_compressed_size_accumulator+infoI_cache_.key_offsets[res];
+        	//long wjOffset = infoI.key_block_compressed_size_accumulator+infoI_cache_.key_offsets[res];
         	return (int) lvOffset;
         }   
     }
 
     
     public static int  binary_find_closest(String[] array,String val){
-    	//TODO 2018.5.12 从P.L.O.D中粘贴代码过来，尚未修改?
     	int middle = 0;
     	int iLen = array.length;
     	int low=0,high=iLen-1;
@@ -2140,8 +2119,79 @@ public interface findAllDoneListener{
     	
     }
     
+    
+    public int  binary_find_closest(byte[][] array,String val){
+    	int middle = 0;
+    	int iLen = array.length;
+    	int low=0,high=iLen-1;
+    	if(array==null || iLen<1){
+    		return -1;
+    	}
+    	//if(iLen==1)
+    	//	return 0;
+		//System.out.println(new String(array[0])+":"+new String(array[array.length-1]));
+    	if(val.compareTo(new String(array[0],_charset).toLowerCase().replaceAll(replaceReg,emptyStr))<=0){
+    		if(new String(array[0],_charset).toLowerCase().replaceAll(replaceReg,emptyStr).startsWith(val))
+    			return 0;
+    		else
+    			return -1;
+    	}else if(val.compareTo(new String(array[iLen-1]).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr))>=0){
+    		return iLen-1;
+    	}
+		//System.out.println(array[0]+":"+val.compareTo(array[0].toLowerCase().replaceAll(replaceReg,emptyStr)));
+		//System.out.println(array[0]+":"+val);
+		//System.out.println(array[0]+":"+array[0].toLowerCase().replaceAll("[: . , - ]",emptyStr));
+
+
+    	int counter=0;
+    	int subStrLen1,subStrLen0,cprRes1,cprRes0,cprRes;String houXuan1,houXuan0;
+    	while(low<high){
+    		counter+=1;
+    		//System.out.println("bfc_1_debug  "+low+":"+high+"   执行第"+counter+" 次");
+    		//System.out.println("bfc_1_debug  "+array[low]+":"+array[high]);
+    		middle = (low+high)/2;
+    		houXuan1 = processKey(array[middle+1]);
+    		houXuan0 = processKey(array[middle  ]);//.replace(" ",emptyStr).replace("-",emptyStr).replace("'",emptyStr);
+    		cprRes1=houXuan1.compareTo(val);
+        	cprRes0=houXuan0.compareTo(val);
+        	/*if(cprRes0>=0){
+        		System.out.println("what");
+        		high=middle;
+        	}else if(cprRes1<=0){// ||(cprRes0<=0 && high==middle+1)
+        		System.out.println("cprRes1<=0 && cprRes0<0");
+        		//System.out.println(houXuan1);
+        		//System.out.println(houXuan0);
+        		low=middle+1;
+        	}else{
+        		//System.out.println("asd");
+        		high=middle;
+        	}*/
+        	if(cprRes0<0){
+        		//System.out.println("rRes1<0&&cpr");
+        		if(cprRes1>0) {
+        			low=middle;
+        			high=middle+1;
+        			break;
+        		}
+        		low=middle+1;
+        	}else{
+        		high=middle;
+        	}
+    	}
+    	
+    	int resPreFinal;
+		//System.out.println(resPreFinal);
+		//System.out.println("执行了几次："+counter);
+
+		if(processKey(array[low]).startsWith(val)) return low;
+		if(processKey(array[high]).startsWith(val)) return high;
+		return -1;
+    	
+    }
+    
+    
     //binary_find_closest: with_charset! with_charset! with_charset!
-    public int  binary_find_closest2(String[] array,String val) throws UnsupportedEncodingException{
+    public int  binary_find_closest2(byte[][] array,String val) {
     	int middle = 0;
     	int iLen = array.length;
     	int low=0,high=iLen-1;
@@ -2151,58 +2201,57 @@ public interface findAllDoneListener{
     	//if(iLen==1)
     	//	return 0;
     	
-    	byte[] valBA = val.getBytes(_encoding);
+    	byte[] valBA = val.getBytes(_charset);
     	
-    	if(compareByteArray(valBA,array[0].toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_encoding))<=0){
-    		if(array[0].toLowerCase().replaceAll(replaceReg,emptyStr).startsWith(val))
-    			return 0;
-    		else
+    	int boundaryCheck = compareByteArray(valBA,processKey(array[0]).getBytes(_charset));
+    	if(boundaryCheck<0){
+			return -1;
+    	}else  if(boundaryCheck==0) {return 0;}
+    	
+    	boundaryCheck = compareByteArray(valBA,processKey(array[iLen-1]).getBytes(_charset));
+    	if(boundaryCheck>0){
     			return -1;
-    	}else if(compareByteArray(valBA,array[iLen-1].toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_encoding))>=0){
-    		//System.out.println("执行了几asdas次：");
-    		return -1;
-    	}
-    	int counter=0;
-    	int subStrLen1,subStrLen0,cprRes1,cprRes0,cprRes;
+    	}else if(boundaryCheck==0) {return iLen-1;}
+    	
+    	//int counter=0;
+    	//int subStrLen1,subStrLen0,cprRes;
+    	int cprRes1,cprRes0;
     	byte[] houXuan1BA,houXuan0BA;
     	while(low<high){
-    		counter+=1;
-    		//System.out.println(low+":"+high);
+    		//counter+=1;
+    		System.out.println(low+":"+high);
     		middle = (low+high)/2;
-    		houXuan1BA = array[middle+1].toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_encoding);
-    		houXuan0BA = array[middle  ].toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_encoding);
+    		houXuan1BA = processKey(array[middle+1]).getBytes(_charset);
+    		houXuan0BA = processKey(array[middle  ]).getBytes(_charset);
     		cprRes1=compareByteArray(houXuan1BA,valBA);
         	cprRes0=compareByteArray(houXuan0BA,valBA);
-        	if(cprRes0>=0){
-        		high=middle;
-        	}else if(cprRes1<=0){
-        		//System.out.println("cprRes1<=0 && cprRes0<0");
-        		//System.out.println(houXuan1);
-        		//System.out.println(houXuan0);
+        	if(cprRes0<0){
+        		//System.out.println("rRes1<0&&cpr");
+        		if(cprRes1>0) {
+        			low=middle;
+        			high=middle+1;
+        			break;
+        		}
         		low=middle+1;
         	}else{
-        		//System.out.println("asd");
         		high=middle;
         	}
     	}
     	
-    	int resPreFinal;
-    	if(low==high) resPreFinal = high;
-    	else{
-    		resPreFinal = Math.abs(compareByteArray(array[low].toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_encoding),valBA))>Math.abs(compareByteArray(array[high].toLowerCase().replaceAll(replaceReg,emptyStr).getBytes(_encoding),valBA))?high:low;
-    	}
+
+		if(processKey(array[low]).startsWith(val)) return low;
+		if(processKey(array[high]).startsWith(val)) return high;
+    	//System.out.println(array[low]+array[high]);
 		//System.out.println(resPreFinal);
 		//System.out.println("执行了几次："+counter);
-    	String houXuan1 = array[resPreFinal].toLowerCase().replaceAll(replaceReg,emptyStr);
-    	//show("houXuan1"+houXuan1);
-    	if(val.length()>houXuan1.length())
-    		return -1;//判为矢匹配.
-    	else{
-    		if(houXuan1.substring(0,val.length()).compareTo(val)!=0)
-    			return -1;//判为矢匹配.
-    		else return resPreFinal;//
-    	}
+		return -1;//判为矢匹配.
     }
+    
+    public String processKey(byte[] in){
+    	return new String(in,_charset).toLowerCase().replaceAll(replaceReg,emptyStr);
+    }
+    
+    
    
     public static int  binary_find_closest_loose(String[] array,String val){
     	int middle = 0;
@@ -2232,7 +2281,7 @@ public interface findAllDoneListener{
     	int subStrLen1,subStrLen0,cprRes1,cprRes0,cprRes;String houXuan1,houXuan0;
     	while(low<high){
     		counter+=1;
-    		//System.out.println("bsl_debug"+low+":"+high);
+    		System.out.println("bsl_debug"+low+":"+high);
     		middle = (low+high)/2;
     		houXuan1 = array[middle+1];
     		houXuan0 = array[middle  ];
@@ -2345,124 +2394,6 @@ public interface findAllDoneListener{
 		return low;
     }
     
-    private void _decode_key_block_info(byte[] key_block_info_compressed) throws UnsupportedEncodingException {
-    	key_info_struct[] _key_block_info_list = new key_info_struct[(int) _num_key_blocks];
-        block_blockId_search_list = new String[(int) _num_key_blocks];
-    	byte[] key_block_info;
-    	if(_version >= 2)
-        {   //zlib压缩
-    		//CMN.show("yes!");
-    		//byte[] asd = new byte[]{key_block_info_compressed[0],key_block_info_compressed[1],key_block_info_compressed[2],key_block_info_compressed[3]};
-    		//assert(new String(asd).equals(new String(new byte[]{2,0,0,0})));
-
-    		//处理 Ripe128md 加密的 key_block_info
-    		if(_encrypt==2){try{
-                key_block_info_compressed = BU._mdx_decrypt(key_block_info_compressed);
-                } catch (IOException e) {e.printStackTrace();}}
-			//!!!getInt CAN BE NEGTIVE ,INCONGRUENT to python CODE
-    		//!!!MAY HAVE BUG
-            //int adler32 = getInt(key_block_info_compressed[4],key_block_info_compressed[5],key_block_info_compressed[6],key_block_info_compressed[7]);
-            key_block_info = zlib_decompress(key_block_info_compressed,8);
-            //assert(adler32 == (BU.calcChecksum(key_block_info) ));
-            //ripemd128.printBytes(key_block_info,0, key_block_info.length);
-        }
-        else
-            key_block_info = key_block_info_compressed;
-    	// decoding……
-        //ByteBuffer sf = ByteBuffer.wrap(key_block_info);
-        long key_block_compressed_size = 0;
-        int accumulation_ = 0;//how many entries before one certain block.for construction of a list.
-        //遍历blocks
-        int bytePointer =0 ;
-        for(int i=0;i<_key_block_info_list.length;i++){
-        	int textbufferST,textbufferLn;
-        	accumulation_blockId_tree.insert(new myCpr<Integer, Integer>(accumulation_,i));
-            //read in number of entries in current key block
-            if(_version<2) {
-	            _key_block_info_list[i] = new key_info_struct(BU.toInt(key_block_info,bytePointer),accumulation_);
-	            bytePointer+=4;
-            }
-            else {
-            	//CMN.show(key_block_info_compressed.length+":"+key_block_info.length+":"+bytePointer);
-            	_key_block_info_list[i] = new key_info_struct(BU.toLong(key_block_info,bytePointer),accumulation_);
-            	bytePointer+=8;
-            }
-            key_info_struct infoI = _key_block_info_list[i];
-            accumulation_ += infoI.num_entries;
-            //CMN.show("infoI.num_entries::"+infoI.num_entries);
-        //![0] head word text
-            int text_head_size;
-            if(_version<2)
-            	text_head_size = key_block_info[bytePointer++];
-        	else {
-        		text_head_size = toChar(key_block_info,bytePointer);
-        		bytePointer+=2;
-        	}
-        	textbufferST=bytePointer;
-            if(!_encoding.startsWith("UTF-16")){
-            	textbufferLn=text_head_size;
-                if(_version>=2)
-            	bytePointer++;         
-            }else{
-            	textbufferLn=text_head_size*2;
-                if(_version>=2)
-                bytePointer+=2;           
-            }
-
-            infoI.headerKeyText = new String(key_block_info,textbufferST,textbufferLn,_charset);
-        	bytePointer+=textbufferLn;
-        	
-            
-        //![1]  tail word text
-            int text_tail_size;
-            if(_version<2)
-            	text_tail_size = key_block_info[bytePointer++];
-        	else {
-        		text_tail_size = toChar(key_block_info,bytePointer);
-        		bytePointer+=2;
-        	}
-            textbufferST=bytePointer;
-            if(!_encoding.startsWith("UTF-16")){
-            	textbufferLn=text_tail_size;
-                if(_version>=2)
-            	bytePointer++;         
-            }else{
-            	textbufferLn=text_tail_size*2;
-                if(_version>=2)
-            	bytePointer+=2;       
-            }
-
-            infoI.tailerKeyText = new String(key_block_info,textbufferST,text_tail_size,_charset);
-        	bytePointer+=textbufferLn;
-        	
-            //show(infoI.tailerKeyText+"~tailerKeyText");
-
-            infoI.key_block_compressed_size_accumulator = key_block_compressed_size;
-            if(_version<2){//may reduce
-            	infoI.key_block_compressed_size = BU.toInt(key_block_info,bytePointer);
-            	key_block_compressed_size += infoI.key_block_compressed_size;
-            	bytePointer+=4;
-            	infoI.key_block_decompressed_size = BU.toInt(key_block_info,bytePointer);
-            	bytePointer+=4;
-            }else{
-            	infoI.key_block_compressed_size = BU.toLong(key_block_info,bytePointer);
-            	maxComKeyBlockSize = Math.max(infoI.key_block_compressed_size, maxComKeyBlockSize);
-            	key_block_compressed_size += infoI.key_block_compressed_size;
-            	bytePointer+=8;
-            	infoI.key_block_decompressed_size = BU.toLong(key_block_info,bytePointer);
-            	maxDecomKeyBlockSize = Math.max(infoI.key_block_decompressed_size, maxDecomKeyBlockSize);
-
-            	bytePointer+=8;
-            }
-            //CMN.show("infoI.key_block_decompressed_size::"+infoI.key_block_decompressed_size);
-            //CMN.show("infoI.key_block_compressed_size::"+infoI.key_block_compressed_size);
-            
-            block_blockId_search_list[i] = infoI.headerKeyText;
-        }
-        key_block_info=null;
-        //assert(accumulation_ == self._num_entries)
-        this._key_block_info_list =  _key_block_info_list;
-	}
     
 
     //解压等utils
@@ -2532,7 +2463,6 @@ public interface findAllDoneListener{
 			try {
 				return sf.readInt();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return 0;
 			}
@@ -2540,7 +2470,6 @@ public interface findAllDoneListener{
 			try {
 				return sf.readLong();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return 0;
 			}
@@ -2699,11 +2628,11 @@ public interface findAllDoneListener{
     	return true;
     }
 
-    private byte[][] SanLieZhi(String str) throws UnsupportedEncodingException {
+    private byte[][] SanLieZhi(String str) {
     	byte[][] res = new byte[str.length()][];
     	for(int i=0;i<str.length();i++){
     		String c = str.substring(i, i+1);
-    		res[i] = c.getBytes(_encoding);
+    		res[i] = c.getBytes(_charset);
 		}
 		return res;
 	}

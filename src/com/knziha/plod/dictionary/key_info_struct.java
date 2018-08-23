@@ -1,7 +1,7 @@
 package com.knziha.plod.dictionary;
 //store key_block's summary and itself
 public class key_info_struct{
-	public key_info_struct(String headerKeyText, String tailerKeyText,
+	public key_info_struct(byte[] headerKeyText, byte[] tailerKeyText,
 			long key_block_compressed_size_accumulator,
 			long key_block_decompressed_size) {
 		this.headerKeyText=headerKeyText;
@@ -15,8 +15,8 @@ public class key_info_struct{
     }
 	public key_info_struct() {
     }
-	public String headerKeyText;
-	public String tailerKeyText;
+	public byte[] headerKeyText;
+	public byte[] tailerKeyText;
 	public long key_block_compressed_size_accumulator;
 	public long key_block_compressed_size;
 	public long key_block_decompressed_size;

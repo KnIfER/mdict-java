@@ -3,8 +3,6 @@ package com.knziha.plod.dictionary;
 
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -112,39 +110,7 @@ public class ripemd128 {
     }
     static byte[] packIntBE(int l){
     	return ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(l).array();
-    }    
-	public static void printBytes2(byte[] b) {
-		for(int i=0;i<b.length;i++)
-    		System.out.print((int)(b[i]&0xff)+",");
-    	System.out.println();
-	}
-	public static void printBytes3(byte[] recordAt, String string) {
-		try {
-			FileOutputStream ou = new FileOutputStream(new File(string));
-			ou.write(recordAt);
-			ou.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-    public static void printBytes(byte[] b){
-    	for(int i=0;i<b.length;i++)
-    		System.out.print(byteTo16(b[i])+",");
-    	System.out.println();
-    }
-    public static void printBytes(byte[] b,int off,int ln){
-    	for(int i=off;i<off+ln;i++)
-    		System.out.print(byteTo16(b[i])+",");
-    	System.out.println();
-    }
-    public static String byteTo16(byte bt){
-        String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-        String resStr="";
-        int low =(bt & 15);
-        int high = bt>>4 & 15;
-        resStr = strHex[high]+strHex[low];
-        return resStr;
-    }
+    }   
     
     static long add(long... intArray){
     	long res = (long) 0;
@@ -223,8 +189,6 @@ public class ripemd128 {
     	data.write(packIntLE((int) h3));
     	return data.toByteArray();
     }
-
-
 
 
 

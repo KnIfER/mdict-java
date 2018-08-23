@@ -2,7 +2,6 @@ package com.knziha.rbtree;
 
 import java.util.ArrayList;
 
-
 /**
  * Java 语言: 红黑树
  *
@@ -12,15 +11,16 @@ import java.util.ArrayList;
  * @date 2017/11/18
  */
 
-public class RBTree<T extends Comparable<T>> {
+public class RBTree_duplicative<T extends Comparable<T>> {
 
-    protected RBTNode<T> mRoot;public RBTNode<T> getRoot() {return mRoot;} // 根结点
+    private RBTNode<T> mRoot;    // 根结点
 
-    protected static final boolean RED   = false;
-    protected static final boolean BLACK = true;
+    private static final boolean RED   = false;
+    private static final boolean BLACK = true;
 
 
-    public RBTree() {
+
+    public RBTree_duplicative() {
         mRoot=null;
     }
 
@@ -123,11 +123,6 @@ public class RBTree<T extends Comparable<T>> {
         if (tmpnode!=null) return tmpnode;
         else return this.minimum(this.mRoot);
     }
-    public RBTNode<T> xxing_samsara(T val){
-        RBTNode<T> tmpnode =downwardNeighbour_skipego(this.mRoot,val);
-        if (tmpnode!=null) return tmpnode;
-        else return this.maximum(this.mRoot);
-    }
     ///情况二///cur///情况一/
     private RBTNode<T> downwardNeighbour(RBTNode<T> du,T val) {
         int cmp;
@@ -148,35 +143,11 @@ public class RBTree<T extends Comparable<T>> {
             else return tmpnode;
         }
     }
-    protected RBTNode<T> downwardNeighbour_skipego(RBTNode<T> du, T val) {
-        int cmp;
-        RBTNode<T> x = du;
-        RBTNode<T> tmpnode = null;
-
-        if (x==null)
-            return null;
-
-        cmp = val.compareTo(x.key);
-        if (cmp <= 0)//情况一
-            return downwardNeighbour_skipego(x.left, val);
-        else// if (cmp >= 0)//情况二
-        {
-            if(x.right==null ) return x;
-            tmpnode = downwardNeighbour_skipego(x.right, val);
-            if (tmpnode==null) return x;
-            else return tmpnode;
-        }
-    }
     //上行wrap :find node x,so that x.key>=val and no node with key smaller that x.key satisfies this condition.
     public RBTNode<T> sxing(T val){
         RBTNode<T> tmpnode =upwardNeighbour(this.mRoot,val);
         if (tmpnode!=null) return tmpnode;
         else return this.maximum(this.mRoot);
-    }
-    public RBTNode<T> sxing_samsara(T val){
-        RBTNode<T> tmpnode =upwardNeighbour_skipego(this.mRoot,val);
-        if (tmpnode!=null) return tmpnode;
-        else return this.minimum(this.mRoot);
     }
     ///情况一////cur///////情况二//
     private RBTNode<T> upwardNeighbour(RBTNode<T> du,T val) {
@@ -198,25 +169,7 @@ public class RBTree<T extends Comparable<T>> {
             else return tmpnode;
         }
     }
-    protected RBTNode<T> upwardNeighbour_skipego(RBTNode<T> du,T val) {
-        int cmp;
-        RBTNode<T> x = du;
-        RBTNode<T> tmpnode = null;
 
-        if (x==null)
-            return null;
-
-        cmp = val.compareTo(x.key);
-        if (cmp >= 0)//情况一
-            return upwardNeighbour_skipego(x.right, val);
-        else// if (cmp =< 0)//情况二
-        {
-            if(x.left==null ) return x;
-            tmpnode = upwardNeighbour_skipego(x.left, val);
-            if (tmpnode==null) return x;
-            else return tmpnode;
-        }
-    }
     //![END]
     public ArrayList<T> flatten(){
         ArrayList<T> res = new ArrayList<T>();
@@ -231,19 +184,7 @@ public class RBTree<T extends Comparable<T>> {
             inOrderflatten(tree.right,res);
         }
     }
-    public ArrayList<T> flattenBE(){
-        ArrayList<T> res = new ArrayList<T>();
-        inOrderflattenBE(this.mRoot,res);
-        return res;
-    }
-    private void inOrderflattenBE(RBTNode<T> tree,ArrayList<T> res) {
-        if(tree != null) {
-            inOrderflattenBE(tree.left,res);
-            res.add(0,tree.key);
-            inOrderflattenBE(tree.right,res);
-        }
-    }
-    
+
     /*
      * 后序遍历"红黑树"
      */
@@ -281,14 +222,6 @@ public class RBTree<T extends Comparable<T>> {
         return search(mRoot, key);
     }
 
-    public T searchT(T key) {
-    	RBTNode<T> preRet = search(mRoot, key);
-    	if(preRet!=null)
-    		return preRet.key;
-    	else
-    		return null;
-    }
-    
     /*
      * (非递归实现)查找"红黑树x"中键值为key的节点
      */
@@ -488,7 +421,7 @@ public class RBTree<T extends Comparable<T>> {
      * 参数说明：
      *     node 插入的结点        // 对应《算法导论》中的z
      */
-    protected void insertFixUp(RBTNode<T> node) {
+    private void insertFixUp(RBTNode<T> node) {
         RBTNode<T> parent, gparent;
 
         // 若“父节点存在，并且父节点的颜色是红色”
@@ -570,9 +503,16 @@ public class RBTree<T extends Comparable<T>> {
                 x = x.left;
             else if(cmp > 0)
                 x = x.right;
-            else return;
+            else {
+            	while(y.right!=null && node.key.compareTo(y.right.key)==0) {
+                	y = y.right;
+                }
+            	break;
+            }	
         }
-
+        
+        
+        	
         node.parent = y;
         if (y!=null) {
             cmp = node.key.compareTo(y.key);
@@ -700,7 +640,7 @@ public class RBTree<T extends Comparable<T>> {
      * 参数说明：
      *     node 删除的结点
      */
-    protected void remove(RBTNode<T> node) {
+    private void remove(RBTNode<T> node) {
         RBTNode<T> child, parent;
         boolean color;
 
@@ -803,7 +743,7 @@ public class RBTree<T extends Comparable<T>> {
     /*
      * 销毁红黑树
      */
-    protected void destroy(RBTNode<T> tree) {
+    private void destroy(RBTNode<T> tree) {
         if (tree==null)
             return ;
 

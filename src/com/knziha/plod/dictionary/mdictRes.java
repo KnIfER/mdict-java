@@ -7,14 +7,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.Adler32;
 import java.util.zip.DataFormatException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
@@ -23,8 +22,6 @@ import java.util.zip.InflaterOutputStream;
 import org.jvcompress.lzo.MiniLZO;
 import org.jvcompress.util.MInt;
 
-import com.knziha.plod.dictionary.mdict.cached_key_block;
-import com.knziha.plod.dictionary.mdict.myCpr;
 import com.knziha.rbtree.RBTree;
 
 
@@ -39,6 +36,7 @@ public class mdictRes {
     File f;
 	
 	int _encrypt=0;
+	Charset _charset;
 	String _encoding="UTF-16LE";
 	String _passcode = "";
 	HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
@@ -76,13 +74,6 @@ public class mdictRes {
 	
     //构造
 	public mdictRes(String fn) throws IOException{
-        //String url = "file:///android_asset/index.html";
-        //if (!TextUtils.isEmpty(url))
-        //    mWebView.loadUrl(url);
-        
-		//![]File in
-    	//byte[] asd = new byte[]{'s',2,3,4,1,2,3,4,1,2,3,4};NameOfPlants.mdx 简明英汉汉英词典.mdx
-    	//File f = new File("/sdcard/BlueDict/Dicts/简明英汉汉英词典.mdx");
     	f = new File(fn);
     	//FileInputStream data_in =new FileInputStream(f);	
     	DataInputStream data_in =new DataInputStream(new FileInputStream(f));	
@@ -115,6 +106,7 @@ public class mdictRes {
             if(_encoding =="GBK"|| _encoding =="GB2312")
             	_encoding = "GB18030";
 		}
+		_charset = Charset.forName(_encoding);
 		if(!header_tag.containsKey("Encrypted") || header_tag.get("Encrypted") == "0")
             _encrypt = 0;
 		else if(header_tag.get("Encrypted") == "1")
@@ -369,7 +361,7 @@ public class mdictRes {
     class cached_key_block{
     	String[] keys;
     	long[] key_offsets;
-    	String hearderText="";
+    	byte[] hearderText=null;
     	int blockID=-1;
     }
     cached_key_block infoI_cache_ = new cached_key_block();
@@ -517,18 +509,19 @@ public class mdictRes {
 
    
 	
+
 	public int reduce(String phrase,int start,int end) {//via mdict-js
         int len = end-start;
         if (len > 1) {
           len = len >> 1;
-          return phrase.compareTo(_key_block_info_list[start + len - 1].tailerKeyText)>0
+          return compareByteArray(phrase.getBytes(_charset), _key_block_info_list[start + len - 1].tailerKeyText)>0
                     ? reduce(phrase,start+len,end)
-                    : reduce(phrase,start,len);
+                    : reduce(phrase,start,start+len);
         } else {
           return start;
         }
     }
-    
+	
     public int lookUp(String keyword)
                             throws UnsupportedEncodingException
     {
@@ -537,8 +530,10 @@ public class mdictRes {
 		
     	int blockId = reduce(keyword,0,_key_block_info_list.length);
         
-        while(blockId>0 && _key_block_info_list[blockId].headerKeyText.compareTo(keyword)>0)
+
+        while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,keyword.getBytes(_encoding))>=0)
         	blockId--;
+        
         key_info_struct infoI = _key_block_info_list[blockId];
         
         cached_key_block infoI_cache = prepareItemByKeyInfo(infoI,blockId);
@@ -561,7 +556,6 @@ public class mdictRes {
     
     public static int  binary_find_closest(String[] array,String val){
     	val = val.toLowerCase();
-    	//TODO 2018.5.12 从P.L.O.D中粘贴代码过来，尚未修改?
     	int middle = 0;
     	int iLen = array.length;
     	int low=0,high=iLen-1;
@@ -686,7 +680,8 @@ public class mdictRes {
                 sf.get(textbuffer, 0, text_head_size*2);
                 sf.get();sf.get();                
             }
-            infoI.headerKeyText = new String(textbuffer,_encoding);
+
+            infoI.headerKeyText = textbuffer;
             //System.out.println("headerKeyText is:"+infoI.headerKeyText);
             
             //![1]  tail word text
@@ -701,7 +696,8 @@ public class mdictRes {
                 sf.get();sf.get();             
             }
           //TODO:兼容性
-            infoI.tailerKeyText = new String(textbuffer,_encoding);
+            //infoI.tailerKeyText = new String(textbuffer,_encoding);
+            infoI.tailerKeyText = textbuffer;
             //System.out.println("tailerKeyText is:"+infoI.tailerKeyText);
             
             //infoI = new key_info_struct(headerKeyText,
@@ -726,7 +722,7 @@ public class mdictRes {
     	for(key_info_struct infoI:_key_block_info_list){
     		prepareItemByKeyInfo(infoI,blockCounter);
     		for(String entry:infoI_cache_.keys){
-    			CMN.show(entry);
+    			//CMN.show(entry);
     		}
     		//CMN.show("block no."+(blockCounter++)+"printed");
     	}
@@ -880,7 +876,6 @@ public class mdictRes {
 			try {
 				return sf.readInt();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return 0;
 			}
@@ -888,7 +883,6 @@ public class mdictRes {
 			try {
 				return sf.readLong();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return 0;
 			}
@@ -923,6 +917,19 @@ public class mdictRes {
         int high = bt>>4 & 15;
         resStr = strHex[high]+strHex[low];
         return resStr;
+    }
+    //per-byte byte array comparing
+    private final static int compareByteArray(byte[] A,byte[] B){
+    	int la = A.length,lb = B.length;
+    	for(int i=0;i<Math.min(la, lb);i++){
+    		int cpr = (int)(A[i]&0xff)-(int)(B[i]&0xff);
+    		if(cpr==0)
+    			continue;
+    		return cpr;
+    	}
+    	if(la==lb)
+    		return 0;
+    	else return la>lb?1:-1;
     }
 }
 

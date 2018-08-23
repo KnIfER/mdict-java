@@ -47,7 +47,6 @@ public class  BU{//byteUtils
     	  b[3] = (byte) (n >> 24 & 0xff);  
     	  return b;  
     	} 
-	
     
     
     
@@ -91,6 +90,32 @@ public class  BU{//byteUtils
 	    System.arraycopy(comp_block, 8, comp_block2, 0, comp_block.length-8);
 	    data.write(_fast_decrypt(comp_block2, key));
 	    return data.toByteArray();
+    }
+	
+	
+	public static void printBytes2(byte[] b) {
+		for(int i=0;i<b.length;i++)
+    		System.out.print((int)(b[i]&0xff)+",");
+    	System.out.println();
+	}
+    public static void printBytes(byte[] b){
+    	for(int i=0;i<b.length;i++)
+    		System.out.print(byteTo16(b[i])+",");
+    	System.out.println();
+    }
+    public static void printBytes(byte[] b,int off,int ln){
+    	for(int i=off;i<off+ln;i++)
+    		System.out.print(byteTo16(b[i])+",");
+    	System.out.println();
+    }
+    
+    public static String byteTo16(byte bt){
+        String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
+        String resStr="";
+        int low =(bt & 15);
+        int high = bt>>4 & 15;
+        resStr = strHex[high]+strHex[low];
+        return resStr;
     }
 }
 	

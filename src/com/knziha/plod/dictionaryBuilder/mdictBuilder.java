@@ -18,11 +18,11 @@ import org.jvcompress.util.MInt;
 
 import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.key_info_struct;
-import com.knziha.plod.dictionary.mdict.myCpr;
+import com.knziha.plod.dictionary.myCpr;
 import com.knziha.plod.dictionary.record_info_struct;
 import com.knziha.rbtree.RBTNode;
-import com.knziha.rbtree.RBTree;
-import com.knziha.rbtree.RBTree.inOrderDo;
+import com.knziha.rbtree.RBTree_duplicative;
+import com.knziha.rbtree.RBTree_duplicative.inOrderDo;
 
 /**
  * @author KnIfER
@@ -51,13 +51,13 @@ public class mdictBuilder{
 	    private key_info_struct[] _key_block_info_list;
 	    
 	    
-	    public RBTree<myCpr<String, String>> data_tree;
+	    public RBTree_duplicative<myCpr<String, String>> data_tree;
 	    
 	    public mdictBuilder(String Dictionary_Name,
 	    		String about,
 	    		String codec
 	    		) {
-	    	data_tree=new RBTree<myCpr<String, String>>();
+	    	data_tree=new RBTree_duplicative<myCpr<String, String>>();
 	    	_Dictionary_Name=Dictionary_Name;
 	    	_about=about;
 	    	_encoding=codec;
@@ -103,11 +103,18 @@ public class mdictBuilder{
 		}
 	    
 	    File dirP;
+	    File index_tmp,record_tmp;
 	    public void write(String path) throws IOException {
+
 	    	dirP = new File(path).getParentFile();
 	    	dirP.mkdirs();
 	    	if(!dirP.exists() && dirP.isDirectory())
 				throw new IOException("input path invalid");
+	    	
+	    	index_tmp = new File(dirP,"index_tmp.mdict");
+			record_tmp = new File(dirP,"record_tmp.mdict");
+			index_tmp.delete();index_tmp.createNewFile();
+			record_tmp.delete();record_tmp.createNewFile();
 	    	
 	    	DataOutputStream fOut = new DataOutputStream(new  FileOutputStream(path));
 	    	// number of bytes of header text
@@ -159,7 +166,7 @@ public class mdictBuilder{
     			fOut.write(infoI.key_block_data,0,(int) infoI.key_block_compressed_size);
 	    		
 	    	}*/
-	    	FileInputStream tmpIn = new FileInputStream(new File(dirP,"index_tmp.mdict"));  
+	    	FileInputStream tmpIn = new FileInputStream(index_tmp);  
             byte[] buf=new byte[1024];  
             int n=0;//记录实际读取到的字节数  
             while((n=tmpIn.read(buf))!=-1)  
@@ -171,7 +178,7 @@ public class mdictBuilder{
 	    	
 //![3]Encoding_record_block_header
 	    	/*numer of record blocks*/
-	    	DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream(new File(dirP,"record_tmp.mdict")));
+	    	DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream(record_tmp));
 	    	
 	    	int posB = fOutTmp.size();
 	    	//写入内容
@@ -248,7 +255,7 @@ public class mdictBuilder{
 		    	fOut.writeLong(RinfoI.decompressed_size);//!!!INCONGRUNENTSVG unmarked
 	    	}
 	    	
-	    	tmpIn = new FileInputStream("F:\\record_tmp.mdict");  
+	    	tmpIn = new FileInputStream(record_tmp);  
             buf=new byte[1024];  
             n=0;//记录实际读取到的字节数  
             while((n=tmpIn.read(buf))!=-1)  
@@ -258,8 +265,8 @@ public class mdictBuilder{
             }
             fOut.close();
             tmpIn.close();
-            new File(dirP,"index_tmp.mdict").delete();
-            new File(dirP,"record_tmp.mdict").delete();
+            index_tmp.delete();
+            record_tmp.delete();
             
 	    }
 	    
@@ -275,10 +282,10 @@ public class mdictBuilder{
 	    	ByteBuffer raw_data = ByteBuffer.wrap(new byte[_key_block_info_list.length*(8+(65535+2+2)*2+8*2)]);//INCONGRUENTSVG::3 not dyed version diff,interval not marked.
 	    	for(key_info_struct infoI:_key_block_info_list) {
 	    		raw_data.putLong(infoI.num_entries);
-	    		byte[] hTextArray = infoI.headerKeyText.getBytes(_encoding);
+	    		byte[] hTextArray = infoI.headerKeyText;
 	    		raw_data.putChar((char) (_encoding.startsWith("UTF-16")?hTextArray.length/2:hTextArray.length));//TODO recollate
 	    		raw_data.put(hTextArray);
-	    		hTextArray = infoI.tailerKeyText.getBytes(_encoding);
+	    		hTextArray = infoI.tailerKeyText;
 		    		if(!_encoding.startsWith("UTF-16")){
 		    			raw_data.put(new byte[] {0});
 		            }else{        
@@ -377,7 +384,7 @@ public class mdictBuilder{
 			counter=_num_entries;
 			ArrayList<key_info_struct> list = new ArrayList<key_info_struct>();
 			key_block_compressed_size_accumulator=0;
-			DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream("F:\\index_tmp.mdict"));
+			DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream(index_tmp));
 			while(counter>0) {
 				dict = new int[102400];//TODO reuse
 				ByteBuffer key_block_data_wrap = ByteBuffer.wrap(new byte[1024*perKeyBlockSize_IE_IndexBlockSize]);
@@ -406,8 +413,8 @@ public class mdictBuilder{
 				}
 				infoI.num_entries = number_entries_counter;
 				//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
-				infoI.headerKeyText = keyslist.get((int) baseCounter).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr);
-				infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr);
+				infoI.headerKeyText = keyslist.get((int) baseCounter).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
+				infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
 				infoI.key_block_decompressed_size = key_block_data_wrap.position();
 				if(grossCompressionType==1) {//lzo压缩全部
 					int in_len = (int) infoI.key_block_decompressed_size;
