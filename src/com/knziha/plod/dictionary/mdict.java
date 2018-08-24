@@ -35,7 +35,6 @@ import org.jvcompress.util.MInt;
 
 import com.knziha.rbtree.RBTree;
 import com.knziha.rbtree.RBTree_additive;
-import com.knziha.rbtree.additiveMyCpr1;
 
 
 
@@ -56,8 +55,8 @@ public class mdict {
 	public mdict(){};
 
     
-    public final static String replaceReg = " |:|\\.|,|-|\'|(|)";
-    public final static String emptyStr = "";
+	public final static String replaceReg = " |:|\\.|,|-|\'|(|)";
+	public final static String emptyStr = "";
     private final static String linkRenderStr = "@@@LINK=";
     final static byte[] _zero4 = new byte[]{0,0,0,0};
     final static byte[] _1zero3 = new byte[]{1,0,0,0};
@@ -546,20 +545,17 @@ public class mdict {
         	data_in.read(record_block_compressed);
         	data_in.close();
             // 4 bytes indicates block compression type
-        	byte[] record_block_type = new byte[4];
-        	System.arraycopy(record_block_compressed, 0, record_block_type, 0, 4);
-        	String record_block_type_str = new String(record_block_type);
         	//ripemd128.printBytes(record_block_type);
         	// 4 bytes adler checksum of uncompressed content
         	ByteBuffer sf1 = ByteBuffer.wrap(record_block_compressed);
             int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
             adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
             // no compression
-            if(record_block_type_str.equals(new String(new byte[]{0,0,0,0}))){
+            if(compareByteArrayIsPara(_zero4,record_block_compressed)){
             	System.arraycopy(record_block_compressed, 8, record_block, 0, compressed_size-8);
             }
             // lzo compression
-            else if(record_block_type_str.equals(new String(new byte[]{1,0,0,0}))){
+            else if(compareByteArrayIsPara(_1zero3,record_block_compressed)){
                 //record_block = new byte[ decompressed_size];
                 MInt len = new MInt(decompressed_size);
                 byte[] arraytmp = new byte[ compressed_size];        
@@ -567,7 +563,7 @@ public class mdict {
                 MiniLZO.lzo1x_decompress(arraytmp,compressed_size,record_block,len);
             }
             // zlib compression
-            else if(record_block_type_str.equals(new String(new byte[]{02,00,00,00}))){
+            else if(compareByteArrayIsPara(_2zero3,record_block_compressed)){
                 // decompress
                 // record_block = zlib_decompress(record_block_compressed,8);
                 Inflater inf = new Inflater();
@@ -1120,8 +1116,7 @@ public class mdict {
 	
 	public int split_keys_thread_number;
 	//public ArrayList<myCpr<String,Integer>>[] combining_search_tree;
-	public ArrayList<additiveMyCpr1>[] combining_search_tree2;
-	public ArrayList<additiveMyCpr1>[] combining_search_tree233;
+	public ArrayList<Integer>[] combining_search_tree2;
 	public ArrayList<Integer>[] combining_search_tree_4;
 
 
@@ -1216,7 +1211,7 @@ public void flowerFindAllKeys(String key,
 	            if(it==split_keys_thread_number-1) jiaX=yuShu;
 	            final byte[] key_block = new byte[65536];/*分配资源 32770   65536*/
 	            if(combining_search_tree2[it]==null)
-	            	combining_search_tree2[it] = new ArrayList<additiveMyCpr1>();
+	            	combining_search_tree2[it] = new ArrayList<Integer>();
            	
 	            
 	            int compressedSize_many = 0;
@@ -1464,7 +1459,7 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 				//additiveMyCpr1 tmpnode = new additiveMyCpr1(LexicalEntry,""+SelfAtIdx+""+((int) (infoI.num_entries_accumulator+keyCounter)));//new ArrayList<Integer>() new int[] {SelfAtIdx,(int) (infoI.num_entries_accumulator+keyCounter)}
 				//tmpnode.value.add(SelfAtIdx);
 				//tmpnode.value.add((int) (infoI.num_entries_accumulator+keyCounter));
-				combining_search_tree2[it].add(new additiveMyCpr1(LexicalEntry,infoI.num_entries_accumulator+keyCounter));
+				combining_search_tree2[it].add((int) (infoI.num_entries_accumulator+keyCounter));//new additiveMyCpr1(LexicalEntry,infoI.num_entries_accumulator+keyCounter));
 
 	         	fuzzyKeyCounter++;
          }
@@ -1535,7 +1530,7 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 				//additiveMyCpr1 tmpnode = new additiveMyCpr1(LexicalEntry,""+SelfAtIdx+""+((int) (infoI.num_entries_accumulator+keyCounter)));//new ArrayList<Integer>() new int[] {SelfAtIdx,(int) (infoI.num_entries_accumulator+keyCounter)}
 				//tmpnode.value.add(SelfAtIdx);
 				//tmpnode.value.add((int) (infoI.num_entries_accumulator+keyCounter));
-				combining_search_tree2[it].add(new additiveMyCpr1(LexicalEntry,infoI.num_entries_accumulator+keyCounter));
+				combining_search_tree2[it].add((int) (infoI.num_entries_accumulator+keyCounter));//new additiveMyCpr1(LexicalEntry,));
 
 	         	fuzzyKeyCounter++;
          }
@@ -1803,6 +1798,7 @@ private byte[][] flowerSanLieZhi(String str) throws UnsupportedEncodingException
 public void size_confined_lookUp5(String keyword,
         RBTree_additive combining_search_tree, int SelfAtIdx, int theta) 
 		{
+	ArrayList<myCpr<String, Integer>> _combining_search_list = combining_search_list;
 	keyword = keyword.toLowerCase().replaceAll(replaceReg,emptyStr);
 	byte[] kAB = keyword.getBytes(_charset);
 	if(_encoding.startsWith("GB")) {
@@ -1895,7 +1891,7 @@ public void size_confined_lookUp5(String keyword,
 							if(combining_search_tree!=null)
 								combining_search_tree.insert(kI,SelfAtIdx,(int)(keyCounter+infoI.num_entries_accumulator));
 							else
-								combining_search_list.add(new myCpr(kI,(int)(keyCounter+infoI.num_entries_accumulator)));
+								_combining_search_list.add(new myCpr(kI,(int)(keyCounter+infoI.num_entries_accumulator)));
 							theta--;
 						}else return;
 						if(theta<=0) return;
@@ -1929,7 +1925,7 @@ public void size_confined_lookUp5(String keyword,
 					if(combining_search_tree!=null)
 						combining_search_tree.insert(kI,SelfAtIdx,(int)(idx+infoI.num_entries_accumulator));
 					else
-						combining_search_list.add(new myCpr<String,Integer>(kI,(int)(idx+infoI.num_entries_accumulator)));
+						_combining_search_list.add(new myCpr<String,Integer>(kI,(int)(idx+infoI.num_entries_accumulator)));
 					theta--;
 				}else
 					return;
@@ -2129,15 +2125,18 @@ public int reduce2(byte[] phrase,byte[] data,int[][] scaler,int start,int end) {
     	}
     	//if(iLen==1)
     	//	return 0;
-		//System.out.println(new String(array[0])+":"+new String(array[array.length-1]));
-    	if(val.compareTo(new String(array[0],_charset).toLowerCase().replaceAll(replaceReg,emptyStr))<=0){
-    		if(new String(array[0],_charset).toLowerCase().replaceAll(replaceReg,emptyStr).startsWith(val))
-    			return 0;
-    		else
-    			return -1;
-    	}else if(val.compareTo(new String(array[iLen-1]).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr))>=0){
-    		return iLen-1;
-    	}
+		System.out.println(new String(array[0])+":"+new String(array[array.length-1]));
+		int boundaryCheck = val.compareTo(new String(array[0],_charset).toLowerCase().replaceAll(replaceReg,emptyStr));
+    	if(boundaryCheck<0){
+    		return -1;
+    	}else if(boundaryCheck==0)
+			return 0;
+    	boundaryCheck = val.compareTo(new String(array[iLen-1],_charset).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr));
+    	if(boundaryCheck>0){
+    		return -1;
+    	}else if(boundaryCheck==0)
+			return iLen-1;
+    	
 		//System.out.println(array[0]+":"+val.compareTo(array[0].toLowerCase().replaceAll(replaceReg,emptyStr)));
 		//System.out.println(array[0]+":"+val);
 		//System.out.println(array[0]+":"+array[0].toLowerCase().replaceAll("[: . , - ]",emptyStr));

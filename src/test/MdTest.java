@@ -5,10 +5,10 @@ import java.util.ArrayList;
 import java.util.zip.DataFormatException;
 
 import com.knziha.plod.dictionary.BU;
+import com.knziha.plod.dictionary.additiveMyCpr1;
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.ripemd128;
 import com.knziha.rbtree.RBTree_additive;
-import com.knziha.rbtree.additiveMyCpr1;
 
 
 
@@ -29,7 +29,7 @@ public class MdTest {
     //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\NameOfPlants.mdx");
     //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\有毒植物,J.Huang.mdx");
 
-    static ArrayList<additiveMyCpr1> fuzzy_search_result;
+    //static ArrayList<Integer> fuzzy_search_result;
     static int d=0;
     public static void main(String[] args) throws IOException, DataFormatException  {
     //assign Mdx File here!
@@ -47,8 +47,8 @@ public class MdTest {
     	if(true)
     	{	/* false  true  */ 
     		CMN.show("\n\n——————————————————————basic query——————————————————————");
-    		md =  new mdict("E:\\assets\\mdicts\\高级成语辞典.mdx");
-    		key = "aadb";
+    		md =  new mdict("E:\\assets\\mdicts\\En-Irish(by Pat Griffin 2007).mdx");
+    		key = "happy";
 	        //CMN.show("查询 "+key+" ： "+md.getEntryAt(md.lookUp(key)));
     		stst=System.currentTimeMillis();
 	        CMN.show("结果html contents of "+key+" ： "+md.getRecordAt(md.lookUp(key)));
@@ -166,14 +166,14 @@ public class MdTest {
 				if(mdtmp.combining_search_tree2==null) {
 				}
 				else
-	    		for(int ti=0;ti<mdtmp.combining_search_tree2.length;ti++){//遍历搜索结果
-	    			if(mdtmp.combining_search_tree2[ti]==null) {
-	    				continue;
-	    			}
-	    			for(additiveMyCpr1 resI:mdtmp.combining_search_tree2[ti])
-	    	    		CMN.show(resI.key);
-	    			resCount+=mdtmp.combining_search_tree2[ti].size();
-	    		}
+	    			//if(mdtmp.combining_search_tree2!=null)
+	        		for(int ti=0;ti<mdtmp.split_keys_thread_number;ti++){
+	        			if(mdtmp.combining_search_tree2[ti]!=null)
+	        				for(int i1=0;i1<mdtmp.combining_search_tree2[ti].size();i1++) {
+	        					CMN.show(mdtmp.getEntryAt(mdtmp.combining_search_tree2[ti].get(i1)));
+	        					resCount++;
+	        				}
+	        		}
 				firstLookUpTable[i]=resCount;
 				
 			}
@@ -280,31 +280,34 @@ public class MdTest {
 				}
 				fuzzy_task_count--;
 				if(fuzzy_task_count<=0){
-					
-					fuzzy_search_result = new ArrayList<additiveMyCpr1>();
+					int cc = 0;
 					if(isCombinedSearching){
 						for(int i=0;i<mdicts.size();i++){
 	            			mdict mdtmp = mdicts.get(i);
 	            			//if(mdtmp.combining_search_tree2!=null)
 	                		for(int ti=0;ti<mdtmp.split_keys_thread_number;ti++){
-	                			fuzzy_search_result.addAll(mdtmp.combining_search_tree2[ti]);
-	                			mdtmp.combining_search_tree2[ti].clear();
+	                			if(mdtmp.combining_search_tree2[ti]!=null)
+	                				for(int i1=0;i1<mdtmp.combining_search_tree2[ti].size();i1++) {
+	                					CMN.show(mdtmp.getEntryAt(mdtmp.combining_search_tree2[ti].get(i1)));
+	                					cc++;
+	                				}
 	                		}
 	                		mdtmp.combining_search_tree2 = null;
 						}
 					}else{//单独搜索
 						mdict mdtmp;
 							mdtmp = mdicts.get(adapter_idx);
-	                		for(int ti=0;ti<mdtmp.split_keys_thread_number;ti++){
-	                			fuzzy_search_result.addAll(mdtmp.combining_search_tree2[ti]);
-	                			mdtmp.combining_search_tree2[ti].clear();
+							for(int ti=0;ti<mdtmp.split_keys_thread_number;ti++){
+	                			if(mdtmp.combining_search_tree2[ti]!=null)
+	                				for(int i1=0;i1<mdtmp.combining_search_tree2[ti].size();i1++) {
+	                					CMN.show(mdtmp.getEntryAt(mdtmp.combining_search_tree2[ti].get(i1)));
+	                					cc++;
+	                				}
 	                		}
 						mdtmp.combining_search_tree2 = null;
 					}
-					for(additiveMyCpr1 k:fuzzy_search_result) {
-						CMN.show(k.key);
-					}
-            		CMN.show("模糊搜索完成! 耗时"+(System.currentTimeMillis()-stst)+"ms,共搜索到 "+fuzzy_search_result.size()+"个词条！");
+					
+            		CMN.show("模糊搜索完成! 耗时"+(System.currentTimeMillis()-stst)+"ms,共搜索到 "+cc+"个词条！");
             		
 					fuzzy_task_count=-10086;
 				}
