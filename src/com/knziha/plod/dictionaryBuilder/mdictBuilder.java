@@ -13,8 +13,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.Deflater;
 
-import org.jvcompress.lzo.MiniLZO;
-import org.jvcompress.util.MInt;
 
 import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.key_info_struct;
@@ -206,6 +204,7 @@ public class mdictBuilder{
 						int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);
 						byte[] record_block_data = new byte[out_len_preEmpt]; 
 						//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
+						
 		                MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
 						RinfoI.compressed_size = out_len.v;
 						//xxx

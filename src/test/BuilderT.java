@@ -5,7 +5,6 @@ import java.io.IOException;
 
 import com.knziha.plod.dictionary.CMN;
 import com.knziha.plod.dictionary.mdict;
-import com.knziha.plod.dictionary.mdict.myCpr;
 import com.knziha.plod.dictionaryBuilder.mdictBuilder;
 
 /**

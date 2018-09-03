@@ -3,6 +3,7 @@ package com.knziha.plod.dictionary;
 public class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,T2>>{
     	public T1 key;
     	public T2 value;
+    	//private final String emptyStr = "";
     	public myCpr(T1 k,T2 v){
     		key=k;value=v;
     	}
@@ -10,11 +11,8 @@ public class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,
  
     		if(key.getClass()==String.class) {
 
-    			return ((String)key)
-    					.toLowerCase().replace(" ",mdict.emptyStr).replace("-",mdict.emptyStr)
-    					.compareTo(((String)other.key)    					
-						.toLowerCase().replace(" ",mdict.emptyStr).replace("-",mdict.emptyStr)
-    							);
+    			return (mdict.processText((String)key)
+    					.compareTo(mdict.processText((String)other.key)));
     		}
     		else
     			return this.key.compareTo(other.key);

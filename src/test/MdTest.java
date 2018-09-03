@@ -7,6 +7,7 @@ import java.util.zip.DataFormatException;
 import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.additiveMyCpr1;
 import com.knziha.plod.dictionary.mdict;
+import com.knziha.plod.dictionary.mdictRes;
 import com.knziha.plod.dictionary.ripemd128;
 import com.knziha.rbtree.RBTree_additive;
 
@@ -20,15 +21,7 @@ import com.knziha.rbtree.RBTree_additive;
 public class MdTest {
 	public static long stst;//static start time
 
-	//f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\简明英汉汉英词典.mdx");
-    //f = new File("F:\\dictionary_wkst\\omidict-analysis-master\\古生物图鉴.mdx");
-    //f = new File("F:\\mdict_wrkst\\mdict-js-master\\makingMDX\\mdd_file.mdx");
-    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\neo\\拉丁语英语[31655](091009).mdx");
-    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\neo\\英语拉丁语字典【匿名原创】【版本日期未注明】.mdx");
-    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\古生物图鉴.mdx");
-    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\NameOfPlants.mdx");
-    //f = new File("C:\\antiquafortuna\\MDictPC\\doc\\有毒植物,J.Huang.mdx");
-
+	
     //static ArrayList<Integer> fuzzy_search_result;
     static int d=0;
     public static void main(String[] args) throws IOException, DataFormatException  {
@@ -44,11 +37,11 @@ public class MdTest {
     //A bunch of tests~
 
     	//![0]Basic query and extraction of contents
-    	if(true)
+    	if(false)
     	{	/* false  true  */ 
     		CMN.show("\n\n——————————————————————basic query——————————————————————");
-    		md =  new mdict("E:\\assets\\mdicts\\En-Irish(by Pat Griffin 2007).mdx");
-    		key = "happy";
+    		md =  new mdict("E:\\assets\\mdicts\\拉鲁斯法语词典.mdx");
+    		key = "abces";
 	        //CMN.show("查询 "+key+" ： "+md.getEntryAt(md.lookUp(key)));
     		stst=System.currentTimeMillis();
 	        CMN.show("结果html contents of "+key+" ： "+md.getRecordAt(md.lookUp(key)));
@@ -184,7 +177,7 @@ public class MdTest {
         
         
         //![6] fuzzy find in contents ✔
-        if(false) 
+        if(true) 
         {	/* false  true  */
 	        CMN.show("\n\n—————————————————————— 多线程全文搜索测试 ——————————————————————");
 	    	CMN.show("...\r\n");
@@ -259,7 +252,47 @@ public class MdTest {
         //mdict m = new mdict("E:\\assets\\mdicts\\简明英汉汉英词典.mdx");
         //CMN.show(m.lookUp("a and")+"");
         
+        //mdict m = new mdict("E:\\assets\\mdicts\\TCM_Textbook.mdx");
+        //m.printAllKeys();
+        //CMN.show(m.getEntryAt(m.lookUp("\\VMpix\\ShengWuPix\\shengwuhuaxueyufenzishengwuxue279.jpg"))+"");
+        //CMN.show(m.getRecordAt(0)+"");
+        //CMN.show((m.getEntryAt(m.lookUp("\hex111111.jpg")))+"");
+        //CMN.show((m.getEntryAt(m.lookUp("目的")))+"");
         
+        if(false) {
+	        mdict m = new mdict("E:\\assets\\mdicts\\诗经集注（注解两种）\\诗经集注（注解两种）.mdx");
+	        //m.printAllKeys();
+	        CMN.show(m.getRecordAt(m.lookUp("七月"))+"");
+	        
+	        mdictRes m1 = new mdictRes("F:\\NVPACK\\mds\\zhwiki-20180601_V1.3.mdd");
+	        //m.printAllKeys();
+	        CMN.show(m1.getEntryAt(m1.lookUp("\\pic\\ja\\jaglion.jpg"))+"");
+	        stst = System.currentTimeMillis();
+	        int cc=0;
+	        while(cc<1000) {
+	        	m1.getRecordAt(m1.lookUp("\\pic\\ja\\jaglion.jpg"));
+	        	cc++;
+	        }
+	        CMN.show("getEntryAt时间"+(System.currentTimeMillis()-stst));
+	        
+	        
+	        
+	        m = new mdict("F:\\NVPACK\\mds\\zhwiki-20180601_V1.3.mdx");
+	        stst = System.currentTimeMillis();
+	        cc=0;
+	        while(cc<1) {
+	        	for(int i=0;i<m.get_num_key_blocks()/100;i++) {
+	        		m.prepareItemByKeyInfo(null, i, null);
+	        	}
+	        	cc++;
+	        }
+	        m.fetch_keyBlocksHeaderTextKeyID();
+	        CMN.show("prepareItemByKeyInfo时间"+(System.currentTimeMillis()-stst));
+        
+        }
+        
+        
+        //BU.printFile(m1.getRecordAt(m1.lookUp("\\pic\\ja\\jaglion.jpg")), 0, 0, "F:\\0tmp\\"+m1.getEntryAt(m1.lookUp("\\pic\\ja\\jaglion.jpg")).replace("\\","_"));
 }
     
 

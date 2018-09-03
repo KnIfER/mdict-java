@@ -1,7 +1,9 @@
 package com.knziha.plod.dictionary;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.Adler32;
 import java.util.zip.InflaterOutputStream;
@@ -108,7 +110,16 @@ public class  BU{//byteUtils
     		System.out.print(byteTo16(b[i])+",");
     	System.out.println();
     }
-    
+    public static void printFile(byte[] b,int off,int ln,String path){
+    	try {
+			FileOutputStream fo = new FileOutputStream(new File(path));
+			fo.write(b);
+			fo.flush();
+			fo.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
     public static String byteTo16(byte bt){
         String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
         String resStr="";
@@ -117,6 +128,33 @@ public class  BU{//byteUtils
         resStr = strHex[high]+strHex[low];
         return resStr;
     }
+    
+    
+    
+    
+
+    public static char toChar(byte[] buffer,int offset) {   
+        char  values = 0;   
+        for (int i = 0; i < 2; i++) {    
+            values <<= 8; values|= (buffer[offset+i] & 0xff);   
+        }   
+        return values;  
+    }
+    //废弃
+    public long toLong1(byte[] b,int offset)
+	{
+		long l = 0;
+		l = b[offset+0];
+		l |= ((long) b[offset+1] << 8);
+		l |= ((long) b[offset+2] << 16);
+		l |= ((long) b[offset+3] << 24);
+		l |= ((long) b[offset+4] << 32);
+		l |= ((long) b[offset+5] << 40);
+		l |= ((long) b[offset+6] << 48);
+		l |= ((long) b[offset+7] << 56);
+		return l;
+	}
+	  
 }
 	
 
