@@ -1,14 +1,14 @@
 # MDict Library in pure java ！
 It supports:  
-   I.lzo(via lzo-core-1.0.5.jar)  
-  II.Ripemd128 key-info encryption.  
- III.Mdx add Mdd Builders.  
+&nbsp;&nbsp;&nbsp;I.lzo(via lzo-core-1.0.5.jar)  
+&nbsp;&nbsp;II.Ripemd128 key-info encryption.  
+&nbsp;III.Mdx add Mdd Builders.  
 
 and is able to do:  
-   I.Basic query.  
-  II.Conjuction search.  
- III.Fast Fuzzy search (with wild cards).  
-  IV.Fast Fulltext retrieval (with wild cards).  
+&nbsp;&nbsp;&nbsp;I.Basic query.  
+&nbsp;&nbsp;II.Conjuction search.  
+&nbsp;III.Fast Fuzzy search (with wild cards).  
+&nbsp;IV.Fast Fulltext retrieval (with wild cards).  
 
 # Usage:
 ### 1.Basic query:
