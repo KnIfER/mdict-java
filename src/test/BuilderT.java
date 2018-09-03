@@ -32,9 +32,9 @@ public class BuilderT {
     	for(int i=0;i<1024;i++) mdxBD.insert(CU.getRandomString2(10), "randomly lose heart megamegamega");
     	
     	
-    	mdxBD.write("C:\\123Test.mdx");
+    	mdxBD.write("F:\\123Test.mdx");
     	
-    	mdict md = new mdict("C:\\123Test.mdx");//en-irish.mdx
+    	mdict md = new mdict("F:\\123Test.mdx");//en-irish.mdx
     	md.printDictInfo();
     	
     	//md.printAllContents();

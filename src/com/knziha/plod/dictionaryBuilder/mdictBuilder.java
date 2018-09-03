@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.Deflater;
 
+import org.anarres.lzo.LzoCompressor1x_1;
+import org.anarres.lzo.LzoDecompressor1x;
+import org.anarres.lzo.lzo_uintp;
 
 import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.key_info_struct;
@@ -199,18 +202,20 @@ public class mdictBuilder{
 	    			
 	    			if(grossCompressionType==1) {
 						fOutTmp.write(new byte[]{1,0,0,0});
-						MInt out_len = new MInt();   
+						//MInt out_len = new MInt();   
 		    			int in_len = data_raw_out.length;
 						int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);
 						byte[] record_block_data = new byte[out_len_preEmpt]; 
 						//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
-						
-		                MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
-						RinfoI.compressed_size = out_len.v;
+						lzo_uintp out_len = new lzo_uintp();
+			            new LzoCompressor1x_1().compress(data_raw_out, 0, in_len, record_block_data, 0,out_len);
+
+		                //MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
+						RinfoI.compressed_size = out_len.value;
 						//xxx
 						//CMN.show(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size)+"asdasd");
 						fOutTmp.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
-						fOutTmp.write(record_block_data,0,out_len.v);
+						fOutTmp.write(record_block_data,0,out_len.value);
 						fOutTmp.flush();
 	    			}else if(grossCompressionType==2) {
 						fOutTmp.write(new byte[]{2,0,0,0});
@@ -426,11 +431,14 @@ public class mdictBuilder{
 	    			}
 					byte[] key_block_data = key_block_data_wrap.array();
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,(int) infoI.key_block_decompressed_size));
-					MInt out_len = new MInt();   
+					//MInt out_len = new MInt();   
 					//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
-	                MiniLZO.lzo1x_1_compress(key_block_data, in_len, compressed_key_block_data, out_len, dict);
-					infoI.key_block_compressed_size = out_len.v;
-					fOutTmp.write(compressed_key_block_data,0,out_len.v);
+	                //MiniLZO.lzo1x_1_compress(key_block_data, in_len, compressed_key_block_data, out_len, dict);
+
+					lzo_uintp out_len = new lzo_uintp();
+		            new LzoCompressor1x_1().compress(key_block_data, 0, in_len, compressed_key_block_data, 0,out_len);
+					infoI.key_block_compressed_size = out_len.value;
+					fOutTmp.write(compressed_key_block_data,0,out_len.value);
 					fOutTmp.flush();
 				}
 
