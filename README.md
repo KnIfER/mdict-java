@@ -67,5 +67,3 @@ public static int reduce(int phrase, int[] array,int start,int end) {
 	
 
 <img src="https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg">
-
-# an android demo,based on [anki-helper](https://github.com/mmjang/ankihelper),is under development
