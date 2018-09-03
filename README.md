@@ -50,7 +50,7 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 * Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js))'s mdict-js is of help too, I just switch to use the same elegant binary list searching mathod——reduce().Somehow, this function will always returns the first occurance of the entry >= keyword, maybe some mathematician could told me why, but I've tested over 100000 times without any expectation.
 ```
 /*via mdict-js
- *note at first time we feed in 0 as start and array.length as end. it's must not be array.length-1. 
+ *note at first time we feed in 0 as start and array.length as end. it must not be array.length-1. 
 */
 public static int reduce(int phrase, int[] array,int start,int end) {
 	int len = end-start;
