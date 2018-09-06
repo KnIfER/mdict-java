@@ -10,6 +10,10 @@ and is able to do:
 &nbsp;III.Fast Fuzzy search (with wild cards).  
 &nbsp;IV.Fast Fulltext retrieval (with wild cards).  
 
+App Released!  
+[Play](https://play.google.com/store/apps/details?id=com.knziha)  
+![image](https://lh3.googleusercontent.com/gCP2nSx3V5MCksPy6NPj1MrFhCJm1GHfpMXm4lDkz3TUnNyJoJRGGdhy7Odec7nAfoyX=w1440-h620-rw)  
+
 # Usage:
 ### 1.Basic query:
 ```
