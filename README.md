@@ -51,7 +51,7 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 # details
 * This project was initially converted from xiaoqiangWang's [python analyzer](https://bitbucket.org/xwang/mdict-analysis). 
 * Use [red-black tree](http://www.cnblogs.com/skywang12345/p/3245399.html) and binary-list-searching(mainly) to implement dict funcitons.  
-* Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js))'s mdict-js is of help too, I've just switched to use the same elegant binary-list-searching method——reduce().Somehow, this function will always returns the first occurence of the entry >= keyword, maybe some mathematician could tell me why, but I've tested over 100000 times without any expectation.
+* Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js))'s mdict-js is of help too, I've just switched to use the same elegant binary-list-searching method——reduce().Somehow, this function always returns the first occurence of the entry >= keyword, maybe some mathematician could tell me why, but I've tested over 100000 times without any expectation.
 ```
 /*via mdict-js
  *note at first time we feed in 0 as start and array.length as end. it must not be array.length-1. 
