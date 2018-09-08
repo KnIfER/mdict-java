@@ -1,14 +1,18 @@
 # MDict Library in pure java ！
-It supports:
-   I.lzo(via lzo-core-1.0.5.jar)
-  II.Ripemd128 key-info encryption.
- III.Mdx add Mdd Builders.
+It supports:  
+&nbsp;&nbsp;&nbsp;I.lzo(via lzo-core-1.0.5.jar)  
+&nbsp;&nbsp;II.Ripemd128 key-info encryption.  
+&nbsp;III.Mdx add Mdd Builders.  
 
-and is able to do:
-   I.Basic query.
-  II.Conjuction search.
- III.Fast Fuzzy search (with wild cards).
-  IV.Fast Fulltext retrieval (with wild cards).
+and is able to do:  
+&nbsp;&nbsp;&nbsp;I.Basic query.  
+&nbsp;&nbsp;II.Conjuction search.  
+&nbsp;III.Fast Fuzzy search (with wild cards).  
+&nbsp;IV.Fast Fulltext retrieval (with wild cards).  
+
+# App Released!    
+<a href="https://play.google.com/store/apps/details?id=com.knziha"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" height="50px"/></a>  
+![image](https://lh3.googleusercontent.com/gCP2nSx3V5MCksPy6NPj1MrFhCJm1GHfpMXm4lDkz3TUnNyJoJRGGdhy7Odec7nAfoyX=w1440-h620-rw)  
 
 # Usage:
 ### 1.Basic query:
@@ -47,10 +51,10 @@ html_contents1 = mdxs.get(1).getRecordAt(16905);
 # details
 * This project was initially converted from xiaoqiangWang's [python analyzer](https://bitbucket.org/xwang/mdict-analysis). 
 * Use [red-black tree](http://www.cnblogs.com/skywang12345/p/3245399.html) and binary-list-searching(mainly) to implement dict funcitons.  
-* Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js))'s mdict-js is of help too, I just switch to use the same elegant binary list searching mathod——reduce().Somehow, this function will always returns the first occurance of the entry >= keyword, maybe some mathematician could told me why, but I've tested over 100000 times without any expectation.
+* Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js))'s mdict-js is of help too, I've just switched to use the same elegant binary-list-searching method——reduce().Somehow, this function always returns the first occurence of the entry >= keyword, maybe some mathematician could tell me why, but I've tested over 100000 times without any expectation.
 ```
 /*via mdict-js
- *note at first time we feed in 0 as start and array.length as end. it's must not be array.length-1. 
+ *note at first time we feed in 0 as start and array.length as end. it must not be array.length-1. 
 */
 public static int reduce(int phrase, int[] array,int start,int end) {
 	int len = end-start;
@@ -67,5 +71,3 @@ public static int reduce(int phrase, int[] array,int start,int end) {
 	
 
 <img src="https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg">
-
-# an android demo,based on [anki-helper](https://github.com/mmjang/ankihelper),is under development
