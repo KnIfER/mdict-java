@@ -43,6 +43,7 @@ import org.anarres.lzo.lzo_uintp;
 
 import com.knziha.rbtree.RBTree;
 
+
 class mdBase {
 	protected File f;
 	mdBase(){};
@@ -493,14 +494,16 @@ class mdBase {
             }
             // zlib compression
             else if(compareByteArrayIsPara(_2zero3, record_block_compressed)){
-                // record_block = zlib_decompress(record_block_compressed,8);
+            	//long stst = System.currentTimeMillis();
+                //record_block = zlib_decompress(record_block_compressed,8);
                 Inflater inf = new Inflater();
                 inf.setInput(record_block_compressed,8,compressed_size-8);
                 try {
 					int ret = inf.inflate(record_block,0,decompressed_size);
 				} catch (DataFormatException e) {
 					e.printStackTrace();
-				} 
+				}
+                //Log.e("asdsad",(System.currentTimeMillis()-stst)+" "+Rinfo_id);
             }
 
             //CMN.show(record_block.length+"ss"+decompressed_size);
@@ -854,6 +857,16 @@ class mdBase {
     void show(String str){
     	System.out.println(str);
     }
+	public String getPath() {
+		return f.getAbsolutePath();
+	}
+	public boolean moveFileTo(File newF) {
+		boolean ret = f.renameTo(newF);
+		if(ret)
+			f = newF;
+		return ret;
+	}
+	
 	
 	
 }

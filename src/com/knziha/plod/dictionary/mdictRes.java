@@ -93,8 +93,12 @@ public class mdictRes extends mdBase{
         	}
         }
         
-        byte[] record = new byte[(int) (record_end-record_start)];         
-        System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
+        byte[] record = new byte[(int) (record_end-record_start)];
+        int recordLen = record.length;
+        if(recordLen+record_start>record_block.length)
+        	recordLen = (int) (record_block.length-record_start);
+    	
+        System.arraycopy(record_block, (int) (record_start), record, 0, recordLen);
 
         return	record;
     }

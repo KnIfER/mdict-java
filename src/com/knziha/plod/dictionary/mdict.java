@@ -145,15 +145,15 @@ public class mdict extends mdBase{
         
         key_info_struct infoI = _key_block_info_list[blockId];
 
-        prepareItemByKeyInfo(infoI,blockId,null);
+        cached_key_block infoI_cache = prepareItemByKeyInfo(infoI,blockId,null);
         
         int res;
         if(_encoding.startsWith("GB"))
-        	//res = binary_find_closest2(infoI_cache_.keys,keyword);//keyword
-    		res = reduce_keys2(infoI_cache_.keys,kAB,0,infoI_cache_.keys.length);
+        	//res = binary_find_closest2(infoI_cache.keys,keyword);//keyword
+    		res = reduce_keys2(infoI_cache.keys,kAB,0,infoI_cache.keys.length);
         else
-        	//res = binary_find_closest(infoI_cache_.keys,keyword);//keyword
-    		res = reduce_keys(infoI_cache_.keys,keyword,0,infoI_cache_.keys.length);
+        	//res = binary_find_closest(infoI_cache.keys,keyword);//keyword
+    		res = reduce_keys(infoI_cache.keys,keyword,0,infoI_cache.keys.length);
         	
         if (res==-1){
         	System.out.println("search failed!"+keyword);
@@ -161,9 +161,9 @@ public class mdict extends mdBase{
         }
         else{
         	if(isSrict)
-        		if(!processText(new String(infoI_cache_.keys[res],_charset)).equals(keyword))
+        		if(!processText(new String(infoI_cache.keys[res],_charset)).equals(keyword))
             		return -1;
-        	//String KeyText= infoI_cache_.keys[res];
+        	//String KeyText= infoI_cache.keys[res];
         	//for(String ki:infoI.keys) CMN.show(ki);
         	//show("match key "+KeyText+" at "+res);
         	return (int) (infoI.num_entries_accumulator+res);
@@ -233,7 +233,7 @@ public class mdict extends mdBase{
         Integer Rinfo_id = reduce(infoI_cache_.key_offsets[i],0,_record_info_struct_list.length);//accumulation_RecordB_tree.xxing(new mdictRes.myCpr(,1)).getKey().value;//null 过 key前
         record_info_struct RinfoI = _record_info_struct_list[Rinfo_id];
         
-        prepareRecordBlock(RinfoI,Rinfo_id);
+        byte[] record_block = prepareRecordBlock(RinfoI,Rinfo_id);
         
             
         // split record block according to the offset info from key block
@@ -250,14 +250,14 @@ public class mdict extends mdBase{
             	record_end = infoI_cache_.key_offsets[0]-RinfoI.decompressed_size_accumulator;
         	}else
         		record_end = rec_decompressed_size;
-        	//CMN.show(record_block_.length+":"+compressed_size+":"+decompressed_size);
+        	//CMN.show(record_block.length+":"+compressed_size+":"+decompressed_size);
         }
         //CMN.show(record_start+"!"+record_end);
         //byte[] record = new byte[(int) (record_end-record_start)]; 
-        //CMN.show(record.length+":"+record_block_.length+":"+(record_start));
-        //System.arraycopy(record_block_, (int) (record_start), record, 0, record.length);
+        //CMN.show(record.length+":"+record_block.length+":"+(record_start));
+        //System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
         // convert to utf-8
-        String record_str = new String(record_block_,(int) (record_start),(int) (record_end-record_start),_charset);
+        String record_str = new String(record_block,(int) (record_start),(int) (record_end-record_start),_charset);
         // substitute styles
         //if self._substyle and self._stylesheet:
         //    record = self._substitute_stylesheet(record);

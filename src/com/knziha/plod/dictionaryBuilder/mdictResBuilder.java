@@ -13,12 +13,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.zip.Deflater;
 
-import org.anarres.lzo.LzoCompressor1x_1;
-import org.anarres.lzo.lzo_uintp;
+import org.jvcompress.lzo.MiniLZO;
+import org.jvcompress.util.MInt;
 
 import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.key_info_struct;
-import com.knziha.plod.dictionary.myCpr;
 import com.knziha.plod.dictionary.record_info_struct;
 import com.knziha.rbtree.RBTNode;
 import com.knziha.rbtree.RBTree;
@@ -51,19 +50,37 @@ public class mdictResBuilder{
 	    private final static String emptyStr = "";
 	    
 	    private key_info_struct[] _key_block_info_list;
-	    
-	    
-	    public RBTree<myCpr<String, byte[]>> data_tree;
-	    
+	    class myCpr_Strict implements Comparable<myCpr_Strict>{
+	    	public String key;
+	    	public byte[] value;
+	    	//private final String emptyStr = "";
+	    	public myCpr_Strict(String k,byte[] v){
+	    		key=k;value=v;
+	    	}
+	    	public int compareTo(myCpr_Strict o) {
+	    	    return this.key.toLowerCase().compareTo(o.key.toLowerCase());
+	    	    }
+	    	public String toString(){
+	    		return key+"_"+value;
+	    	}
+	    } 
+	    public RBTree<myCpr_Strict> data_tree;
+	    public HashMap<String,File> fileTree = new HashMap<>();
+		public void insert(String key, File inhtml) {
+	    	data_tree.insert(new myCpr_Strict(key,nullStr));
+			fileTree.put(key, inhtml);
+		}
+		private final byte[] nullStr=null;
+		
 	    public mdictResBuilder(String Dictionary_Name,
 	    		String about
 	    		) {
-	    	data_tree=new RBTree<myCpr<String, byte[]>>();
+	    	data_tree=new RBTree<myCpr_Strict>();
 	    	_Dictionary_Name=Dictionary_Name;
 	    	_about=about;	    }
 
 	    public int insert(String key,byte[] data) {
-	    	data_tree.insert(new myCpr(key,data));
+	    	data_tree.insert(new myCpr_Strict(key,data));
 	    	return 0;
 	    }
 	    
@@ -177,7 +194,15 @@ public class mdictResBuilder{
 		    		ByteArrayOutputStream data_raw = new ByteArrayOutputStream();
 	    			//CMN.show(blockInfo_L[i]+":"+values.length);
 		    		for(int entryC=0;entryC<blockInfo_L_I;entryC++) {//压入内容
-		    			byte[] byteContent = values.get(baseCounter+entryC);
+		    			byte[] byteContent;
+		    			if(values.get(baseCounter+entryC)==null) {
+		    				File inhtml = fileTree.get(keys[baseCounter+entryC]);
+		    				FileInputStream FIN = new FileInputStream(inhtml);
+		    		        byteContent = new byte[(int) inhtml.length()];
+		    		        FIN.read(byteContent);
+		    		        FIN.close();
+		    			}else
+		    				byteContent = values.get(baseCounter+entryC);
 		    			data_raw.write(byteContent);
 		    			//data_raw.write(new byte[] {0x0d,0x0a,0}); no intervals here
 		    		}
@@ -190,15 +215,13 @@ public class mdictResBuilder{
 					//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
 					if(grossCompressionType==1) {
 						fOutTmp.write(new byte[]{1,0,0,0});
-						//MInt out_len = new MInt();   
-		                //MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
-						//RinfoI.compressed_size = out_len.v;
-						lzo_uintp out_len = new lzo_uintp();
-			            new LzoCompressor1x_1().compress(data_raw_out, 0, in_len, record_block_data, 0,out_len);
+						MInt out_len = new MInt();   
+		                MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
+						RinfoI.compressed_size = out_len.v;
 						//xxx
 						//CMN.show(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size)+"asdasd");
 						fOutTmp.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
-						fOutTmp.write(record_block_data,0,out_len.value);
+						fOutTmp.write(record_block_data,0,out_len.v);
 						fOutTmp.flush();
 					}else  if(grossCompressionType==2) {
 						fOutTmp.write(new byte[]{2,0,0,0});
@@ -320,6 +343,7 @@ public class mdictResBuilder{
 	    int[] dict;
 	    int [] offsets;
 	    ArrayList<byte[]> values;
+	    String keys[];
 	    Integer[] blockDataInfo_L;
 		Integer[] blockInfo_L;
 		
@@ -331,8 +355,8 @@ public class mdictResBuilder{
 			data_tree.SetInOrderDo(new inOrderDo() {
 				@Override
 				public void dothis(RBTNode node) {
-					keyslist.add(((myCpr<String,byte[]>)node.getKey()).key);
-					valslist.add(((myCpr<String,byte[]>)node.getKey()).value);
+					keyslist.add(((myCpr_Strict)node.getKey()).key);
+					valslist.add(((myCpr_Strict)node.getKey()).value);
 			}});
 			data_tree.inOrderDo();
 			long counter=
@@ -340,6 +364,7 @@ public class mdictResBuilder{
 			//calc record split
 			offsets = new int[(int) _num_entries];
 			values = valslist;
+			keys = keyslist.toArray(new String[] {});
 			ArrayList<Integer> blockInfo = new ArrayList<Integer>();
 			ArrayList<Integer> blockDataInfo = new ArrayList<Integer>();
 			while(counter>0) {
@@ -352,15 +377,32 @@ public class mdictResBuilder{
 				blockInfo.add(0);
 				while(true) {
 					if(counter<=0) break;
-					byte[] record_data = values.get((int) (_num_entries-counter));
-					int preJudge = blockDataInfo.get(idx)+record_data.length;
+					int recordLen;
+					int preJudge;
+					if(values.get((int) (_num_entries-counter))!=null) {//从内存
+						byte[] record_data = values.get((int) (_num_entries-counter));
+						recordLen = record_data.length;
+						preJudge = blockDataInfo.get(idx)+record_data.length;
+						preJudge = blockDataInfo.get(idx)+recordLen;
+					}else {//从文件
+						File inhtml = fileTree.get(keys[(int) (_num_entries-counter)]);
+						recordLen = (int) inhtml.length();
+						preJudge = blockDataInfo.get(idx)+recordLen;
+					}
 					if(preJudge<1024*perRecordBlockSize) {//可以放入
 						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx  +3*((int) (_num_entries-counter))
-						record_block_decompressed_size_accumulator+=record_data.length;
+						record_block_decompressed_size_accumulator+=recordLen;
 						blockDataInfo.set(idx, preJudge);
 						blockInfo.set(idx, blockInfo.get(idx)+1);//累积
 						counter-=1;
-					}else
+					}else if(recordLen>=1024*perRecordBlockSize) {//单独放入
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx
+						record_block_decompressed_size_accumulator+=recordLen;
+						blockDataInfo.set(idx, recordLen);
+						blockInfo.set(idx, blockInfo.get(idx)+1);//累积
+						counter-=1;
+						break;
+					}
 						break;
 				}
 			}
@@ -399,8 +441,8 @@ public class mdictResBuilder{
 				}
 				infoI.num_entries = number_entries_counter;
 				//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
-				infoI.headerKeyText = keyslist.get((int) baseCounter).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
-				infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
+				infoI.headerKeyText = keyslist.get((int) baseCounter).toLowerCase().getBytes(_encoding);
+				infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).getBytes(_encoding);
 				infoI.key_block_decompressed_size = key_block_data_wrap.position();
 				if(grossCompressionType==1) {//lzo压缩全部
 					fOutTmp.write(new byte[]{1,0,0,0});
@@ -411,14 +453,11 @@ public class mdictResBuilder{
 					
 					byte[] key_block_data = key_block_data_wrap.array();
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,(int) infoI.key_block_decompressed_size));
-					//MInt out_len = new MInt();   
+					MInt out_len = new MInt();   
 					//CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
-	                //MiniLZO.lzo1x_1_compress(key_block_data, in_len, compressed_key_block_data, out_len, dict);
-
-					lzo_uintp out_len = new lzo_uintp();
-		            new LzoCompressor1x_1().compress(key_block_data, 0, in_len, compressed_key_block_data, 0,out_len);
-					infoI.key_block_compressed_size = out_len.value;
-					fOutTmp.write(compressed_key_block_data,0,out_len.value);
+	                MiniLZO.lzo1x_1_compress(key_block_data, in_len, compressed_key_block_data, out_len, dict);
+					infoI.key_block_compressed_size = out_len.v;
+					fOutTmp.write(compressed_key_block_data,0,out_len.v);
 					fOutTmp.flush();
 				}else  if(grossCompressionType==2) {
 					fOutTmp.write(new byte[]{2,0,0,0});

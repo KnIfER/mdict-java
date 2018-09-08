@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import java.util.zip.DataFormatException;
 
 import com.knziha.plod.dictionary.BU;
-import com.knziha.plod.dictionary.additiveMyCpr1;
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.mdictRes;
-import com.knziha.plod.dictionary.ripemd128;
 import com.knziha.rbtree.RBTree_additive;
 
 
