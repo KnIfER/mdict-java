@@ -20,8 +20,8 @@ public class BuilderT {
     	mdxBD.insert("happy", "happy means I possess you");
     	mdxBD.insert("sad", "sad means I lose you");
     	mdxBD.insert("aasadad", "sad means I lose you");
-    	mdxBD.insert("basdad", "sad means I lose you");
-    	mdxBD.insert("casdad", "sad means I lose you");
+    	mdxBD.insert("parenthesis", "sad means I lose you");
+    	mdxBD.insert("dianthus", "sad means I lose you");
     	mdxBD.insert("dasdad", "sad means I lose you");
     	mdxBD.insert("eaasdd", "sad means I lose you");
     	mdxBD.insert("fsdad", "sad means I lose you");
@@ -36,7 +36,7 @@ public class BuilderT {
     	
     	mdict md = new mdict("F:\\123Test.mdx");//en-irish.mdx
     	md.printDictInfo();
-    	
+    	md.printAllKeys();
     	//md.printAllContents();
     	CMN.show(md.getRecordAt(md.lookUp("happy")));
     	CMN.show(md.getRecordAt(1024));

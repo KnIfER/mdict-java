@@ -92,7 +92,7 @@ class mdBase {
     	return data_in1;
     }
     
-	private HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
+	protected HashMap<String,String[]> _stylesheet = new HashMap<String,String[]>();
 
     //构造
     mdBase(String fn) throws IOException  {
@@ -165,9 +165,9 @@ class mdBase {
         // {'number' : ('style_begin', 'style_end')}
         
         if(_header_tag.containsKey("StyleSheet")){
-            String[] lines = _header_tag.get("StyleSheet").split("[\r\n \r \n]");
+            String[] lines = _header_tag.get("StyleSheet").split("\n");
             for(int i=0;i<=lines.length-3;i+=3)
-                _stylesheet.put(i,new String[]{lines[i+1],lines[i+2]});
+                _stylesheet.put(lines[i],new String[]{lines[i+1],lines[i+2]});
         }
         
         _version = Float.valueOf(_header_tag.get("GeneratedByEngineVersion"));

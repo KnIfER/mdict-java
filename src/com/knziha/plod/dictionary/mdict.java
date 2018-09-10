@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
@@ -53,9 +54,10 @@ import com.knziha.rbtree.RBTree_additive;
  */
 
 public class mdict extends mdBase{
-	public mdict(){};
+	public mdict(){};//don't call this.
 	
-	public final static Pattern replaceReg = Pattern.compile(" |:|\\.|,|-|\'|\\(|\\)|#|<|>|!");
+	public final static Pattern replaceReg = Pattern.compile(" |:|\\.|,|-|\'|\\(|\\)|#|<|>|!|\\n");
+	public final static Pattern markerReg = Pattern.compile("`([\\w\\W]{1,3}?)`");// for `1` `2`...
     private final static String linkRenderStr = "@@@LINK=";
     
     protected mdictRes mdd;
@@ -199,24 +201,43 @@ public class mdict extends mdBase{
     	StringBuilder sb = new StringBuilder();
     	int c=0;
     	for(int i:positions) {
-    		String tmp = getRecordAt(i).trim();
+    		String tmp = getRecordAt(i);
     		if(tmp.startsWith(linkRenderStr)) {
-    			int idx = lookUp(tmp.substring(linkRenderStr.length()));
-    			if(idx!=-1)
+    			String key = tmp.substring(linkRenderStr.length());
+    			int offset = offsetByTailing(key);
+    			key = key.trim();
+    			//CMN.show(offset+"");
+    			int idx = lookUp(key);
+    			if(idx!=-1) {
+    				if(offset>0) {
+    					if(key.equals(getEntryAt(idx+offset)))
+    						idx+=offset;
+    				}
     				tmp=getRecordAt(idx);
+    			}
     		}
-    		sb.append(tmp);
+    		sb.append(tmp.trim());
     		if(c!=positions.length-1)
         		sb.append("<HR>");
     		c++;
     	}
-    	return sb.toString();
+    	return processStyleSheet(sb.toString());
     }
     
+    public static int offsetByTailing(String token) {
+    	//calculating relative offset represented by number of tailing '\n'.
+    	//entrys: abc abc acc TO: abc abc\n acc
+		if(token.endsWith("\n")) {
+			int first=token.length()-1;
+			while(first-1>0 && token.charAt(first-1)=='\n') {
+				first--;
+			}
+			return token.length()-first;
+		}
+		return 0;
+	}
 
-
-	
-    public String getRecordAt(int position) throws IOException {
+	public String getRecordAt(int position) throws IOException {
     	if(record_block_==null)
     		decode_record_block_header();
     	if(position<0||position>=_num_entries) return null;
@@ -257,7 +278,7 @@ public class mdict extends mdBase{
         //CMN.show(record.length+":"+record_block.length+":"+(record_start));
         //System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
         // convert to utf-8
-        String record_str = new String(record_block,(int) (record_start),(int) (record_end-record_start),_charset);
+        String record_str = new String(record_block,(int) (record_start),(int) (record_end-record_start)-3,_charset);//-3 is because of 0d 0a 00 tailing after each record.
         // substitute styles
         //if self._substyle and self._stylesheet:
         //    record = self._substitute_stylesheet(record);
@@ -1325,10 +1346,11 @@ public class mdict extends mdBase{
     			.append("Engine Version: ").append(_version).append("<BR>")
     			.append("CreationDate: ").append((_header_tag.containsKey("CreationDate")?_header_tag.get("CreationDate"):"UNKNOWN")).append("<BR>")
     			.append("Charset &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : ").append(this._encoding).append("<BR>")
-    			.append("_num_entries: ").append(this._num_entries).append("<BR>")
-    			.append("_num_key_blocks: ").append(this._num_key_blocks).append("<BR>")
-    			.append("_num_rec_blocks: ").append(this._num_record_blocks).append("<BR>")
-    			.append(mdd==null?"no assiciated mdRes":(mdd._encoding+","+mdd.getNumberEntries()+","+mdd._num_key_blocks+","+mdd._num_record_blocks)).toString();
+    			.append("Num Entries: ").append(this._num_entries).append("<BR>")
+    			.append("Num Key Blocks: ").append(this._num_key_blocks).append("<BR>")
+    			.append("Num Rec Blocks: ").append(this._num_record_blocks).append("<BR>")
+    			.append(mdd==null?"&lt;no assiciated mdRes&gt;":("MdResource count "+mdd.getNumberEntries()+","+mdd._encoding+","+mdd._num_key_blocks+","+mdd._num_record_blocks)).append("<BR>")
+    			.append("Path: ").append(this.getPath()).toString();
     }
     
     static boolean EntryStartWith(byte[] source, int sourceOffset, int sourceCount, byte[][][] matchers) {
@@ -1377,6 +1399,25 @@ public class mdict extends mdBase{
     public static String processText(String input) {
  		return replaceReg.matcher(input).replaceAll(emptyStr).toLowerCase();
  	}
+    
+    public String processStyleSheet(String input) {
+    	if(_stylesheet.size()==0)
+    		return input;
+ 		Matcher m = markerReg.matcher(input);
+ 		HashSet<String> Already = new HashSet<>();
+ 		while(m.find()) {
+			String now = m.group(1);
+			if(!Already.contains(now)) {
+				try {
+				input = input.replace("`"+now+"`", _stylesheet.get(now)[0]);
+				}catch(Exception e) {}
+				Already.add(now);
+			}
+	    }
+ 		Already.clear();
+ 		return input;
+ 	}
+    
 }
 
 
