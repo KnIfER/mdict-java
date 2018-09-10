@@ -17,12 +17,14 @@ public class ArrayListTree<T extends Comparable<T>> {
 	public int insert(T val){
 		if(data.size()==0 || data.get(data.size()-1).compareTo(val)<=0) {
 			data.add(data.size(),val);
-			return data.size()-1;
+			return data.size();
 		}
 		int idx = reduce(val,0,data.size());
-		if(val.compareTo(data.get(idx))==0)
-		while(idx<data.size()-1 && val.compareTo(data.get(idx+1))==0) {
-			idx++;
+		if(val.compareTo(data.get(idx))==0) {
+			while(idx<data.size()-1 && val.compareTo(data.get(idx+1))==0) {
+				idx++;
+			}
+			if(idx<data.size()-1) idx++;
 		}
 		data.add(idx,val);
 		return idx;
@@ -48,6 +50,21 @@ public class ArrayListTree<T extends Comparable<T>> {
 	com.knziha.rbtree.RBTree_duplicative.inOrderDo inOrderDo_;
 	public void SetInOrderDo(com.knziha.rbtree.RBTree_duplicative.inOrderDo inOrderDo) {
 		inOrderDo_=inOrderDo;
+	}
+
+	public int getCountOf(T key) {
+		if(data.size()==0 || data.get(data.size()-1).compareTo(key)<0) {
+			return 0;
+		}
+		int idx = reduce(key,0,data.size());
+		int cc=0;
+		if(key.compareTo(data.get(idx))==0) {
+			cc++;
+			while(idx<data.size()-1 && key.compareTo(data.get(idx+1))==0) {
+				idx++;cc++;
+			}
+		}
+		return cc;
 	}
 	
 	

@@ -549,4 +549,8 @@ public class mdictBuilder{
 	    public void setIndexUnitSize(int val) {
 	    	perKeyBlockSize_IE_IndexBlockSize=val;
 	    }
+
+		public int getCountOf(String key) {
+			return data_tree.getCountOf(new myCpr<>(key,""));
+		}
 }
