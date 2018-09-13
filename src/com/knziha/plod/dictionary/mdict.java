@@ -38,6 +38,8 @@ import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 //import org.jvcompress.lzo.MiniLZO;
 //import org.jvcompress.util.MInt;
+import org.apache.commons.lang.StringEscapeUtils;
+
 
 import com.knziha.rbtree.RBTree_additive;
 
@@ -203,6 +205,7 @@ public class mdict extends mdBase{
     	for(int i:positions) {
     		String tmp = getRecordAt(i);
     		if(tmp.startsWith(linkRenderStr)) {
+    			//CMN.show(tmp.replace("\n", "1"));
     			String key = tmp.substring(linkRenderStr.length());
     			int offset = offsetByTailing(key);
     			key = key.trim();
@@ -216,7 +219,7 @@ public class mdict extends mdBase{
     				tmp=getRecordAt(idx);
     			}
     		}
-    		sb.append(tmp.trim());
+    		sb.append(tmp);//.trim()
     		if(c!=positions.length-1)
         		sb.append("<HR>");
     		c++;
@@ -278,7 +281,7 @@ public class mdict extends mdBase{
         //CMN.show(record.length+":"+record_block.length+":"+(record_start));
         //System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
         // convert to utf-8
-        String record_str = new String(record_block,(int) (record_start),(int) (record_end-record_start)-3,_charset);//-3 is because of 0d 0a 00 tailing after each record.
+        String record_str = new String(record_block,(int) (record_start),(int) (record_end-record_start),_charset);
         // substitute styles
         //if self._substyle and self._stylesheet:
         //    record = self._substitute_stylesheet(record);
@@ -1404,18 +1407,32 @@ public class mdict extends mdBase{
     	if(_stylesheet.size()==0)
     		return input;
  		Matcher m = markerReg.matcher(input);
- 		HashSet<String> Already = new HashSet<>();
+ 		//HashSet<String> Already = new HashSet<>();
+ 		StringBuilder transcriptor = new StringBuilder();
+ 		String last=null;
+ 		int lastEnd=0;
+ 		boolean returnRaw=true;
  		while(m.find()) {
 			String now = m.group(1);
-			if(!Already.contains(now)) {
-				try {
-				input = input.replace("`"+now+"`", _stylesheet.get(now)[0]);
-				}catch(Exception e) {}
-				Already.add(now);
+			String[] nowArr = _stylesheet.get(now);
+			if(nowArr==null) {
+				if(last!=null) {
+					transcriptor.append(last);
+					last=null;
+				}
+				continue;
 			}
+ 			transcriptor.append(input.substring(lastEnd, m.start()));
+ 			if(last!=null) transcriptor.append(last);
+ 			transcriptor.append(StringEscapeUtils.unescapeHtml(nowArr[0]));
+ 			lastEnd = m.end();
+			last = StringEscapeUtils.unescapeHtml(nowArr[1]);
+			returnRaw=false;
 	    }
- 		Already.clear();
- 		return input;
+ 		if(returnRaw)
+ 			return input;
+ 		else
+ 			return transcriptor.append(last==null?"":last).append(input.substring(lastEnd,input.length())).toString();
  	}
     
 }

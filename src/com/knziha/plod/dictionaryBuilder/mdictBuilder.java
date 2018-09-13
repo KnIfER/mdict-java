@@ -51,12 +51,13 @@ public class mdictBuilder{
 	    
 	    
 	    public ArrayListTree<myCpr<String, String>> data_tree;
-	    
+	    public HashMap<Integer,Integer> privateZone;
 	    public mdictBuilder(String Dictionary_Name,
 	    		String about,
 	    		String codec
 	    		) {
 	    	data_tree=new ArrayListTree<myCpr<String, String>>();
+	    	privateZone = new HashMap<>();
 	    	_Dictionary_Name=Dictionary_Name;
 	    	_about=StringEscapeUtils.escapeHtml4(about);
 	    	_encoding=codec;
@@ -65,19 +66,21 @@ public class mdictBuilder{
 	    public HashMap<String,File> fileTree = new HashMap<>();
 	    
 	    public int insert(String key,String data) {
-
-    		//CMN.show(key);
 	    	data_tree.insert(new myCpr<>(key,data));
 	    	return 0;
 	    }
-	    
+
+		
 	    private final String nullStr=null;
 	    
 		public void insert(String key, File inhtml) {
 	    	data_tree.insert(new myCpr<>(key,nullStr));
 			fileTree.put(key, inhtml);
 		}
-		
+		public void append(String key, File inhtml) {
+	    	data_tree.add(new myCpr<>(key,nullStr));
+			fileTree.put(key, inhtml);
+		}
 	    private String constructHeader() {
 	    	String encoding = _encoding;
 	        if(encoding.equals("UTF-16LE"))
@@ -132,6 +135,7 @@ public class mdictBuilder{
 	    	DataOutputStream fOut = new DataOutputStream(new  FileOutputStream(path));
 	    	// number of bytes of header text
 
+	    	//!!!!
 	    	splitKeys();
 //![1]write_header 
 	    	String headerString = constructHeader();
@@ -217,7 +221,7 @@ public class mdictBuilder{
 		    			}else
 		    				byteContent = values[baseCounter+entryC].getBytes(_encoding);
 		    			data_raw.write(byteContent);
-		    			data_raw.write(new byte[] {0x0d,0x0a,0});
+		    			//data_raw.write(new byte[] {0x0d,0x0a,0});
 		    		}
 	    			
 	    			byte[] data_raw_out = data_raw.toByteArray();
@@ -227,7 +231,7 @@ public class mdictBuilder{
 						fOutTmp.write(new byte[]{1,0,0,0});
 						
 		    			int in_len = data_raw_out.length;
-						int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);
+						int out_len_preEmpt =  (in_len + in_len / 16 + 64);// + 3
 						byte[] record_block_data = new byte[out_len_preEmpt]; 
 		    			
 						//MInt out_len = new MInt();   //CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
@@ -420,16 +424,16 @@ public class mdictBuilder{
 					}
 					if(preJudge<1024*perRecordBlockSize) {
 						//PASSING
-						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+3*((int) (_num_entries-counter));//xxx
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx+3*((int) (_num_entries-counter));
 						record_block_decompressed_size_accumulator+=recordLen;
 						blockDataInfo.set(idx, preJudge);/*offset+=preJudge*/
 						blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
 						counter-=1;
 					}else if(recordLen>=1024*perRecordBlockSize) {
 						//MONO OCCUPYING
-						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+3*((int) (_num_entries-counter));//xxx
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx+3*((int) (_num_entries-counter));
 						record_block_decompressed_size_accumulator+=recordLen;
-						blockDataInfo.set(idx, recordLen+3*((int) (_num_entries-counter)));/*offset+=preJudge*/
+						blockDataInfo.set(idx, recordLen);/*offset+=preJudge*/  //+3*((int) (_num_entries-counter))
 						blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
 						counter-=1;
 						break;
@@ -444,16 +448,16 @@ public class mdictBuilder{
 			ArrayList<key_info_struct> list = new ArrayList<key_info_struct>();
 			key_block_compressed_size_accumulator=0;
 			DataOutputStream fOutTmp = new DataOutputStream(new  FileOutputStream(index_tmp));
-			while(counter>0) {
+			while(counter>0) {//总循环
 				//dict = new int[102400];//TODO reuse
 				ByteBuffer key_block_data_wrap = ByteBuffer.wrap(new byte[1024*perKeyBlockSize_IE_IndexBlockSize]);
 				key_info_struct infoI = new key_info_struct();
 				long number_entries_counter = 0;
 				long baseCounter = _num_entries-counter;
-				while(true) {//压入entries
-					if(counter<=0) break;
-					int retPos = key_block_data_wrap.position();
-					try {//必定抛出，除非最后一个block.
+				if(privateZone.containsKey((int) (_num_entries-counter))) {
+					int end = privateZone.get((int) (_num_entries-counter));
+					for(int i=(int) (_num_entries-counter);i<end;i++) {
+						//CMN.show("putting!.."+(_num_entries-counter));
 						key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
 						key_block_data_wrap.put(keyslist.get((int) (_num_entries-counter)).getBytes(_encoding));
 						//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
@@ -461,26 +465,47 @@ public class mdictBuilder{
 							key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
 						}else
 							key_block_data_wrap.put(new byte[]{0});//INCONGRUENTSVG
-						counter-=1;
-						number_entries_counter+=1;//完整放入后才计数
-						//key_block_data.put(new byte[]{0});
-					} catch (BufferOverflowException e) {
-						//e.printStackTrace();
-						key_block_data_wrap.position(retPos);//不完整放入则回退。
-						break;
+						number_entries_counter++;
+						counter--;
 					}
+					infoI.num_entries = number_entries_counter;
+					//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
+					infoI.headerKeyText = "～～".getBytes(_encoding);
+					infoI.tailerKeyText = "～～".getBytes(_encoding);
+				}else {
+					while(true) {//常规压入entries
+						if(counter<=0) break;
+						int retPos = key_block_data_wrap.position();
+						try {//必定抛出，除非最后一个block.
+							if(privateZone.containsKey((int) (_num_entries-counter))) throw new BufferOverflowException();
+							key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
+							key_block_data_wrap.put(keyslist.get((int) (_num_entries-counter)).getBytes(_encoding));
+							//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
+							if(_encoding.startsWith("UTF-16")){
+								key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
+							}else
+								key_block_data_wrap.put(new byte[]{0});//INCONGRUENTSVG
+							counter-=1;
+							number_entries_counter+=1;//完整放入后才计数
+							//key_block_data.put(new byte[]{0});
+						} catch (BufferOverflowException e) {
+							//e.printStackTrace();
+							key_block_data_wrap.position(retPos);//不完整放入则回退。
+							break;
+						}
+					}
+					infoI.num_entries = number_entries_counter;
+					//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
+					infoI.headerKeyText = keyslist.get((int) baseCounter).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
+					infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
 				}
-				infoI.num_entries = number_entries_counter;
-				//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
-				infoI.headerKeyText = keyslist.get((int) baseCounter).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
-				infoI.tailerKeyText = keyslist.get((int) (baseCounter+number_entries_counter-1)).toLowerCase().replace(" ",emptyStr).replace("-",emptyStr).getBytes(_encoding);
 				infoI.key_block_decompressed_size = key_block_data_wrap.position();
 				int in_len = (int) infoI.key_block_decompressed_size;
 				byte[] key_block_data = key_block_data_wrap.array();
 				if(grossCompressionType==1) {//lzo压缩全部
 					fOutTmp.write(new byte[]{1,0,0,0});
 	    	    	//fOut.write(new byte[] {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,9,9,9,9,9});
-					int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);
+					int out_len_preEmpt =  (in_len + in_len / 16 + 64 );//+ 3
 					byte[] compressed_key_block_data = new byte[out_len_preEmpt]; 
 					
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,(int) infoI.key_block_decompressed_size));
@@ -553,4 +578,5 @@ public class mdictBuilder{
 		public int getCountOf(String key) {
 			return data_tree.getCountOf(new myCpr<>(key,""));
 		}
+
 }

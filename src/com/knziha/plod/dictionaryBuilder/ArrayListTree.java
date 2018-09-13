@@ -2,6 +2,7 @@ package com.knziha.plod.dictionaryBuilder;
 
 import java.util.ArrayList;
 
+import com.knziha.plod.dictionary.myCpr;
 import com.knziha.rbtree.RBTNode;
 
 public class ArrayListTree<T extends Comparable<T>> {
@@ -65,6 +66,14 @@ public class ArrayListTree<T extends Comparable<T>> {
 			}
 		}
 		return cc;
+	}
+
+	public Integer size() {
+		return data.size();
+	}
+
+	public void add(T val) {
+		data.add(val);
 	}
 	
 	
