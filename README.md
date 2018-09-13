@@ -19,11 +19,10 @@ and is able to do:
 ```
 String key = "happy";
 mdict md = new mdict(path);
-int search_result = md.lookUp(key);
+int search_result = md.lookUp(key, true);//true means to match strictly  
 if(search_result!=-1){
   String html_contents = md.getRecordAt(search_result);
-  String entry_name_at_pos = md.getEntryAt(search_result);
-  //TODO handle html_contents and entry_name_at_pos
+  String entry_name = md.getEntryAt(search_result);
 }
 ```
 ### 2.Search in a bunch of dicts:
@@ -39,10 +38,14 @@ for(int i=0;i<mdxs.size();i++)
 }  	
 combining_search_tree.inOrder();//print results stored in the RBTree
 
-/*printed results looks like 【happy____@398825@0@16905@1】...【other results】...
+/*printed results looks like 【happy____@398825@0@16905@1@16906@1】...【other results】...
 how to handle:
-String html_contents0 = mdxs.get(0).getRecordAt(398825),
-html_contents1 = mdxs.get(1).getRecordAt(16905);
+String 
+html_contents0 = mdxs.get(0).getRecordAt(398825),
+html_contents1 = mdxs.get(1).getRecordAt(16905),
+html_contents2 = mdxs.get(1).getRecordAt(16906);
+...  
+...
 */
 ```
 
