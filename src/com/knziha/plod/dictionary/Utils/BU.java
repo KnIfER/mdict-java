@@ -15,7 +15,9 @@
 	Mdict-Java Query Library
 */
 
-package com.knziha.plod.dictionary;
+package com.knziha.plod.dictionary.Utils;
+
+import com.knziha.plod.dictionary.ripemd128;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -44,6 +46,7 @@ public class  BU{//byteUtils
         return sum;
     }
     //解压等utils
+    @Deprecated
     public static byte[] zlib_decompress(byte[] encdata,int offset,int ln) {
 	    try {
 			    ByteArrayOutputStream out = new ByteArrayOutputStream(); 
@@ -56,7 +59,8 @@ public class  BU{//byteUtils
 		    	return "ERR".getBytes(); 
 		    }
     }
-	
+
+    @Deprecated
     public static byte[] toLH(int n) {  
     	  byte[] b = new byte[4];  
     	  b[0] = (byte) (n & 0xff);  
@@ -97,7 +101,7 @@ public class  BU{//byteUtils
 	    return data;
     }
 	
-	static byte[] _mdx_decrypt(byte[] comp_block) throws IOException{
+	public static byte[] _mdx_decrypt(byte[] comp_block) throws IOException{
 		ByteArrayOutputStream data = new ByteArrayOutputStream() ;
 		data.write(comp_block,4,4);
 		data.write(ripemd128.packIntLE(0x3695));
@@ -109,23 +113,27 @@ public class  BU{//byteUtils
 	    data.write(_fast_decrypt(comp_block2, key));
 	    return data.toByteArray();
     }
-	
-	
+
+
+    @Deprecated
 	public static void printBytes2(byte[] b) {
 		for(int i=0;i<b.length;i++)
     		System.out.print((int)(b[i]&0xff)+",");
     	System.out.println();
 	}
+    @Deprecated
     public static void printBytes(byte[] b){
     	for(int i=0;i<b.length;i++)
     		System.out.print(byteTo16(b[i])+",");
     	System.out.println();
     }
+    @Deprecated
     public static void printBytes(byte[] b,int off,int ln){
     	for(int i=off;i<off+ln;i++)
     		System.out.print(byteTo16(b[i])+",");
     	System.out.println();
     }
+    @Deprecated
     public static void printFile(byte[] b,int off,int ln,String path){
     	try {
 			FileOutputStream fo = new FileOutputStream(new File(path));

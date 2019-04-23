@@ -1,0 +1,11 @@
+.list-view .scroll-bar:horizontal .increment-arrow,
+.list-view .scroll-bar:horizontal .decrement-arrow,
+.list-view .scroll-bar:horizontal .increment-button,
+.list-view .scroll-bar:horizontal .decrement-button {
+ -fx-scale-y: 0;
+ -fx-padding:0;
+}
+
+.list-cell:selected{
+    -fx-background-color: #d3d3d3;
+}

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.zip.DataFormatException;
 
-import com.knziha.plod.dictionary.BU;
+import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.mdictRes;
 import com.knziha.rbtree.RBTree_additive;
@@ -24,7 +24,7 @@ public class MdTest {
     static int d=0;
     public static void main(String[] args) throws IOException, DataFormatException  {
     //assign Mdx File here!
-    	mdict md =  new mdict("E:\\assets\\mdicts\\高级汉语词典.mdx");//牛津高阶英汉双解词典.mdx
+    	mdict md =  new mdict("E:\\assets\\mdicts\\wordsmyth2018.mdx");//牛津高阶英汉双解词典.mdx
     	//final mdict md =  new mdict("E:\\mdict\\MDictPC\\doc\\清华大学藏战国竹简（伍）.mdx");
     	
     //A keyword to search!			//简明英汉汉英词典.mdx      古生物图鉴.mdx
@@ -174,7 +174,7 @@ public class MdTest {
         }   
         
         
-        //![6] fuzzy find in contents ✔
+        //![6] fulltext search
         if(true) 
         {	/* false  true  */
 	        CMN.show("\n\n—————————————————————— 多线程全文搜索测试 ——————————————————————");
@@ -190,7 +190,7 @@ public class MdTest {
 	        for(int i=0;i<gross.size();i++) {
 	        	CMN.show(gross.getResAt(i));
 	        }
-	        CMN.show("多线程全文搜索测试 time used： "+(System.currentTimeMillis()-stst)+"ms 共搜索到res count: "+gross.size());
+	        CMN.show("✔ 多线程全文搜索测试 time used： "+(System.currentTimeMillis()-stst)+"ms 共搜索到res count: "+gross.size());
 	        
         }     
         

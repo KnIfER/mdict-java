@@ -16,12 +16,14 @@ import java.util.zip.Deflater;
 import org.anarres.lzo.LzoCompressor1x_1;
 import org.anarres.lzo.lzo_uintp;
 
-import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.key_info_struct;
+import com.knziha.plod.dictionary.mdictRes;
 import com.knziha.plod.dictionary.record_info_struct;
+import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.rbtree.RBTNode;
 import com.knziha.rbtree.RBTree;
 import com.knziha.rbtree.RBTree.inOrderDo;
+
 
 /**
  * @author KnIfER
@@ -108,7 +110,9 @@ public class mdictResBuilder{
 	    
 	    File dirP;
 	    File index_tmp,record_tmp;
+	    String _path;
 	    public void write(String path) throws IOException {
+	    	_path=path;
 	    	dirP = new File(path).getParentFile();
 	    	dirP.mkdirs();
 	    	if(!dirP.exists() && dirP.isDirectory())
@@ -507,6 +511,20 @@ public class mdictResBuilder{
 			//CMN.show("le"+list.size());
 			_key_block_info_list = list.toArray(new key_info_struct[] {});
 		}
+
+		public mdictRes getMdd() {
+			try {
+				return new mdictRes(_path);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
 	    
-	
+	    public void setRecordUnitSize(int val) {
+	    	perRecordBlockSize=val;
+	    }
+	    public void setIndexUnitSize(int val) {
+	    	perKeyBlockSize_IE_IndexBlockSize=val;
+	    }
 }

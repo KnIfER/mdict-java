@@ -1,4 +1,4 @@
-/*  Copyright 2018 KnIfER Zenjio-Kang
+/*  Copyright 2018 KnIfER
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package com.knziha.plod.dictionary;
 
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,7 +40,8 @@ import org.anarres.lzo.lzo_uintp;
 //import org.jvcompress.util.MInt;
 import org.apache.commons.lang.StringEscapeUtils;
 
-
+import com.knziha.plod.dictionary.Utils.BU;
+import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.rbtree.RBTree_additive;
 
 
@@ -49,28 +50,40 @@ import com.knziha.rbtree.RBTree_additive;
  * FEATURES:
  * 1. Basic parse and query functions.
  * 2. Mdicts conjunction search.
- * 3. Multi-threaded search in all context text.
- * 4. Multi-threaded fuzzy search in all key entries.
+ * 3. Multi-threaded search in all contexts.
+ * 4. Multi-threaded wildcard match in all key entries.
  * @author KnIfER
  * @date 2017/12/30
  */
 
 public class mdict extends mdBase{
-	public mdict(){};//don't call this.
+    @Deprecated//dummy, don't call this.
+	public mdict(){};
 	
-	public final static Pattern replaceReg = Pattern.compile(" |:|\\.|,|-|\'|\\(|\\)|#|<|>|!|\\n");
+	public final static Pattern replaceReg = Pattern.compile(" |&|:|\\$|/|\\.|,|-|\'|\\(|\\)|\\[|\\]|#|<|>|!|\\n");
+	public final static Pattern replaceReg2 = Pattern.compile(" |-");
+	public final static Pattern numSuffixedReg = Pattern.compile(".+?([0-9]{1,})");
 	public final static Pattern markerReg = Pattern.compile("`([\\w\\W]{1,3}?)`");// for `1` `2`...
     private final static String linkRenderStr = "@@@LINK=";
     
-    protected mdictRes mdd;
+    public mdictRes mdd;
     
     public String _Dictionary_fName;
     public String _Dictionary_Name;
     public String _Dictionary_fSuffix;
-    
+
+    public int KeycaseStrategy=0;//0:global 1:Java API 2:classical 
+    public static boolean bGlobalUseClassicalKeycase=false;
+
+	public String currentDisplaying;
+	
 	//构造
 	public mdict(String fn) throws IOException {
 		super(fn);
+	}
+	
+	protected void init(String fn) throws IOException{
+		super.init(fn);
         _Dictionary_fName = f.getName();
     	int tmpIdx = _Dictionary_fName.lastIndexOf(".");
     	if(tmpIdx!=-1) {
@@ -78,33 +91,66 @@ public class mdict extends mdBase{
 	    	_Dictionary_fName = _Dictionary_fName.substring(0, tmpIdx);
     	}
         String fnTMP = f.getName();
-        File f2 = new File(f.getParentFile().getAbsolutePath()+"/"+fnTMP.substring(0,fnTMP.lastIndexOf("."))+".mdd");
-    	if(f2.exists()){
-    		mdd=new mdictRes(f2.getAbsolutePath());
-    	}
+        File p =f.getParentFile();
+        if(p!=null) {
+	        File f2 = new File(p.getAbsolutePath()+"/"+fnTMP.substring(0,fnTMP.lastIndexOf("."))+".mdd");
+	    	if(f2.exists()){
+	    		mdd=new mdictRes(f2.getAbsolutePath());
+	    	}
+	    	if(mdd==null) {
+	    		if(_header_tag.containsKey("SharedMdd")) {
+		    		File SharedMddF=new File(f.getParentFile(),_header_tag.get("SharedMdd")+".mdd");
+		    		if(SharedMddF.exists())
+		    			mdd=new mdictRes(SharedMddF.getAbsolutePath());
+	    		}
+	    	}
+        }
     	if(_header_tag.containsKey("Title"))
 			_Dictionary_Name=_header_tag.get("Title");
     	calcFuzzySpace();
+    	
 	}
 	
-	public int reduce2(byte[] phrase,int start,int end) {//via mdict-js
+    //for lv
+	public String getEntryAt(int position,Flag mflag) {
+		if(position==-1) return "about:";
+		if(_key_block_info_list==null) read_key_block_info();
+        int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
+        key_info_struct infoI = _key_block_info_list[blockId];
+        if(compareByteArray(infoI.headerKeyText, infoI.tailerKeyText)==0)
+        	mflag.data = new String(infoI.headerKeyText,_charset);
+        else
+        	mflag.data = null;
+        prepareItemByKeyInfo(infoI,blockId,null);
+        //TODO null pointer error
+        return new String(infoI_cache_.keys[(int) (position-infoI.num_entries_accumulator)],_charset);
+	}
+	
+	
+	public int reduce_index2(byte[] phrase,int start,int end) {//via mdict-js
         int len = end-start;
         if (len > 1) {
           len = len >> 1;
-          return compareByteArray(phrase, _key_block_info_list[start + len - 1].tailerKeyText)>0
-                    ? reduce2(phrase,start+len,end)
-                    : reduce2(phrase,start,start+len);
+          //show("reducearound:"+(start + len - 1)+"@"+len+": "+new String(_key_block_info_list[start + len - 1].tailerKeyText));
+ 		  //show(start+"::"+end+"   "+new String(_key_block_info_list[start].tailerKeyText,_charset)+"::"+new String(_key_block_info_list[end==_key_block_info_list.length?end-1:end].tailerKeyText,_charset));
+          byte[] zhujio = _key_block_info_list[start + len - 1].tailerKeyText;
+          return compareByteArray(phrase, isCompact?zhujio:processMyText(new String(zhujio,_charset)).getBytes(_charset))>0
+                    ? reduce_index2(phrase,start+len,end)
+                    : reduce_index2(phrase,start,start+len);
         } else {
           return start;
         }
     }
-	public int reduce(String phrase,int start,int end) {//via mdict-js
+	public int reduce_index(String phrase,int start,int end) {//via mdict-js
         int len = end-start;
         if (len > 1) {
           len = len >> 1;
-          return phrase.compareTo(new String(_key_block_info_list[start + len - 1].tailerKeyText,_charset))>0
-                    ? reduce(phrase,start+len,end)
-                    : reduce(phrase,start,start+len);
+ 		  //show("reducearound:"+(start + len - 1)+"@"+len+": "+new String(_key_block_info_list[start + len - 1].tailerKeyText));
+ 		  //show(start+"::"+end+"   "+new String(_key_block_info_list[start].tailerKeyText,_charset)+"::"+new String(_key_block_info_list[end==_key_block_info_list.length?end-1:end].tailerKeyText,_charset));
+          String zhujio = new String(_key_block_info_list[start + len - 1].tailerKeyText,_charset);
+          return phrase.compareToIgnoreCase(isCompact?zhujio:processMyText(zhujio))>0
+                    ? reduce_index(phrase,start+len,end)
+                    : reduce_index(phrase,start,start+len);
         } else {
           return start;
         }
@@ -112,10 +158,12 @@ public class mdict extends mdBase{
 	public int lookUp(String keyword) {
 		return lookUp(keyword,false);
 	}
+	String HeaderTextStr,TailterTextStr;
 	public int lookUp(String keyword,boolean isSrict)
     {
     	if(_key_block_info_list==null) read_key_block_info();
-    	keyword = processText(keyword);
+    	String keyOrg=keyword;
+    	keyword = processMyText(keyword);
     	byte[] kAB = keyword.getBytes(_charset);
     	
     	int blockId = -1;
@@ -134,13 +182,19 @@ public class mdict extends mdBase{
     		if(boudaryCheck<0)
     			return -1;
     		if(boudaryCheck==0) blockId = (int)_num_key_blocks-1;
-    		boudaryCheck = new String(_key_block_info_list[0].headerKeyText,_charset).compareTo(keyword);
-    		if(boudaryCheck>0)
-    			return -1;
+    		if(HeaderTextStr==null)
+    			HeaderTextStr=processMyText(new String(_key_block_info_list[0].headerKeyText,_charset));
+    		boudaryCheck = HeaderTextStr.compareTo(keyword);
+    		if(boudaryCheck>0) {
+    			if(HeaderTextStr.startsWith(keyword)) {
+    				return isSrict?-(0+2):0;
+    			}else
+    				return -1;
+    		}
     		if(boudaryCheck==0) return 0;
     	}
     	if(blockId==-1)
-    		blockId = _encoding.startsWith("GB")?reduce2(keyword.getBytes(_charset),0,_key_block_info_list.length):reduce(keyword,0,_key_block_info_list.length);
+    		blockId = _encoding.startsWith("GB")?reduce_index2(keyword.getBytes(_charset),0,_key_block_info_list.length):reduce_index(keyword,0,_key_block_info_list.length);
         if(blockId==-1) return blockId;
         //show("blockId:"+blockId);
         //while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,kAB)>=0) blockId--;
@@ -149,6 +203,14 @@ public class mdict extends mdBase{
         
         key_info_struct infoI = _key_block_info_list[blockId];
 
+    	//smart shunt
+        if(compareByteArray(infoI.headerKeyText, infoI.tailerKeyText)==0) {
+        	if(isSrict)
+        		return -1*(int) ((infoI.num_entries_accumulator+2));
+        	else
+        		return (int) infoI.num_entries_accumulator;
+        }
+        
         cached_key_block infoI_cache = prepareItemByKeyInfo(infoI,blockId,null);
         
         int res;
@@ -163,22 +225,108 @@ public class mdict extends mdBase{
         	System.out.println("search failed!"+keyword);
         	return -1;
         }
-        else{
-        	if(isSrict)
-        		if(!processText(new String(infoI_cache.keys[res],_charset)).equals(keyword))
-            		return -1;
-        	//String KeyText= infoI_cache.keys[res];
-        	//for(String ki:infoI.keys) CMN.show(ki);
-        	//show("match key "+KeyText+" at "+res);
-        	return (int) (infoI.num_entries_accumulator+res);
-        }   
+			if(isCompact) {//compatibility fix.
+
+
+
+
+			}
+		String other_key = new String(infoI_cache.keys[res],_charset);
+		String looseMatch = processMyText(other_key);
+		boolean bIsEqual = looseMatch.equals(keyword);
+
+		if(!bIsEqual){
+			boolean b1 = keyOrg.endsWith(">"),b2=false;
+			Matcher m=null;
+			if(!b1) {
+				m = numSuffixedReg.matcher(keyOrg);
+				b2=m.find();
+			}
+			if((b1||b2) && other_key.endsWith(">")){
+				int idx3 = other_key.lastIndexOf("<", other_key.length() - 2);
+				int idx2 = b2?m.start(1):keyOrg.lastIndexOf("<",keyOrg.length()-2);
+				//CMN.Log(idx2,idx3,idx2,idx3);
+				if(idx2!=-1 && idx2==idx3) {
+					int start = parseint(other_key.substring(idx2+1,other_key.length()-1));
+					int target;
+					if(b2){
+						target = IU.parsint(m.group(1));
+					}else{
+						String itemA=keyOrg.substring(idx2+1,keyOrg.length()-1);
+						target = parseint(itemA);
+					}
+					//CMN.Log(keyOrg,other_key,start,target);
+					int PstPosition = (int) (infoI.num_entries_accumulator + res + (target-start));
+					String other_other_key = getEntryAt(PstPosition);
+					if(other_other_key.length()>idx2 && other_other_key.endsWith(">") && other_other_key.charAt(idx2)=='<')
+					if(keyOrg.startsWith(other_other_key.substring(0, idx2))){
+						String itemB=other_other_key.substring(idx2+1,other_other_key.length()-1);
+						int end = parseint(itemB);
+						if(target==end)
+							return PstPosition;
+					}
+				}
+			}
+		}
+
+		if(isSrict)
+			if(!bIsEqual) {
+				//CMN.show(res+"::"+Integer.toString(-1*(res+2)));
+				return -1*(int) ((infoI.num_entries_accumulator+res+2));
+			}
+		//String KeyText= infoI_cache.keys[res];
+		//for(String ki:infoI.keys) CMN.show(ki);
+		//show("match key "+KeyText+" at "+res);
+		return (int) (infoI.num_entries_accumulator+res);
     }
+
+	private int parseint(String item) {
+		if(IU.shuzi.matcher(item).find())
+			return IU.parsint(item);
+		else if(IU.hanshuzi.matcher(item).find())
+			return IU.recurse1wCalc(item,0,item.length()-1,1);
+		return -1;
+	}
+
+	private int try_get_tailing_number(String keyOrg) {
+		if(keyOrg.endsWith(">")){
+			int idx2 = keyOrg.lastIndexOf("<",keyOrg.length()-2);
+			if(idx2!=-1){
+				String item = keyOrg.substring(idx2+1,keyOrg.length()-1);
+				if(IU.hanshuzi.matcher(item).find())
+					return IU.recurse1wCalc(item,0,item.length()-1,1);
+				else if(IU.shuzi.matcher(item).find())
+					return IU.parsint(item);
+			}
+		}else{
+			Matcher m = numSuffixedReg.matcher(keyOrg);
+			if(m.find()){
+				return IU.parsint(m.group());
+			}
+		}
+		return -1;
+	}
 
 	public int reduce_keys(byte[][] keys,String val,int start,int end) {//via mdict-js
         int len = end-start;
         if (len > 1) {
           len = len >> 1;
-          return val.compareTo(processText(new String(keys[start + len - 1],_charset)))>0
+		  //String zhujue = processMyText(new String(keys[start + len - 1],_charset));
+          /*if(!isCompact) {//fixing python writemdict compatibility
+			  if(infoI_cache.hearderTextStr==null) {
+				  infoI_cache.hearderTextStr=new String(infoI_cache.hearderText,_charset);
+				  infoI_cache.tailerKeyTextStr=new String(infoI_cache.tailerKeyText,_charset);
+			  }
+			  if(infoI_cache.tailerKeyTextStr.compareTo(zhujue)>0 || infoI_cache.hearderTextStr.compareTo(zhujue)<0) {
+				  zhujue = replaceReg2.matcher(zhujue).replaceAll(emptyStr);
+			  }
+		  }*/
+          
+          //show("->"+new String(keys[start + len - 1],_charset)+" ="+val.compareTo(processMyText(new String(keys[start + len - 1],_charset))));
+		  //show(start+"::"+end+"   "+new String(keys[start],_charset)+"::"+new String(keys[end==keys.length?end-1:end],_charset));
+  		
+  		  
+          return val.compareTo(processMyText(new String(keys[start + len - 1],_charset)))>0
                     ? reduce_keys(keys,val,start+len,end)
                     : reduce_keys(keys,val,start,start+len);
         } else {
@@ -189,8 +337,18 @@ public class mdict extends mdBase{
         int len = end-start;
         if (len > 1) {
           len = len >> 1;
+          //String zhujue = processMyText(new String(keys[start + len - 1],_charset));
+          /*if(!isCompact) {//fixing python writemdict compatibility
+			  if(infoI_cache.hearderTextStr==null) {
+				  infoI_cache.hearderTextStr=new String(infoI_cache.hearderText,_charset);
+				  infoI_cache.tailerKeyTextStr=new String(infoI_cache.tailerKeyText,_charset);
+			  }
+			  if(infoI_cache.tailerKeyTextStr.compareTo(zhujue)>0 || infoI_cache.hearderTextStr.compareTo(zhujue)<0) {
+				  zhujue = replaceReg2.matcher(zhujue).replaceAll(emptyStr);
+			  }
+		  }*/
 		  //CMN.show(start+"::"+end+"   "+new String(keys[start],_charset)+"::"+new String(keys[end],_charset));
-          return compareByteArray(val, processText(new String(keys[start + len - 1],_charset)).getBytes(_charset))>0
+          return compareByteArray(val, processMyText(new String(keys[start + len - 1],_charset)).getBytes(_charset))>0
                     ? reduce_keys2(keys,val,start+len,end)
                     : reduce_keys2(keys,val,start,start+len);
         } else {
@@ -198,20 +356,38 @@ public class mdict extends mdBase{
         }
     }
 
-    
+
+	
     public String getRecordsAt(int... positions) throws IOException {
     	StringBuilder sb = new StringBuilder();
     	int c=0;
     	for(int i:positions) {
     		String tmp = getRecordAt(i);
     		if(tmp.startsWith(linkRenderStr)) {
+    			//Log.e("rerouting",tmp);
     			//CMN.show(tmp.replace("\n", "1"));
     			String key = tmp.substring(linkRenderStr.length());
     			int offset = offsetByTailing(key);
     			key = key.trim();
-    			//CMN.show(offset+"");
+    			//Log.e("rerouting offset",""+offset);
     			int idx = lookUp(key);
     			if(idx!=-1) {
+    				String looseKey = processMyText(key);
+    				int tmpIdx = lookUp(key,false);
+    				if(tmpIdx!=-1) {
+    					String looseMatch = getEntryAt(tmpIdx);
+						while(processMyText(looseMatch).equals(looseKey)) {
+							if(looseMatch.equals(key)) {
+								idx=tmpIdx;
+								break;
+							} 
+							if(tmpIdx>=getNumberEntries()-1)
+								break;
+							looseMatch = getEntryAt(++tmpIdx);
+						}
+    				}
+    				
+    				
     				if(offset>0) {
     					if(key.equals(getEntryAt(idx+offset)))
     						idx+=offset;
@@ -281,6 +457,8 @@ public class mdict extends mdBase{
         //CMN.show(record.length+":"+record_block.length+":"+(record_start));
         //System.arraycopy(record_block, (int) (record_start), record, 0, record.length);
         // convert to utf-8
+        if(compareByteArrayIsPara(record_block, (int) (record_end-3), new byte[] {0x0d,0x0a,0}))
+        	record_end-=3;
         String record_str = new String(record_block,(int) (record_start),(int) (record_end-record_start),_charset);
         // substitute styles
         //if self._substyle and self._stylesheet:
@@ -376,7 +554,10 @@ public class mdict extends mdBase{
         split_recs_thread_number = split_keys_thread_number>16?6:split_keys_thread_number;
         final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+2, split_keys_thread_number);
 	     
-	     
+
+		//Log.e("fatal_","split_recs_thread_number"+split_recs_thread_number);
+		//Log.e("fatal_","thread_number"+thread_number);
+		
         final int step = (int) (_num_record_blocks/split_recs_thread_number);
     	final int yuShu=(int) (_num_record_blocks%split_recs_thread_number);
     	
@@ -389,6 +570,7 @@ public class mdict extends mdBase{
         for(int ti=0; ti<split_recs_thread_number; ti++){//分  thread_number 股线程运行
         	if(searchCancled) break;
 	    	final int it = ti;
+	    	//if(false)
 	    	if(split_recs_thread_number>thread_number) while (poolEUSize>=thread_number) {
 				  try {
 					Thread.sleep(1);
@@ -410,7 +592,7 @@ public class mdict extends mdBase{
 	            final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
 	            try 
 	            {
-		            FileInputStream data_in = new FileInputStream(f);
+		            InputStream data_in = mOpenInputStream();
 		            data_in.skip(_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width);
 		            int jiaX=0;
 		            if(it==split_recs_thread_number-1) jiaX=yuShu;
@@ -502,7 +684,7 @@ public class mdict extends mdBase{
 		                    		
 		                    		combining_search_tree_4[it].add(pos);
 		                    	}
-		                    	dirtykeyCounter++;
+		                    	dirtyfzPrgCounter++;
 	                    	}
 	                    	key_block_id++;
                     	}
@@ -516,7 +698,7 @@ public class mdict extends mdBase{
         }
         fixedThreadPool.shutdown();
 		try {
-			fixedThreadPool.awaitTermination(1, TimeUnit.MINUTES);
+			fixedThreadPool.awaitTermination(5, TimeUnit.MINUTES);
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
@@ -584,7 +766,12 @@ public class mdict extends mdBase{
    
    public volatile boolean searchCancled=false;
    public volatile int dirtykeyCounter;
-   public volatile static int fuzzyKeyCounter ;
+   public volatile static int fullTextKeyCounter;
+
+   public volatile boolean fuzzyCancled=false;
+   public volatile int dirtyfzPrgCounter;
+   public volatile static int fuzzyKeyCounter;
+   
    volatile int poolEUSize;
    
 	byte[] keywordArray;
@@ -609,6 +796,7 @@ public class mdict extends mdBase{
 	 	 
 	}
   
+
 	//XXX2
 	public void flowerFindAllKeys(String key,
 	        final int SelfAtIdx,int theta) 
@@ -616,34 +804,36 @@ public class mdict extends mdBase{
 		  if(_key_block_info_list==null) read_key_block_info();
 	
 	
-	  	key = key.toLowerCase();
-		String upperKey = key.toUpperCase();
-	  	final byte[][][] matcher = new byte[upperKey.equals(key)?1:2][][];
-		matcher[0] = flowerSanLieZhi(key);
+	  	String keyword = key.toLowerCase();
+	  	final Pattern keyPattern=Pattern.compile(keyword.replace("*", ".+?"),Pattern.CASE_INSENSITIVE);
+		String upperKey = keyword.toUpperCase();
+	  	final byte[][][] matcher = new byte[upperKey.equals(keyword)?1:2][][];
+		matcher[0] = flowerSanLieZhi(keyword);
 		if(matcher.length==2)
 		matcher[1] = flowerSanLieZhi(upperKey);
 	  	
 	   //final String fkeyword = keyword.toLowerCase().replaceAll(replaceReg,emptyStr);
 	   //int entryIdx = 0;
-	   show("availableProcessors: "+Runtime.getRuntime().availableProcessors());
-	   show("keyBLockN: "+_key_block_info_list.length);
+	   //show("availableProcessors: "+Runtime.getRuntime().availableProcessors());
+	   //show("keyBLockN: "+_key_block_info_list.length);
 	   split_keys_thread_number = _num_key_blocks<6?1:(int) (_num_key_blocks/6);//Runtime.getRuntime().availableProcessors()/2*2+10;
 	   final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+5, split_keys_thread_number);
 	   
-	   poolEUSize = dirtykeyCounter =0;
+	   poolEUSize = dirtyfzPrgCounter =0;
 	   
 	   thread_number_count = split_keys_thread_number;
 	   final int step = (int) (_num_key_blocks/split_keys_thread_number);
 		  final int yuShu=(int) (_num_key_blocks%split_keys_thread_number);
 	
-		  ExecutorService fixedThreadPoolmy = Executors.newFixedThreadPool(thread_number);
-		   
-		  show("~"+step+"~"+split_keys_thread_number+"~"+_num_key_blocks);
+		  //ExecutorService fixedThreadPoolmy = Executors.newFixedThreadPool(thread_number);
+		   ExecutorService fixedThreadPoolmy = Executors.newWorkStealingPool();
+		   //Executors.defaultThreadFactory()
+		  //show("~"+step+"~"+split_keys_thread_number+"~"+_num_key_blocks);
 		  if(combining_search_tree2==null)
 			  combining_search_tree2 = new ArrayList[split_keys_thread_number];
 		  
 	   for(int ti=0; ti<split_keys_thread_number; ti++){//分  thread_number 股线程运行
-		   		if(searchCancled) break;
+		   		if(fuzzyCancled) break;
 		        if(split_keys_thread_number>thread_number) while (poolEUSize>=thread_number) {  
 		              try {
 		    			Thread.sleep(1);
@@ -656,7 +846,7 @@ public class mdict extends mdBase{
 		        fixedThreadPoolmy.execute(
 		        new Runnable(){@Override public void run() 
 		        {
-		        	if(searchCancled) { poolEUSize=0; return; }
+		        	if(fuzzyCancled) {poolEUSize=0; return; }
 		            int jiaX=0;
 		            if(it==split_keys_thread_number-1) jiaX=yuShu;
 		            final byte[] key_block = new byte[65536];/*分配资源 32770   65536*/
@@ -683,10 +873,10 @@ public class mdict extends mdBase{
 						byte[]  _key_block_compressed_many = new byte[ compressedSize_many];
 						data_in.read(_key_block_compressed_many, 0, _key_block_compressed_many.length);
 						data_in.close();
-						
+						data_in=null;
 						//大循环	
 						for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
-							if(searchCancled) { poolEUSize=0; return; }
+							if(fuzzyCancled) { poolEUSize=0; return; }
 							
 							int compressedSize;
 							key_info_struct infoI = _key_block_info_list[blockId];
@@ -725,13 +915,15 @@ public class mdict extends mdBase{
 									  //CMN.show(""+infoI.key_block_decompressed_size);
 										int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
 									} catch (DataFormatException e) {e.printStackTrace();}
+									inf=null;
 							}
 							
-							find_in_keyBlock(key_block,infoI,matcher,SelfAtIdx,it);
+							find_in_keyBlock(keyPattern, key_block,infoI,matcher,SelfAtIdx,it);
 							
 							
 							
 						} 
+			            _key_block_compressed_many=null;
 		            }
 	            catch (Exception e1) {e1.printStackTrace();}
 	           thread_number_count--;
@@ -741,10 +933,13 @@ public class mdict extends mdBase{
 		fixedThreadPoolmy.shutdown();
 		try {
 			fixedThreadPoolmy.awaitTermination(1, TimeUnit.MINUTES);
+			fixedThreadPoolmy.shutdownNow();
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
-	}  
+		fixedThreadPoolmy=null;
+		//System.gc();
+	}
 
 
 	HashSet<Integer> miansi = new HashSet<>();//. is 免死金牌  that exempt you from death for just one time
@@ -858,7 +1053,7 @@ public class mdict extends mdBase{
 	}
 	 
  
-    protected void find_in_keyBlock(byte[] key_block,key_info_struct infoI,byte[][][] matcher,int SelfAtIdx,int it) {
+    protected void find_in_keyBlock(Pattern keyPattern,byte[] key_block,key_info_struct infoI,byte[][][] matcher,int SelfAtIdx,int it) {
 	 //!!spliting curr Key block
        int key_start_index = 0;
        //String delimiter;
@@ -899,11 +1094,8 @@ public class mdict extends mdBase{
 			if(try_idx!=-1){
 				//复核 re-collate
 				String LexicalEntry = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset);
-				//int LexicalEntryIdx = LexicalEntry.toLowerCase().indexOf(keyword.toLowerCase());
-	         	//if(LexicalEntryIdx==-1) {
-	         	//	key_start_index = key_end_index + width;
-	         	//	dirtykeyCounter++;continue;
-	         	//}
+				//int LexicalEntryIdx = LexicalEntry.toLowerCase().indexOf(keyword);
+	         	if(!keyPattern.matcher(LexicalEntry).find()) {key_start_index = key_end_index + delimiter_width;dirtyfzPrgCounter++;keyCounter++;continue;}
 				//StringBuilder sb = new StringBuilder(LexicalEntry);
 	         	//byte[] arraytmp = new byte[key_end_index-(key_start_index+_number_width)];
 	         	//System.arraycopy(key_block,key_start_index+_number_width, arraytmp, 0,arraytmp.length);
@@ -911,7 +1103,7 @@ public class mdict extends mdBase{
 				//tmpnode.value.add(SelfAtIdx);
 				//tmpnode.value.add((int) (infoI.num_entries_accumulator+keyCounter));
 				combining_search_tree2[it].add((int) (infoI.num_entries_accumulator+keyCounter));//new additiveMyCpr1(LexicalEntry,infoI.num_entries_accumulator+keyCounter));
-
+				//CMN.show("fuzzyKeyCounter"+fuzzyKeyCounter);
 	         	fuzzyKeyCounter++;
          }
 		} catch (Exception e) {
@@ -920,7 +1112,7 @@ public class mdict extends mdBase{
 
 
            key_start_index = key_end_index + delimiter_width;
-           keyCounter++;dirtykeyCounter++;
+           keyCounter++;dirtyfzPrgCounter++;
        }
        //assert(adler32 == (calcChecksum(key_block)));	
 }
@@ -972,7 +1164,7 @@ public class mdict extends mdBase{
 				int LexicalEntryIdx = LexicalEntry.toLowerCase().indexOf(keyword.toLowerCase());
 	         	if(LexicalEntryIdx==-1) {
 	         		key_start_index = key_end_index + delimiter_width;
-	         		dirtykeyCounter++;continue;
+	         		dirtyfzPrgCounter++;continue;
 	         	}
 	         	
 				//StringBuilder sb = new StringBuilder(LexicalEntry);
@@ -991,7 +1183,7 @@ public class mdict extends mdBase{
 
 
            key_start_index = key_end_index + delimiter_width;
-           keyCounter++;dirtykeyCounter++;
+           keyCounter++;dirtyfzPrgCounter++;
        }
        //assert(adler32 == (calcChecksum(key_block)));	
    }
@@ -1001,16 +1193,74 @@ public class mdict extends mdBase{
 	byte[] key_block_cache = null;
 	int key_block_cacheId=-1;
 	int key_block_Splitted_flag=-1;
+	int[][] scaler = null;
 
+	public int reduce(String phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
+	    int len = end-start;
+	    if (len > 1) {
+	      len = len >> 1;
+		  //int iI = start + len - 1;
+			String zhujio= new String(data, scaler[start + len - 1][0], scaler[start + len - 1][1], _charset);
+			/*if(!isCompact) {//fixing python writemdict compatibility
+				  if(wml.hearderTextStr==null) {
+					  wml.hearderTextStr=new String(wml.infoI.headerKeyText,_charset);
+					  wml.tailerKeyTextStr=new String(wml.infoI.tailerKeyText,_charset);
+				  }
+				  if(wml.tailerKeyTextStr.compareTo(zhujio)>0 || wml.hearderTextStr.compareTo(zhujio)<0) {
+					  zhujio = replaceReg2.matcher(zhujio).replaceAll(emptyStr);
+				  }
+			  }*/
+	      return phrase.compareTo(processMyText(zhujio))>0
+	                ? reduce(phrase,data,scaler,start+len,end)
+	                : reduce(phrase,data,scaler,start,start+len);
+	    } else {
+	      return start;
+	    }
+	}
+	
+	public int reduce2(byte[] phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
+	    int len = end-start;
+	    if (len > 1) {
+	      len = len >> 1;
+		  //int iI = start + len - 1;
+	        String zhujio= new String(data, scaler[start + len - 1][0], scaler[start + len - 1][1], _charset);
+			/*if(!isCompact) {//fixing python writemdict compatibility
+				  if(wml.hearderTextStr==null) {
+					  wml.hearderTextStr=new String(wml.infoI.headerKeyText,_charset);
+					  wml.tailerKeyTextStr=new String(wml.infoI.tailerKeyText,_charset);
+				  }
+				  if(wml.tailerKeyTextStr.compareTo(zhujio)>0 || wml.hearderTextStr.compareTo(zhujio)<0) {
+					  zhujio = replaceReg2.matcher(zhujio).replaceAll(emptyStr);
+				  }
+			  }*/
+		  	byte[] sub_data = processMyText(zhujio).getBytes(_charset);
 
-	int[][] scaler;
+	      return compareByteArray(phrase, sub_data)>0
+	                ? reduce2(phrase,data,scaler,start+len,end)
+	                : reduce2(phrase,data,scaler,start,start+len);
+	    } else {
+	      return start;
+	    }
+	}
+	
+	class WMCompatLet{
+		key_info_struct infoI;
+		String hearderTextStr;
+		String tailerKeyTextStr;
+		WMCompatLet(key_info_struct _infoI){
+			infoI=_infoI;
+		}
+	}
+	
 	public ArrayList<myCpr<String, Integer>> combining_search_list;
-  //联合搜索  555
+	//联合搜索  555
 	public void size_confined_lookUp5(String keyword,
-	        RBTree_additive combining_search_tree, int SelfAtIdx, int theta) 
+	        RBTree_additive combining_search_tree, int SelfAtIdx, int theta) //多线程
 			{
+		int[][] scaler_ = null;
+		byte[] key_block_cache_ = null;
 		ArrayList<myCpr<String, Integer>> _combining_search_list = combining_search_list;
-		keyword = processText(keyword);
+		keyword = processMyText(keyword);
 		byte[] kAB = keyword.getBytes(_charset);
 		if(_encoding.startsWith("GB")) {
 			if(compareByteArray(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,kAB)<0)
@@ -1020,11 +1270,18 @@ public class mdict extends mdBase{
 		}else {
 			if(new String(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,_charset).compareTo(keyword)<0)
 				return;
-			if(new String(_key_block_info_list[0].headerKeyText,_charset).compareTo(keyword)>0)
-				return;
+    		if(HeaderTextStr==null)
+    			HeaderTextStr=processMyText(new String(_key_block_info_list[0].headerKeyText,_charset));
+			if(HeaderTextStr.compareTo(keyword)>0) {
+				if(!HeaderTextStr.startsWith(keyword))
+					return;
+				else {
+					
+				}
+			}
 		}
 		if(_key_block_info_list==null) read_key_block_info();
-	    int blockId = _encoding.startsWith("GB")?reduce2(kAB,0,_key_block_info_list.length):reduce(keyword,0,_key_block_info_list.length);
+	    int blockId = _encoding.startsWith("GB")?reduce_index2(kAB,0,_key_block_info_list.length):reduce_index(keyword,0,_key_block_info_list.length);
 		if(blockId==-1) return;
 		//show(_Dictionary_fName+_key_block_info_list[blockId].tailerKeyText+"1~"+_key_block_info_list[blockId].headerKeyText);
 		//while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,kAB)>=0)
@@ -1033,12 +1290,12 @@ public class mdict extends mdBase{
 		boolean doHarvest=false;
 		
 		//OUT:
-		while(theta>0) {
+		while(theta>0) {//complexity explanation: the aim is to harvest at most number theta matching results. but they might be crossing-blocks.
 			key_info_struct infoI = _key_block_info_list[blockId];
 			try {
 				long start = infoI.key_block_compressed_size_accumulator;
 				long compressedSize;
-				if(!(key_block_cacheId==blockId && key_block_cache!=null)) {
+				if(key_block_cacheId!=blockId || key_block_cache==null) {
 					if(blockId==_key_block_info_list.length-1)
 						compressedSize = _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
 					else
@@ -1053,52 +1310,55 @@ public class mdict extends mdBase{
 		            //int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
 					if(compareByteArrayIsPara(_zero4, _key_block_compressed)){
 						//System.out.println("no compress!");
-						key_block_cache = new byte[(int) (_key_block_compressed.length-start-8)];
-						System.arraycopy(_key_block_compressed, (int)(start+8), key_block_cache, 0,key_block_cache.length);
+						key_block_cache_ = new byte[(int) (_key_block_compressed.length-start-8)];
+						System.arraycopy(_key_block_compressed, (int)(start+8), key_block_cache_, 0,key_block_cache_.length);
 					}else if(compareByteArrayIsPara(_1zero3, _key_block_compressed))
 					{
 						//MInt len = new MInt((int) infoI.key_block_decompressed_size);
-						//key_block_cache = new byte[len.v];
+						//key_block_cache_ = new byte[len.v];
 						//byte[] arraytmp = new byte[(int) compressedSize];
 						//System.arraycopy(_key_block_compressed, (int)(+8), arraytmp, 0,(int) (compressedSize-8));
-						//MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block_cache,len);
-						key_block_cache =  new byte[(int) infoI.key_block_decompressed_size];
-	                    new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block_cache, 0, new lzo_uintp());
+						//MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block_cache_,len);
+						key_block_cache_ =  new byte[(int) infoI.key_block_decompressed_size];
+	                    new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block_cache_, 0, new lzo_uintp());
 					}
 					else if(compareByteArrayIsPara(_2zero3, _key_block_compressed)){
-						//key_block_cache = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
-						key_block_cache =  new byte[(int) infoI.key_block_decompressed_size];
+						//key_block_cache_ = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
+						key_block_cache_ =  new byte[(int) infoI.key_block_decompressed_size];
 						Inflater inf = new Inflater();
 	                    inf.setInput(_key_block_compressed,8,(int)compressedSize-8);
-	                    int ret = inf.inflate(key_block_cache,0,key_block_cache.length);  
+	                    int ret = inf.inflate(key_block_cache_,0,key_block_cache_.length);  
 					}
+					key_block_cache=key_block_cache_;
 					key_block_cacheId = blockId;
+				}else {
+					key_block_cache_=key_block_cache;
 				}
 				/*!!spliting curr Key block*/
-				if(key_block_Splitted_flag!=blockId) {
+				if(key_block_Splitted_flag!=blockId || scaler==null) {
 					if(!doHarvest)
-						scaler = new int[(int) infoI.num_entries][2];
+						scaler_ = new int[(int) infoI.num_entries][2];
 					int key_start_index = 0;
 					int key_end_index=0;
 					int keyCounter = 0;
 					
-					while(key_start_index < key_block_cache.length){
+					while(key_start_index < key_block_cache_.length){
 						  key_end_index = key_start_index + _number_width;
 						  SK_DELI:
 						  while(true){
 							for(int sker=0;sker<delimiter_width;sker++) {
-								if(key_block_cache[key_end_index+sker]!=0) {
+								if(key_block_cache_[key_end_index+sker]!=0) {
 									key_end_index+=delimiter_width;
 									continue SK_DELI;
 								}
 							}
 							break;
 						  }
-						//CMN.show(new String(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset));
-						//if(EntryStartWith(key_block_cache,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
+						//CMN.show(new String(key_block_cache_,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset));
+						//if(EntryStartWith(key_block_cache_,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
 						if(doHarvest) {
-							String kI = new String(key_block_cache, key_start_index+_number_width,key_end_index-(key_start_index+_number_width), _charset);
-							if(processText(kI).startsWith(keyword)) {
+							String kI = new String(key_block_cache_, key_start_index+_number_width,key_end_index-(key_start_index+_number_width), _charset);
+							if(processMyText(kI).startsWith(keyword)) {
 								if(combining_search_tree!=null)
 									combining_search_tree.insert(kI,SelfAtIdx,(int)(keyCounter+infoI.num_entries_accumulator));
 								else
@@ -1107,14 +1367,19 @@ public class mdict extends mdBase{
 							}else return;
 							if(theta<=0) return;
 						}else {
-							scaler[keyCounter][0] = key_start_index+_number_width;
-							scaler[keyCounter][1] = key_end_index-(key_start_index+_number_width);
+							scaler_[keyCounter][0] = key_start_index+_number_width;
+							scaler_[keyCounter][1] = key_end_index-(key_start_index+_number_width);
 						}
 		
 						key_start_index = key_end_index + delimiter_width;
 						keyCounter++;
 					}
-					if(!doHarvest) key_block_Splitted_flag=blockId;
+					if(!doHarvest) {
+						scaler=scaler_;
+						key_block_Splitted_flag=blockId;
+					}
+				}else {
+					scaler_=scaler;
 				}
 	  			} catch (Exception e2) {
 	  				e2.printStackTrace();
@@ -1124,15 +1389,15 @@ public class mdict extends mdBase{
 			if(!doHarvest) {
 				int idx;
 				if(_encoding.startsWith("GB"))
-					idx = reduce2(kAB, key_block_cache, scaler, 0, (int) infoI.num_entries);
+					idx = reduce2(kAB, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
 				else
-					idx = reduce(keyword, key_block_cache, scaler, 0, (int) infoI.num_entries);
-				//CMN.show(new String(key_block_cache, scaler[idx][0],scaler[idx][1], _charset));
-				//CMN.show(new String(key_block_cache, scaler[idx+1][0],scaler[idx+1][1], _charset));
+					idx = reduce(keyword, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
+				//CMN.show(new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset));
+				//CMN.show(new String(key_block_cache_, scaler_[idx+1][0],scaler_[idx+1][1], _charset));
 				
-				String kI = new String(key_block_cache, scaler[idx][0],scaler[idx][1], _charset);
+				String kI = new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset);
 				while(true) {
-					if(processText(kI).startsWith(keyword)) {
+					if(processMyText(kI).startsWith(keyword)) {
 						if(combining_search_tree!=null)
 							combining_search_tree.insert(kI,SelfAtIdx,(int)(idx+infoI.num_entries_accumulator));
 						else
@@ -1142,12 +1407,12 @@ public class mdict extends mdBase{
 						return;
 					idx++;
 					//if(idx>=infoI.num_entries) CMN.show("nono!");
-					if(theta<=0)
+					if(theta<=0)//no need to proceed. Max results fetched.
 						return;
 					if(idx>=infoI.num_entries) {
 						break;
 					}
-					kI = new String(key_block_cache, scaler[idx][0],scaler[idx][1], _charset);
+					kI = new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset);
 				}
 				doHarvest=true;
 			}
@@ -1155,33 +1420,6 @@ public class mdict extends mdBase{
 			if(_key_block_info_list.length<=blockId) return;
 		}
 	}
-	public int reduce(String phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
-	    int len = end-start;
-	    if (len > 1) {
-	      len = len >> 1;
-		  //int iI = start + len - 1;
-	      return phrase.compareTo(processText(new String(data, scaler[start + len - 1][0], scaler[start + len - 1][1], _charset)))>0
-	                ? reduce(phrase,data,scaler,start+len,end)
-	                : reduce(phrase,data,scaler,start,start+len);
-	    } else {
-	      return start;
-	    }
-	}
-	
-	public int reduce2(byte[] phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
-	    int len = end-start;
-	    if (len > 1) {
-	      len = len >> 1;
-		  //int iI = start + len - 1;
-		  byte[] sub_data = processText(new String(data, scaler[start + len - 1][0], scaler[start + len - 1][1], _charset)).getBytes(_charset);
-	      return compareByteArray(phrase, sub_data)>0
-	                ? reduce2(phrase,data,scaler,start+len,end)
-	                : reduce2(phrase,data,scaler,start,start+len);
-	    } else {
-	      return start;
-	    }
-	}
-
 
 	
 	
@@ -1189,59 +1427,7 @@ public class mdict extends mdBase{
 	
 	
 	
-	
-	
-    public int  binary_find_closest(byte[][] array,String val){
-    	if(array==null)
-    		return -1;
-    	int iLen = array.length;
-    	if(iLen<1)
-    		return -1;
-    	
-		//System.out.println(new String(array[0])+":"+new String(array[array.length-1]));
-		int boundaryCheck = val.compareTo(processText(new String(array[0],_charset)));
-    	if(boundaryCheck<0){
-    		return -1;
-    	}else if(boundaryCheck==0)
-			return 0;
-    	boundaryCheck = val.compareTo(processText(new String(array[iLen-1],_charset)));
-    	if(boundaryCheck>0){
-    		return -1;
-    	}else if(boundaryCheck==0)
-			return iLen-1;
-    	
-    	int resPreFinal = reduce_keys(array,val,0,array.length);
-    	return resPreFinal;
-    }
-    //binary_find_closest: with_charset! with_charset! with_charset!
-    public int  binary_find_closest2(byte[][] array,String val) {
-    	int middle = 0;
-    	int iLen = array.length;
-    	int low=0,high=iLen-1;
-    	if(array==null || iLen<1){
-    		return -1;
-    	}
-    	//if(iLen==1)
-    	//	return 0;
-    	
-    	byte[] valBA = val.getBytes(_charset);
-    	
-    	int boundaryCheck = compareByteArray(valBA,processKey(array[0]).getBytes(_charset));
-    	if(boundaryCheck<0){
-			return -1;
-    	}else  if(boundaryCheck==0) {return 0;}
-    	
-    	boundaryCheck = compareByteArray(valBA,processKey(array[iLen-1]).getBytes(_charset));
-    	if(boundaryCheck>0){
-    			return -1;
-    	}else if(boundaryCheck==0) {return iLen-1;}
-
-    	return reduce_keys2(array,valBA,0,array.length);
-    }
-    
-    public String processKey(byte[] in){
-    	return processText(new String(in,_charset));
-    }
+    public String processKey(byte[] in){ return processMyText(new String(in,_charset));  }
     
         
 
@@ -1301,18 +1487,7 @@ public class mdict extends mdBase{
         return r;
     }
     
-    public static int getInt(byte buf1, byte buf2, byte buf3, byte buf4) 
-    {
-        int r = 0;
-        r |= (buf1 & 0x000000ff);
-        r <<= 8;
-        r |= (buf2 & 0x000000ff);
-        r <<= 8;
-        r |= (buf3 & 0x000000ff);
-        r <<= 8;
-        r |= (buf4 & 0x000000ff);
-        return r;
-    }
+
     public static long getLong(byte[] buf) 
     {
         long r = 0;
@@ -1352,7 +1527,11 @@ public class mdict extends mdBase{
     			.append("Num Entries: ").append(this._num_entries).append("<BR>")
     			.append("Num Key Blocks: ").append(this._num_key_blocks).append("<BR>")
     			.append("Num Rec Blocks: ").append(this._num_record_blocks).append("<BR>")
+    			.append("Compact  排序: ").append(this.isCompact).append("<BR>")
+    			.append("StripKey 排序: ").append(this.isStripKey).append("<BR>")
+    			.append("Case Sensitive: ").append(this.isKeyCaseSensitive).append("<BR>")
     			.append(mdd==null?"&lt;no assiciated mdRes&gt;":("MdResource count "+mdd.getNumberEntries()+","+mdd._encoding+","+mdd._num_key_blocks+","+mdd._num_record_blocks)).append("<BR>")
+    			.append("Internal Name: ").append(_Dictionary_Name).append("<BR>")
     			.append("Path: ").append(this.getPath()).toString();
     }
     
@@ -1399,9 +1578,23 @@ public class mdict extends mdBase{
     }
 
 
-    public static String processText(String input) {
+    public static String processText(CharSequence input) {
  		return replaceReg.matcher(input).replaceAll(emptyStr).toLowerCase();
  	}
+    
+    public String processMyText(String input) {
+    	String ret = isStripKey?replaceReg.matcher(input).replaceAll(emptyStr):input;
+ 		return isKeyCaseSensitive?ret:(((KeycaseStrategy>0)?(KeycaseStrategy==2):bGlobalUseClassicalKeycase)?mOldSchoolToLowerCase(ret):ret.toLowerCase());
+ 	}
+    
+    public String mOldSchoolToLowerCase(String input) {
+    	StringBuilder sb = new StringBuilder(input);
+		for(int i=0;i<sb.length();i++) {
+			if(sb.charAt(i)>='A' && sb.charAt(i)<='Z')
+				sb.setCharAt(i, (char) (sb.charAt(i)+32));
+		}
+		return sb.toString();
+    }
     
     public String processStyleSheet(String input) {
     	if(_stylesheet.size()==0)
@@ -1415,6 +1608,10 @@ public class mdict extends mdBase{
  		while(m.find()) {
 			String now = m.group(1);
 			String[] nowArr = _stylesheet.get(now);
+			if(nowArr==null)
+			if(now.equals("0") && currentDisplaying!=null) {
+				nowArr=new String[] {currentDisplaying,""};
+			}
 			if(nowArr==null) {
 				if(last!=null) {
 					transcriptor.append(last);
@@ -1434,7 +1631,8 @@ public class mdict extends mdBase{
  		else
  			return transcriptor.append(last==null?"":last).append(input.substring(lastEnd,input.length())).toString();
  	}
-    
+
+
 }
 
 

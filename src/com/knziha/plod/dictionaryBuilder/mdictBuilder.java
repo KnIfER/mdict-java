@@ -17,10 +17,12 @@ import org.anarres.lzo.LzoCompressor1x_1;
 import org.anarres.lzo.lzo_uintp;
 import org.apache.commons.text.StringEscapeUtils;
 
-import com.knziha.plod.dictionary.BU;
 import com.knziha.plod.dictionary.key_info_struct;
+import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.myCpr;
 import com.knziha.plod.dictionary.record_info_struct;
+import com.knziha.plod.dictionary.Utils.BU;
+import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.rbtree.RBTNode;
 import com.knziha.rbtree.RBTree_duplicative;
 import com.knziha.rbtree.RBTree_duplicative.inOrderDo;
@@ -41,6 +43,8 @@ public class mdictBuilder{
 		//private String _passcode = "";
 		public String _stylesheet = "";
 		private float _version=2.0f;
+	    private boolean isKeyCaseSensitive=false;
+	    private boolean isStripKey=true;
 		private long _num_entries;public long getNumberEntries(){return _num_entries;}
 		private long _num_key_blocks;
 	    private long _num_record_blocks;
@@ -50,35 +54,45 @@ public class mdictBuilder{
 	    private key_info_struct[] _key_block_info_list;
 	    
 	    
-	    public ArrayListTree<myCpr<String, String>> data_tree;
-	    public HashMap<Integer,Integer> privateZone;
+	    public ArrayListTree<myCprKey<String>> data_tree;
+	    public IntervalTree privateZone;
 	    public mdictBuilder(String Dictionary_Name,
 	    		String about,
 	    		String codec
 	    		) {
-	    	data_tree=new ArrayListTree<myCpr<String, String>>();
-	    	privateZone = new HashMap<>();
+	    	data_tree=new ArrayListTree<myCprKey<String>>();
+	    	privateZone = new IntervalTree();
 	    	_Dictionary_Name=Dictionary_Name;
 	    	_about=StringEscapeUtils.escapeHtml4(about);
 	    	_encoding=codec;
 	    }
 	    
-	    public HashMap<String,File> fileTree = new HashMap<>();
-	    
+
 	    public int insert(String key,String data) {
-	    	data_tree.insert(new myCpr<>(key,data));
+	    	data_tree.insert(new myCprKey<>(key,data));
 	    	return 0;
 	    }
-
-		
+	    
 	    private final String nullStr=null;
 	    
-		public void insert(String key, File inhtml) {
-	    	data_tree.insert(new myCpr<>(key,nullStr));
-			fileTree.put(key, inhtml);
+	    public HashMap<String,File> fileTree = new HashMap<>();
+		public void insert(String key, File file) {
+	    	data_tree.insert(new myCprKey<>(key,nullStr));
+			fileTree.put(key, file);
 		}
+		public void recordFile(String key,File file) {
+			fileTree.put(key, file);
+		}
+		
+	    public HashMap<String,ArrayList<myCprKey<String>>> bookTree = new HashMap<>();
+		public void insert(String key, ArrayList<myCprKey<String>> bioc) {
+			data_tree.insert(new myCprKey<>(key+"[<>]",nullStr));
+			bookTree.put(key, bioc);
+		}
+		
+
 		public void append(String key, File inhtml) {
-	    	data_tree.add(new myCpr<>(key,nullStr));
+	    	data_tree.add(new myCprKey<>(key,nullStr));
 			fileTree.put(key, inhtml);
 		}
 	    private String constructHeader() {
@@ -101,9 +115,12 @@ public class mdictBuilder{
 	    			.append(" Compact=")//c
 	    			.append("\"").append("Yes").append("\"")
 	    			.append(" KeyCaseSensitive=")//k
-	    			.append("\"").append("No").append("\"")
+	    			.append("\"").append(isKeyCaseSensitive?"Yes":"No").append("\"")
+	    			.append(" StripKey=")//k
+	    			.append("\"").append(isStripKey?"Yes":"No").append("\"")
 	    			.append(" Description=")
 	    			.append("\"").append(_about).append("\"")
+	    			.append(sharedMdd!=null?" SharedMdd=\""+sharedMdd+"\"":"")
 	    			.append(" Title=")
 	    			.append("\"").append(_Dictionary_Name).append("\"")
 	    			.append(" StyleSheet=")
@@ -221,7 +238,7 @@ public class mdictBuilder{
 		    			}else
 		    				byteContent = values[baseCounter+entryC].getBytes(_encoding);
 		    			data_raw.write(byteContent);
-		    			//data_raw.write(new byte[] {0x0d,0x0a,0});
+		    			data_raw.write(new byte[] {0x0d,0x0a,0});//xxx
 		    		}
 	    			
 	    			byte[] data_raw_out = data_raw.toByteArray();
@@ -231,7 +248,7 @@ public class mdictBuilder{
 						fOutTmp.write(new byte[]{1,0,0,0});
 						
 		    			int in_len = data_raw_out.length;
-						int out_len_preEmpt =  (in_len + in_len / 16 + 64);// + 3
+						int out_len_preEmpt =  (in_len + in_len / 16 + 64+ 3);//xxx
 						byte[] record_block_data = new byte[out_len_preEmpt]; 
 		    			
 						//MInt out_len = new MInt();   //CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
@@ -316,6 +333,7 @@ public class mdictBuilder{
 	    	for(key_info_struct infoI:_key_block_info_list) {
 	    		raw_data.putLong(infoI.num_entries);
 	    		byte[] hTextArray = infoI.headerKeyText;
+	    		//CMN.show(hTextArray.length+"");
 	    		raw_data.putChar((char) (_encoding.startsWith("UTF-16")?hTextArray.length/2:hTextArray.length));//TODO recollate
 	    		raw_data.put(hTextArray);
 	    		hTextArray = infoI.tailerKeyText;
@@ -378,12 +396,36 @@ public class mdictBuilder{
 			data_tree.SetInOrderDo(new inOrderDo() {
 				@Override
 				public void dothis(RBTNode node) {
-					keyslist.add(((myCpr<String,String>)node.getKey()).key);
-					valslist.add(((myCpr<String,String>)node.getKey()).value);
+					String key = ((myCprKey)node.getKey()).key;
+					String val = (String) ((myCprKey)node.getKey()).value;
+					valslist.add(val);
+					keyslist.add(key);
 			}});
 			data_tree.inOrderDo();
+			
+			for(int i=0;i<keyslist.size();i++) {//扩充
+				String key = keyslist.get(i);
+				if(key.endsWith("[<>]")) {
+					keyslist.remove(i);
+					valslist.remove(i);
+					int start = i;
+					String name=key.substring(0, key.length()-4);
+					ArrayList<myCprKey<String>> bookc = bookTree.get(name);
+			    	for(myCprKey<String> xx:bookc) {
+			    		keyslist.add(i,xx.key);
+			    		valslist.add(i++,xx.value);
+			    	}
+			    	if(bookc.size()>0) {
+			    		i--;
+			    		privateZone.addInterval(start, i, name);
+			    		//CMN.show(name+" added  "+start+" :: "+i);
+			    	}
+				}
+			}
+			
+			
 			long counter=
-					_num_entries=keyslist.size();
+					_num_entries = keyslist.size();
 			//calc record split
 			offsets = new int[(int) _num_entries];
 			values = valslist.toArray(new String[] {});
@@ -424,17 +466,22 @@ public class mdictBuilder{
 					}
 					if(preJudge<1024*perRecordBlockSize) {
 						//PASSING
-						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx+3*((int) (_num_entries-counter));
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+3*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
 						record_block_decompressed_size_accumulator+=recordLen;
 						blockDataInfo.set(idx, preJudge);/*offset+=preJudge*/
 						blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
 						counter-=1;
 					}else if(recordLen>=1024*perRecordBlockSize) {
 						//MONO OCCUPYING
-						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator;//xxx+3*((int) (_num_entries-counter));
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+3*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
 						record_block_decompressed_size_accumulator+=recordLen;
+						if(blockDataInfo.get(idx)!=0) {//新开一个recblock
+							blockDataInfo.add(0);
+							blockInfo.add(0);
+							idx++;
+						}
 						blockDataInfo.set(idx, recordLen);/*offset+=preJudge*/  //+3*((int) (_num_entries-counter))
-						blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
+						blockInfo.set(idx, 1);/*entry++*/
 						counter-=1;
 						break;
 					}else//NOT PASSING
@@ -454,12 +501,14 @@ public class mdictBuilder{
 				key_info_struct infoI = new key_info_struct();
 				long number_entries_counter = 0;
 				long baseCounter = _num_entries-counter;
-				if(privateZone.containsKey((int) (_num_entries-counter))) {
-					int end = privateZone.get((int) (_num_entries-counter));
-					for(int i=(int) (_num_entries-counter);i<end;i++) {
+				//if(_num_entries-counter==0) CMN.show("___ "+(privateZone.container(198).key));
+				if(privateZone.container((int) (_num_entries-counter))!=null) {
+					myCpr<Integer, Integer> interval = privateZone.container((int) (_num_entries-counter));
+					//CMN.show(interval.key+" ~ "+interval.value+" via "+(int) (_num_entries-counter));
+					for(int i=interval.key;i<=interval.value;i++) {
 						//CMN.show("putting!.."+(_num_entries-counter));
-						key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
-						key_block_data_wrap.put(keyslist.get((int) (_num_entries-counter)).getBytes(_encoding));
+						key_block_data_wrap.putLong(offsets[i]);//占位 offsets i.e. keyid
+						key_block_data_wrap.put(keyslist.get(i).getBytes(_encoding));
 						//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
 						if(_encoding.startsWith("UTF-16")){
 							key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
@@ -470,14 +519,17 @@ public class mdictBuilder{
 					}
 					infoI.num_entries = number_entries_counter;
 					//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
-					infoI.headerKeyText = "～～".getBytes(_encoding);
-					infoI.tailerKeyText = "～～".getBytes(_encoding);
+					String whatever = privateZone.names.get(interval.key)+"";
+					//whatever = keyslist.get(interval.key);
+					infoI.headerKeyText = whatever.getBytes(_encoding);
+					infoI.tailerKeyText = (whatever).getBytes(_encoding);
+					CMN.show(whatever);
 				}else {
 					while(true) {//常规压入entries
 						if(counter<=0) break;
 						int retPos = key_block_data_wrap.position();
 						try {//必定抛出，除非最后一个block.
-							if(privateZone.containsKey((int) (_num_entries-counter))) throw new BufferOverflowException();
+							if(privateZone.container((int) (_num_entries-counter))!=null) throw new BufferOverflowException();
 							key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
 							key_block_data_wrap.put(keyslist.get((int) (_num_entries-counter)).getBytes(_encoding));
 							//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
@@ -505,7 +557,7 @@ public class mdictBuilder{
 				if(grossCompressionType==1) {//lzo压缩全部
 					fOutTmp.write(new byte[]{1,0,0,0});
 	    	    	//fOut.write(new byte[] {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,9,9,9,9,9});
-					int out_len_preEmpt =  (in_len + in_len / 16 + 64 );//+ 3
+					int out_len_preEmpt =  (in_len + in_len / 16 + 64 + 3);//
 					byte[] compressed_key_block_data = new byte[out_len_preEmpt]; 
 					
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,(int) infoI.key_block_decompressed_size));
@@ -560,7 +612,28 @@ public class mdictBuilder{
 			_key_block_info_list = list.toArray(new key_info_struct[] {});
 		}
 
-	    public void setZLibCompress(boolean flag) {
+	    private int bookGetRecordLen(String key) {
+	    	int len =0;
+	    	ArrayList<myCprKey<String>> bookc = bookTree.get(key.substring(0, key.length()-4));
+	    	for(myCprKey<String> xx:bookc) {
+	    		if(xx.value!=null)
+					try {
+						len+=xx.value.getBytes(_encoding).length;
+					} catch (UnsupportedEncodingException e) {
+						e.printStackTrace();
+					}
+				else
+	    			len+=fileTree.get(xx.key).length();
+	    	}
+			return len;
+		}
+	    
+	    private int bookGetNumKeys(String key) {
+	    	ArrayList<myCprKey<String>> bookc = bookTree.get(key.substring(0, key.length()-4));
+			return bookc.size();
+		}
+
+		public void setZLibCompress(boolean flag) {
 	    	if(flag) {
 	    		grossCompressionType=2;
 	    	}else {
@@ -576,7 +649,72 @@ public class mdictBuilder{
 	    }
 
 		public int getCountOf(String key) {
-			return data_tree.getCountOf(new myCpr<>(key,""));
+			return data_tree.getCountOf(new myCprKey<>(key,""));
 		}
+
+		String sharedMdd;
+		public void setSharedMdd(String name) {
+			sharedMdd=name;
+		}
+
+
+		public void setKeycaseSensitive(boolean b) {
+			isKeyCaseSensitive=b;
+		}
+
+		protected String mOldSchoolToLowerCase(String input) {
+	    	StringBuilder sb = new StringBuilder(input);
+			for(int i=0;i<sb.length();i++) {
+				if(sb.charAt(i)>='A' && sb.charAt(i)<='Z')
+					sb.setCharAt(i, (char) (sb.charAt(i)+32));
+			}
+			return sb.toString();
+	    }
+		protected String processMyText(String input) {
+	    	String ret = isStripKey?mdict.replaceReg.matcher(input).replaceAll(emptyStr):input;
+	 		return isKeyCaseSensitive?ret:ret.toLowerCase();
+	 	}
+
+		public class myCprKey<T2> implements Comparable<myCprKey<T2>>{
+	    	public String key;
+	    	public T2 value;
+	    	public myCprKey(String vk,T2 v){
+	    		key=vk;value=v;
+	    	}
+	    	public int compareTo(myCprKey<T2> other) {
+	    		if(key.endsWith(">") && other.key.endsWith(">")) {
+	    			int idx2 = key.lastIndexOf("<",key.length()-2);
+	    			if(idx2!=-1) {
+		    			int idx3 = other.key.lastIndexOf("<",key.length()-2);
+	    				if(idx3!=-1) {
+	    					if(key.startsWith(other.key.substring(0,idx3))) {
+		    					String itemA=key.substring(idx2+1,key.length()-1);
+		    					String itemB=other.key.substring(idx2+1,other.key.length()-1);
+		    					idx2=-1;idx3=-1;
+		    					if(IU.shuzi.matcher(itemA).find()) {
+		    						idx2=IU.parsint(itemA);
+		    					}else if(IU.hanshuzi.matcher(itemA).find()) {
+		    						idx2=IU.recurse1wCalc(itemA, 0, itemA.length()-1, 1);
+		    					}
+		    					if(idx2!=-1) {
+		    						if(IU.shuzi.matcher(itemB).find()) {
+			    						idx3=IU.parsint(itemB);
+			    					}else if(IU.hanshuzi.matcher(itemB).find()) {
+			    						idx3=IU.recurse1wCalc(itemB, 0, itemB.length()-1, 1);
+			    					}
+		    						if(idx3!=-1)
+		    							return idx2-idx3;
+		    					}
+	    						
+	    					}
+	    				}
+	    			}
+	    		}
+    			return (processMyText(key).compareTo(processMyText(other.key)));
+	    	}
+	    	public String toString(){
+	    		return key+"_"+value;
+	    	}
+	    }
 
 }

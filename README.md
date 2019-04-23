@@ -50,7 +50,7 @@ html_contents2 = mdxs.get(1).getRecordAt(16906);
 ```
 
 ### 3. Other search methods
-TODO:) See the newly uploaded mdict-javafx demo! It's not yet complete though.
+TODO:) See test/MdTest.java and the newly uploaded mdict-javafx demo! It's not yet complete though.
 
 
 # details

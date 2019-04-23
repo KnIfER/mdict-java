@@ -1,4 +1,4 @@
-/*  Copyright 2018 KnIfER Zenjio-Kang
+/*  Copyright 2018 KnIfER
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -17,12 +17,14 @@
 
 package com.knziha.plod.dictionary;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -41,20 +43,25 @@ import org.anarres.lzo.lzo_uintp;
 //import org.jvcompress.lzo.MiniLZO;
 //import org.jvcompress.util.MInt;
 
+import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.rbtree.RBTree;
+
 
 
 class mdBase {
 	protected File f;
+    @Deprecated//dummy, don't call this.
 	mdBase(){};
 	
     final static byte[] _zero4 = new byte[]{0,0,0,0};
     final static byte[] _1zero3 = new byte[]{1,0,0,0};
     final static byte[] _2zero3 = new byte[]{2,0,0,0};
 	final static String emptyStr = "";
-    
+    public Boolean isCompact = true;
+    public Boolean isStripKey = true;
+    protected Boolean isKeyCaseSensitive = false;
 	int _encrypt=0;
-	Charset _charset;
+	Charset _charset;public Charset getCharset(){return _charset;}
 	protected int delimiter_width = 1;
 	String _encoding="UTF-16LE";
 	String _passcode = "";
@@ -63,7 +70,7 @@ class mdBase {
 	protected int _number_width;
 	long _num_entries;public long getNumberEntries(){return _num_entries;}
     long _num_key_blocks;public long get_num_key_blocks(){return _num_key_blocks;}
-    long _num_record_blocks=0;
+    long _num_record_blocks=0;public long get_num_record_blocks(){return _num_record_blocks;}
 
 	RBTree<myCpr<Integer, Integer>> accumulation_blockId_tree = new RBTree<myCpr<Integer, Integer>>();
 	long _key_block_size,_key_block_info_size,_key_block_info_decomp_size,_record_block_size;
@@ -81,8 +88,8 @@ class mdBase {
     public long maxDecomKeyBlockSize;
 	byte[] record_block_;
 	
-    DataInputStream getStreamAt(long at) throws IOException {
-    	DataInputStream data_in1 = new DataInputStream(new FileInputStream(f));
+	protected DataInputStream getStreamAt(long at) throws IOException {
+    	DataInputStream data_in1 = new DataInputStream(mOpenInputStream());
     	if(at>0) {
 	    	long yue=0;
 	    	while(yue<at) {
@@ -92,127 +99,161 @@ class mdBase {
     	return data_in1;
     }
     
+
+	protected InputStream mOpenInputStream() throws IOException {
+        //return new FileInputStream(f);
+        return new BufferedInputStream(new FileInputStream(f));
+    }
+	
+	
 	protected HashMap<String,String[]> _stylesheet = new HashMap<String,String[]>();
+	public int lenSty=0;
 
     //构造
     mdBase(String fn) throws IOException  {
-    //![0]File in
-    	f = new File(fn);
-    	
-    	DataInputStream data_in = getStreamAt(0);	
-    //![1]read_header 
-    	// number of bytes of header text
-    	byte[] itemBuf = new byte[4];
-		data_in.read(itemBuf, 0, 4);
-    	int header_bytes_size = BU.toInt(itemBuf,0);
-		_key_block_offset = 4 + header_bytes_size + 4;
-    	byte[] header_bytes = new byte[header_bytes_size];
-    	data_in.read(header_bytes,0, header_bytes_size); 
-		// 4 bytes: adler32 checksum of header, in little endian
-		//itemBuf = new byte[4];
-		//data_in.read(itemBuf, 0, 4);
-    	//int alder32 = getInt(itemBuf[3],itemBuf[2],itemBuf[1],itemBuf[0]);
-    	//assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
-		data_in.skipBytes(4);
-		//不必关闭文件流 data_in
-
-			
-		Pattern re = Pattern.compile("(\\w+)=\"(.*?)\"",Pattern.DOTALL);
-		String headerString = new String(header_bytes,"UTF-16LE");
-		//CMN.show("headerString::"+headerString);
-		Matcher m = re.matcher(headerString);
-		_header_tag = new HashMap<String,String>();
-		while(m.find()) {
-			_header_tag.put(m.group(1), m.group(2));
-	    }
-		
-		if(_header_tag.containsKey("Encoding") && !_header_tag.get("Encoding").equals(""))
-			_encoding = _header_tag.get("Encoding").toUpperCase();
-		
-        if(_encoding.equals("GBK")|| _encoding.equals("GB2312")) _encoding = "GB18030";// GB18030 > GBK > GB2312
-        if (_encoding.equals("")) _encoding = "UTF-8";
-        if(_encoding.equals("UTF-16")) _encoding = "UTF-16LE"; //INCONGRUENT java charset
-
-        _charset = Charset.forName(_encoding);
-        
-        if(_encoding.startsWith("UTF-16"))
-			delimiter_width = 2;
-		else
-			delimiter_width = 1;
-        
-        
-        /* encryption flag
-           0x00 - no encryption
-           0x01 - encrypt record block
-           0x02 - encrypt key info block*/
-        String EncryptedFlag = _header_tag.get("Encrypted");
-		if(EncryptedFlag==null || EncryptedFlag.equals("0") || EncryptedFlag.equals("No"))
-            _encrypt = 0;
-		else if(EncryptedFlag == "1")
-            _encrypt = 1;
-		else
-			try {
-				_encrypt = Integer.valueOf(EncryptedFlag);
-			} catch (NumberFormatException e) {
-				_encrypt=0;
-			}
-
-        // stylesheet attribute if present takes form of:
-        //   style_number # 1-255
-        //   style_begin  # or ''
-        //   style_end    # or ''
-        // store stylesheet in dict in the form of
-        // {'number' : ('style_begin', 'style_end')}
-        
-        if(_header_tag.containsKey("StyleSheet")){
-            String[] lines = _header_tag.get("StyleSheet").split("\n");
-            for(int i=0;i<=lines.length-3;i+=3)
-                _stylesheet.put(lines[i],new String[]{lines[i+1],lines[i+2]});
-        }
-        
-        _version = Float.valueOf(_header_tag.get("GeneratedByEngineVersion"));
-        if(_version < 2.0)
-            _number_width = 4;
-        else
-            _number_width = 8;
-    //![1]HEADER 分析完毕 
-    //![2]_read_keys_info START
-		//stst = System.currentTimeMillis();
-        //size (in bytes) of previous 5 or 4 numbers (can be encrypted)
-        int num_bytes;
-        if(_version >= 2)
-            num_bytes = 8 * 5 + 4;
-        else
-            num_bytes = 4 * 4;
-		itemBuf = new byte[num_bytes];
-		data_in.read(itemBuf, 0, num_bytes);
-		data_in.close();
-        ByteBuffer sf = ByteBuffer.wrap(itemBuf);
-        
-        //TODO: pureSalsa20.py decryption
-        if(_encrypt==1){if(_passcode==emptyStr) throw new IllegalArgumentException("_passcode未输入");}
-        _num_key_blocks = _read_number(sf);                                           // 1
-        _num_entries = _read_number(sf);                                          // 2
-        if(_version >= 2.0){_key_block_info_decomp_size = _read_number(sf);}      //[3]
-        _key_block_info_size = _read_number(sf);                                  // 4
-        _key_block_size = _read_number(sf);                                       // 5
-        
-        //前 5 个数据的 adler checksum
-        if(_version >= 2.0)
-        {
-            //int adler32 = BU.calcChecksum(itemBuf,0,num_bytes-4);
-            //assert adler32 == (sf.getInt()& 0xffffffff);
-        }
-
-        _key_block_offset+=num_bytes+_key_block_info_size;
-        
-        //assert(_num_key_blocks == _key_block_info_list.length);
-
-        _record_block_offset = _key_block_offset+_key_block_size;
-        
-        read_key_block_info();
+    	init(fn);
     }
     
+    protected void init(String fn) throws IOException{
+
+        //![0]File in
+        	f = new File(fn);
+        	
+        	DataInputStream data_in = getStreamAt(0);
+        //![1]read_header 
+        	// number of bytes of header text
+        	byte[] itemBuf = new byte[4];
+    		data_in.read(itemBuf, 0, 4);
+        	int header_bytes_size = BU.toInt(itemBuf,0);
+    		_key_block_offset = 4 + header_bytes_size + 4;
+        	byte[] header_bytes = new byte[header_bytes_size];
+        	data_in.read(header_bytes,0, header_bytes_size);
+
+    		// 4 bytes: adler32 checksum of header, in little endian
+    		itemBuf = new byte[4];
+    		data_in.read(itemBuf, 0, 4);
+        	int alder32 = getInt(itemBuf[3],itemBuf[2],itemBuf[1],itemBuf[0]);
+        	//assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
+            if((BU.calcChecksum(header_bytes)& 0xffffffff) != alder32) throw new IOException("_passcode未输入");
+
+    		//data_in.skipBytes(4);
+    		//不必关闭文件流 data_in
+
+    			
+    		Pattern re = Pattern.compile("(\\w+)=\"(.*?)\"",Pattern.DOTALL);
+    		String headerString = new String(header_bytes,"UTF-16LE");
+    		//if(f.getName().startsWith("Long")) CMN.show("headerString::"+headerString);
+    		Matcher m = re.matcher(headerString);
+    		_header_tag = new HashMap<>();
+    		while(m.find()) {
+    			_header_tag.put(m.group(1), m.group(2));
+    	    }
+    		
+    		String valueTmp = _header_tag.get("Compact");
+    		if(valueTmp==null)
+    			valueTmp = _header_tag.get("Compat");
+    		if(valueTmp!=null)
+    			isCompact = !(valueTmp.equals("No"));
+    		
+
+    		valueTmp = _header_tag.get("StripKey");
+    		if(valueTmp!=null)
+    			isStripKey = valueTmp.length()==3;
+    		
+    		valueTmp = _header_tag.get("KeyCaseSensitive");
+    		if(valueTmp!=null)
+    			isKeyCaseSensitive = valueTmp.length()==3;
+    		
+    		valueTmp = _header_tag.get("Encoding");
+    		if(valueTmp!=null && !valueTmp.equals(""))
+    			_encoding = valueTmp.toUpperCase();
+    		
+            if(_encoding.equals("GBK")|| _encoding.equals("GB2312")) _encoding = "GB18030";// GB18030 > GBK > GB2312
+            if (_encoding.equals("")) _encoding = "UTF-8";
+            if(_encoding.equals("UTF-16")) _encoding = "UTF-16LE"; //INCONGRUENT java charset
+
+            _charset = Charset.forName(_encoding);
+            
+            if(_encoding.startsWith("UTF-16"))
+    			delimiter_width = 2;
+    		else
+    			delimiter_width = 1;
+            
+            
+            /* encryption flag
+               0x00 - no encryption
+               0x01 - encrypt record block
+               0x02 - encrypt key info block*/
+            String EncryptedFlag = _header_tag.get("Encrypted");
+    		if(EncryptedFlag==null || EncryptedFlag.equals("0") || EncryptedFlag.equals("No"))
+                _encrypt = 0;
+    		else if(EncryptedFlag == "1")
+                _encrypt = 1;
+    		else
+    			try {
+    				_encrypt = Integer.valueOf(EncryptedFlag);
+    			} catch (NumberFormatException e) {
+    				_encrypt=0;
+    			}
+
+            // stylesheet attribute if present takes form of:
+            //   style_number # 1-255
+            //   style_begin  # or ''
+            //   style_end    # or ''
+            // store stylesheet in dict in the form of
+            // {'number' : ('style_begin', 'style_end')}
+            
+            if(_header_tag.containsKey("StyleSheet")){
+                String[] lines = _header_tag.get("StyleSheet").split("\n");
+                for(int i=0;i<lines.length;i+=3) {
+                    _stylesheet.put(lines[i],new String[]{i+1<lines.length?lines[i+1]:"",i+2<lines.length?lines[i+2]:""});
+                    lenSty++;
+                }
+            }
+            
+            _version = Float.valueOf(_header_tag.get("GeneratedByEngineVersion"));
+            if(_version < 2.0)
+                _number_width = 4;
+            else
+                _number_width = 8;
+        //![1]HEADER 分析完毕 
+        //![2]_read_keys_info START
+    		//stst = System.currentTimeMillis();
+            //size (in bytes) of previous 5 or 4 numbers (can be encrypted)
+            int num_bytes;
+            if(_version >= 2)
+                num_bytes = 8 * 5 + 4;
+            else
+                num_bytes = 4 * 4;
+    		itemBuf = new byte[num_bytes];
+    		data_in.read(itemBuf, 0, num_bytes);
+    		data_in.close();
+            ByteBuffer sf = ByteBuffer.wrap(itemBuf);
+            
+            //TODO: pureSalsa20.py decryption
+            if(_encrypt==1){if(_passcode==emptyStr) throw new IllegalArgumentException("_passcode未输入");}
+            _num_key_blocks = _read_number(sf);                                           // 1
+            _num_entries = _read_number(sf);                                          // 2
+            if(_version >= 2.0){_key_block_info_decomp_size = _read_number(sf);}      //[3]
+            _key_block_info_size = _read_number(sf);                                  // 4
+            _key_block_size = _read_number(sf);                                       // 5
+            
+            //前 5 个数据的 adler checksum
+            if(_version >= 2.0)
+            {
+                //int adler32 = BU.calcChecksum(itemBuf,0,num_bytes-4);
+                //assert adler32 == (sf.getInt()& 0xffffffff);
+            }
+
+            _key_block_offset+=num_bytes+_key_block_info_size;
+            
+            //assert(_num_key_blocks == _key_block_info_list.length);
+
+            _record_block_offset = _key_block_offset+_key_block_size;
+            
+            read_key_block_info();
+        
+    }
     
     void read_key_block_info() {
 	    // read key block info, which comprises each key_block's:
@@ -369,7 +410,7 @@ class mdBase {
         //int size_counter = 0;
         long compressed_size_accumulator = 0;
         long decompressed_size_accumulator = 0;
-		/*may be faster:batch read-in strategy*/
+		/*may be faster: batch read-in strategy*/
 		byte[] numers = new byte[(int) record_block_info_size];
 		data_in1.read(numers);
 		data_in1.close();
@@ -467,8 +508,8 @@ class mdBase {
        // for(int i123=0; i123<record_block_info_list.size(); i123++){
         	int compressed_size = (int) RinfoI.compressed_size;
         	int decompressed_size = rec_decompressed_size = (int) RinfoI.decompressed_size;//用于验证
-        	byte[] record_block = new byte[(int) decompressed_size];
-        	byte[] record_block_compressed = new byte[(int) compressed_size];
+        	byte[] record_block = new byte[decompressed_size];
+        	byte[] record_block_compressed = new byte[compressed_size];
         	//System.out.println(compressed_size) ;
         	//System.out.println(decompressed_size) ;
         	data_in.read(record_block_compressed);
@@ -533,6 +574,9 @@ class mdBase {
     	byte[][] keys;
     	long[] key_offsets;
     	byte[] hearderText=null;
+		byte[] tailerKeyText=null;
+    	String hearderTextStr=null;
+    	String tailerKeyTextStr=null;
     	int blockID=-1;
     }
     protected cached_key_block infoI_cache_ = new cached_key_block();
@@ -549,6 +593,7 @@ class mdBase {
 	        infoI_cache.keys = new byte[(int) infoI.num_entries][];
 	        infoI_cache.key_offsets = new long[(int) infoI.num_entries];
 	        infoI_cache.hearderText = infoI.headerKeyText;
+	        infoI_cache.tailerKeyText = infoI.tailerKeyText;
         	long start = infoI.key_block_compressed_size_accumulator;
             long compressedSize;
             byte[] key_block = new byte[1];
@@ -570,7 +615,7 @@ class mdBase {
             if(key_block_compression_type.equals(new String(new byte[]{0,0,0,0}))){
                 //无需解压
                 key_block = new byte[(int) (_key_block_compressed.length-start-8)];
-                System.arraycopy(_key_block_compressed, (int)(+8), key_block, 0,key_block.length);
+                System.arraycopy(_key_block_compressed, (+8), key_block, 0,key_block.length);
             }else if(key_block_compression_type.equals(new String(new byte[]{1,0,0,0})))
             {
                 //key_block = lzo_decompress(_key_block_compressed,(int) (start+_number_width),(int)(compressedSize-_number_width));
@@ -641,16 +686,16 @@ class mdBase {
         return infoI_cache;
                 
     }
-    
-    
-    
-    
-    
-    
-    
-    
 
-    
+
+
+
+
+
+
+
+
+    @Deprecated
     public void printRecordInfo() throws IOException{
         for(int i=0; i<_record_info_struct_list.length; i++){
         	record_info_struct RinfoI = _record_info_struct_list[i];
@@ -658,8 +703,8 @@ class mdBase {
         	
         }	
     }
-     
-    
+
+    @Deprecated
     public void printAllContents() throws IOException{
     	OutputStreamWriter fOut = new OutputStreamWriter(new FileOutputStream(f.getAbsolutePath()+".txt"),_encoding);
 
@@ -688,12 +733,12 @@ class mdBase {
             int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
             byte[] record_block_ = new byte[1];
             // no compression
-            if(record_block_type_str.equals(new String(new byte[]{0,0,0,0}))){
+            if(compareByteArrayIsPara(_zero4, record_block_type)){
             	record_block_ = new byte[(int) (compressed_size-8)];
             	System.arraycopy(record_block_compressed, 8, record_block_, 0, record_block_.length-8);
             }
             // lzo compression
-            else if(record_block_type_str.equals(new String(new byte[]{1,0,0,0}))){
+            else if(compareByteArrayIsPara(_1zero3, record_block_type)){
                 //stst=System.currentTimeMillis(); //获取开始时间 
                 //record_block_ = new byte[(int) decompressed_size];
                 //MInt len = new MInt((int) decompressed_size);
@@ -707,7 +752,7 @@ class mdBase {
                 //System.out.println("解压Record耗时："+(System.currentTimeMillis()-st));
             }
             // zlib compression
-            else if(record_block_type_str.equals(new String(new byte[]{02,00,00,00}))){
+            else if(compareByteArrayIsPara(_2zero3, record_block_type)){
                 record_block_ = zlib_decompress(record_block_compressed,8);
             }
             // notice not that adler32 return signed value
@@ -729,7 +774,8 @@ class mdBase {
         data_in.close();
         fOut.close();
     }
-    
+
+    @Deprecated
     public void printAllKeys(){
     	if(_key_block_info_list==null) read_key_block_info();
     	int blockCounter = 0;
@@ -742,7 +788,8 @@ class mdBase {
     		show("block no."+(blockCounter++)+"printed");
     	}
     }
-    
+
+    @Deprecated
     public void findAllKeys(String keyword){
         keyword = mdict.processText(keyword);
     	int blockCounter = 0;
@@ -769,6 +816,7 @@ class mdBase {
     
     
     protected HashMap<String,String> _header_tag;
+    @Deprecated
     public void printDictInfo(){
     	show("\r\n——————————————————————Dict Info——————————————————————");
     	if(_header_tag!=null) {
@@ -789,7 +837,7 @@ class mdBase {
         if(true) {
 	        int counter=0;
 	        for(key_info_struct infoI:_key_block_info_list) {
-	        	show("|"+infoI.num_entries+"@No."+counter+"||header~"+infoI.headerKeyText+"||tailer~"+infoI.tailerKeyText);
+	        	show("|"+infoI.num_entries+"@No."+counter+"||header~"+new String(infoI.headerKeyText,_charset)+"||tailer~"+new String(infoI.tailerKeyText,_charset));
 	        	counter++;
 	        }
         }
@@ -797,6 +845,7 @@ class mdBase {
     }
 
     //解压等utils
+    @Deprecated
     public static byte[] zlib_decompressRAW_METHON(byte[] encdata,int offset,int len) {
 	    try {
 			    Inflater inf = new Inflater();
@@ -810,6 +859,7 @@ class mdBase {
 		    	return "ERR".getBytes(); 
 		    }
     }
+    @Deprecated
     public static String zlib_decompress_to_str(byte[] encdata,int offset) {
 	    try {
 			    ByteArrayOutputStream out = new ByteArrayOutputStream(); 
@@ -821,7 +871,19 @@ class mdBase {
 		    	ex.printStackTrace(); 
 		    	return "ERR"; 
 		    }
-    }    
+    }
+    public static int getInt(byte buf1, byte buf2, byte buf3, byte buf4)
+    {
+        int r = 0;
+        r |= (buf1 & 0x000000ff);
+        r <<= 8;
+        r |= (buf2 & 0x000000ff);
+        r <<= 8;
+        r |= (buf3 & 0x000000ff);
+        r <<= 8;
+        r |= (buf4 & 0x000000ff);
+        return r;
+    }
     //per-byte byte array comparing
     final static int compareByteArray(byte[] A,byte[] B){
     	int la = A.length,lb = B.length;
@@ -866,6 +928,16 @@ class mdBase {
 			f = newF;
 		return ret;
 	}
+	public boolean renameFileTo(File newF) {
+		boolean ret = f.renameTo(newF);
+		if(ret)
+			f = newF;
+		return ret;
+	}
+	public void updateFile(File newF){
+		f = newF;
+	}
+	
 	
 	
 	

@@ -1,0 +1,45 @@
+
+.dhtmlgoodies-seekbar{
+
+}
+
+/* Default configurations */
+.seekbar-negative{
+    background-color:#009966;
+}
+.seekbar-positive{
+    background-color:#009966;
+}
+
+/* Dragable thumb */
+.seekbar-thumb{
+    background-color:#006699;
+    /* Transparency can be enabled with
+    opacity:0.8;
+    */
+}
+/* The center point of the thumb */
+.seekbar-thumb-over{
+    opacity:0.3 !important;
+    filter:alpha(opacity=30) !important;
+}
+.seekbar-thumb-needle{
+    background-color:#006699;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

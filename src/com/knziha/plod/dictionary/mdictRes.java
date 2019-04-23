@@ -1,4 +1,4 @@
-/*  Copyright 2018 KnIfER Zenjio-Kang
+/*  Copyright 2018 KnIfER
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 */
 
 package com.knziha.plod.dictionary;
+
+import com.knziha.plod.dictionary.Utils.BU;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -49,7 +51,7 @@ public class mdictRes extends mdBase{
     
 	HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
 
-
+	protected mdictRes() {};
     //构造
 	public mdictRes(String fn) throws IOException{
 		super(fn);

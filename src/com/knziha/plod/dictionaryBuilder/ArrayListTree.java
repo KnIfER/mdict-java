@@ -5,10 +5,12 @@ import java.util.ArrayList;
 import com.knziha.plod.dictionary.myCpr;
 import com.knziha.rbtree.RBTNode;
 
+import test.CMN;
+
 public class ArrayListTree<T extends Comparable<T>> {
 	//wonderful!
 	
-	private final ArrayList<T> data;
+	protected final ArrayList<T> data;
 	
 	
 	ArrayListTree(){
@@ -20,7 +22,12 @@ public class ArrayListTree<T extends Comparable<T>> {
 			data.add(data.size(),val);
 			return data.size();
 		}
-		int idx = reduce(val,0,data.size());
+		int idx=-1;
+		if(data.get(0).compareTo(val)>=0)
+			idx=0;
+		else
+			idx = reduce(val,0,data.size());
+		
 		if(val.compareTo(data.get(idx))==0) {
 			while(idx<data.size()-1 && val.compareTo(data.get(idx+1))==0) {
 				idx++;

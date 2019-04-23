@@ -9,9 +9,8 @@ import java.nio.ByteBuffer;
 import java.util.zip.Deflater;
 import java.util.zip.InflaterOutputStream;
 
-import com.knziha.plod.dictionary.CMN;
 import com.knziha.plod.dictionary.mdict;
-import com.knziha.plod.dictionary.BU;
+import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionaryBuilder.mdictBuilder;
 
 /**
