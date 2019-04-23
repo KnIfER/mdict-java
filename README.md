@@ -7,8 +7,8 @@ It supports:
 and is able to do:  
 &nbsp;&nbsp;&nbsp;I.Basic query.  
 &nbsp;&nbsp;II.Conjuction search.  
-&nbsp;III.Fast Fuzzy search (with wild cards).  
-&nbsp;IV.Fast Fulltext retrieval (with wild cards).  
+&nbsp;III.Fast wildcard match entry.  
+&nbsp;IV.Fast Fulltext retrieval (also with wild cards).  
 
 # App Released!    
 <a href="https://play.google.com/store/apps/details?id=com.knziha"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" height="50px"/></a>  
@@ -49,12 +49,15 @@ html_contents2 = mdxs.get(1).getRecordAt(16906);
 */
 ```
 
+### 3. Other search methods
+TODO:) See the newly uploaded mdict-javafx demo! It's not yet complete though.
 
 
 # details
 * This project was initially converted from xiaoqiangWang's [python analyzer](https://bitbucket.org/xwang/mdict-analysis). 
 * Use [red-black tree](http://www.cnblogs.com/skywang12345/p/3245399.html) and binary-list-searching(mainly) to implement dictionary funcitons.  
 * Feng Dihai(@[fengdh](https://github.com/fengdh/mdict-js))'s mdict-js is of help too, I've just switched to use the same short but elegant binary-list-searching method——reduce().Somehow, this function always returns the first occurence of the entry >= keyword, in a pre-sorted list that contain entries. maybe some mathematician could tell me why, but I've tested over 100000 times without any expectation.
+* Maybe I should oneday replace red-black tree and the recursive reduce method with that binarySearch method inside of AOSP, but I am lazy... 
 ```
 /*via mdict-js
  *note at first time we feed in 0 as start and array.length as end. it must not be array.length-1. 
