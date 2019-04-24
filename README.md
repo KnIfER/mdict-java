@@ -51,6 +51,9 @@ html_contents2 = mdxs.get(1).getRecordAt(16906);
 
 ### 3. Other search methods
 TODO:) See test/MdTest.java and the newly uploaded mdict-javafx demo! It's not yet complete though.
+Updated: PlaneDictionary-javafx (using nanohttpd to serve a dictionary server and Javafx webview to show it. )
+截图：
+![image](https://github.com/KnIfER/tuChuang/raw/master/javaFx_PDPC_α.png)  
 
 
 # details
