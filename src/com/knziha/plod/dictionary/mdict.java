@@ -853,22 +853,24 @@ public class mdict extends mdBase{
 		        	if(fuzzyCancled) {poolEUSize=0; return; }
 		            int jiaX=0;
 		            if(it==split_keys_thread_number-1) jiaX=yuShu;
-		            byte[] key_block = new byte[65536];/*分配资源 32770   65536 (common cache for index blocks)*/
 		            if(combining_search_tree2[it]==null)
 		            	combining_search_tree2[it] = new ArrayList<Integer>();
 	           	
 		            
-		            int compressedSize_many = 0;
+		            int compressedSize_many = 0, _maxDecomKeyBlockSize = 0;
 		           //小循环	
 		            for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
 		                   //prepareItemByKeyInfo(_key_block_info_list[blockCounter],blockCounter);
 		                   key_info_struct infoI = _key_block_info_list[blockId];
+		                   _maxDecomKeyBlockSize = Math.max(_maxDecomKeyBlockSize, (int) infoI.key_block_decompressed_size);
 		                   if(blockId==_key_block_info_list.length-1)
 		                	   compressedSize_many += _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
 		                   else
 		                	   compressedSize_many += _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
 		            }
-		            
+		            //TODO optimise compressedSize_many
+		            //CMN.show("compressedSize_many;;"+compressedSize_many);
+		            byte[] key_block = new byte[_maxDecomKeyBlockSize];/*分配资源 maxDecomKeyBlockSize 32770   65536 (common cache for index blocks)*/
 	            long start = _key_block_info_list[it*step].key_block_compressed_size_accumulator;
 	
 	            try {
@@ -885,12 +887,10 @@ public class mdict extends mdBase{
 							int compressedSize;
 							key_info_struct infoI = _key_block_info_list[blockId];
 							
-							//growing cache size, which should rarely happen?
+							//redundant check growing cache size
 							if(infoI.key_block_decompressed_size>key_block.length) {
-								//System.out.println("growing cache size");
-								//TODO decide optimal cache size
 								key_block=null;
-								key_block = new byte[(int) infoI.key_block_decompressed_size];
+								key_block = new byte[(int) maxDecomKeyBlockSize];
 							}
 							
 							if(blockId==_key_block_info_list.length-1)
@@ -903,7 +903,8 @@ public class mdict extends mdBase{
 							
 							//byte[] record_block_type = new byte[]{_key_block_compressed_many[(int) startI],_key_block_compressed_many[(int) (startI+1)],_key_block_compressed_many[(int) (startI+2)],_key_block_compressed_many[(int) (startI+3)]};
 							//int adler32 = getInt(_key_block_compressed_many[(int) (startI+4)],_key_block_compressed_many[(int) (startI+5)],_key_block_compressed_many[(int)(startI+6)],_key_block_compressed_many[(int) (startI+7)]);
-		
+
+							//CMN.show(key_block.length+";;"+infoI.key_block_decompressed_size+";;"+maxDecomKeyBlockSize);
 							if(compareByteArrayIsPara(_key_block_compressed_many,startI,_zero4)){
 								  System.arraycopy(_key_block_compressed_many, (startI+8), key_block, 0, (int)(_key_block_size-8));
 							}else if(compareByteArrayIsPara(_key_block_compressed_many,startI,_1zero3))
@@ -925,7 +926,6 @@ public class mdict extends mdBase{
 									inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
 									//key_block = new byte[(int) infoI.key_block_decompressed_size];
 									try {
-										//CMN.show(key_block.length+";;"+infoI.key_block_decompressed_size);
 										int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
 									} catch (DataFormatException e) {e.printStackTrace();}
 									inf=null;
