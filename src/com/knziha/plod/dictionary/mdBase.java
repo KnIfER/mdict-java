@@ -84,7 +84,7 @@ class mdBase {
     int rec_decompressed_size;
     long maxComRecSize;
     long maxDecompressedSize;
-    public long maxComKeyBlockSize;
+    //public long maxComKeyBlockSize;
     public long maxDecomKeyBlockSize;
 	byte[] record_block_;
 	
@@ -134,7 +134,7 @@ class mdBase {
     		data_in.read(itemBuf, 0, 4);
         	int alder32 = getInt(itemBuf[3],itemBuf[2],itemBuf[1],itemBuf[0]);
         	//assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
-            if((BU.calcChecksum(header_bytes)& 0xffffffff) != alder32) throw new IOException("_passcode未输入");
+            if((BU.calcChecksum(header_bytes)& 0xffffffff) != alder32) throw new IOException("unrecognized format");
 
     		//data_in.skipBytes(4);
     		//不必关闭文件流 data_in
@@ -375,7 +375,6 @@ class mdBase {
 	        	bytePointer+=4;
 	        }else{
 	        	infoI.key_block_compressed_size = BU.toLong(key_block_info,bytePointer);
-	        	maxComKeyBlockSize = Math.max(infoI.key_block_compressed_size, maxComKeyBlockSize);
 	        	key_block_compressed_size += infoI.key_block_compressed_size;
 	        	bytePointer+=8;
 	        	infoI.key_block_decompressed_size = BU.toLong(key_block_info,bytePointer);
