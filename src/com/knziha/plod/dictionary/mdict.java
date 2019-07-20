@@ -805,7 +805,11 @@ public class mdict extends mdBase{
 	
 	
 	  	String keyword = key.toLowerCase();
-	  	final Pattern keyPattern=Pattern.compile(keyword.replace("*", ".+?"),Pattern.CASE_INSENSITIVE);
+	  	Pattern keyPattern=null;//用于 复核 ，并不直接参与搜索
+	  	try {
+	  		Pattern.compile(keyword.replace("*", ".+?"),Pattern.CASE_INSENSITIVE);
+	  	}catch(Exception e) {}
+	  	
 		String upperKey = keyword.toUpperCase();
 	  	final byte[][][] matcher = new byte[upperKey.equals(keyword)?1:2][][];
 		matcher[0] = flowerSanLieZhi(keyword);
@@ -849,7 +853,7 @@ public class mdict extends mdBase{
 		        	if(fuzzyCancled) {poolEUSize=0; return; }
 		            int jiaX=0;
 		            if(it==split_keys_thread_number-1) jiaX=yuShu;
-		            final byte[] key_block = new byte[65536];/*分配资源 32770   65536*/
+		            byte[] key_block = new byte[65536];/*分配资源 32770   65536 (common cache for index blocks)*/
 		            if(combining_search_tree2[it]==null)
 		            	combining_search_tree2[it] = new ArrayList<Integer>();
 	           	
@@ -880,6 +884,15 @@ public class mdict extends mdBase{
 							
 							int compressedSize;
 							key_info_struct infoI = _key_block_info_list[blockId];
+							
+							//growing cache size, which should rarely happen?
+							if(infoI.key_block_decompressed_size>key_block.length) {
+								//System.out.println("growing cache size");
+								//TODO decide optimal cache size
+								key_block=null;
+								key_block = new byte[(int) infoI.key_block_decompressed_size];
+							}
+							
 							if(blockId==_key_block_info_list.length-1)
 								compressedSize = (int) (_key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator);
 							else
@@ -912,7 +925,7 @@ public class mdict extends mdBase{
 									inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
 									//key_block = new byte[(int) infoI.key_block_decompressed_size];
 									try {
-									  //CMN.show(""+infoI.key_block_decompressed_size);
+										//CMN.show(key_block.length+";;"+infoI.key_block_decompressed_size);
 										int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
 									} catch (DataFormatException e) {e.printStackTrace();}
 									inf=null;
@@ -1095,6 +1108,7 @@ public class mdict extends mdBase{
 				//复核 re-collate
 				String LexicalEntry = new String(key_block,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset);
 				//int LexicalEntryIdx = LexicalEntry.toLowerCase().indexOf(keyword);
+				if(keyPattern!=null)
 	         	if(!keyPattern.matcher(LexicalEntry).find()) {key_start_index = key_end_index + delimiter_width;dirtyfzPrgCounter++;keyCounter++;continue;}
 				//StringBuilder sb = new StringBuilder(LexicalEntry);
 	         	//byte[] arraytmp = new byte[key_end_index-(key_start_index+_number_width)];
