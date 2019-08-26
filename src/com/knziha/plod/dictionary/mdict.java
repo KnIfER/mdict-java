@@ -36,8 +36,6 @@ import java.util.zip.Inflater;
 
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
-//import org.jvcompress.lzo.MiniLZO;
-//import org.jvcompress.util.MInt;
 import org.apache.commons.lang.StringEscapeUtils;
 
 import com.knziha.plod.dictionary.Utils.BU;
@@ -53,15 +51,14 @@ import com.knziha.rbtree.RBTree_additive;
  * 3. Multi-threaded search in all contexts.
  * 4. Multi-threaded wildcard match in all key entries.
  * @author KnIfER
- * @date 2017/12/30
  */
 
 public class mdict extends mdBase{
     @Deprecated//dummy, don't call this.
 	public mdict(){};
 	
-	public final static Pattern replaceReg = Pattern.compile(" |&|:|\\$|/|\\.|,|-|\'|\\(|\\)|\\[|\\]|#|<|>|!|\\n");
-	public final static Pattern replaceReg2 = Pattern.compile(" |-");
+	public final static Pattern replaceReg = Pattern.compile("[ &:$/.,\\-'()\\[\\]#<>!\\n]");
+	public final static Pattern replaceReg2 = Pattern.compile("[ \\-]");
 	public final static Pattern numSuffixedReg = Pattern.compile(".+?([0-9]{1,})");
 	public final static Pattern markerReg = Pattern.compile("`([\\w\\W]{1,3}?)`");// for `1` `2`...
     private final static String linkRenderStr = "@@@LINK=";
@@ -159,6 +156,7 @@ public class mdict extends mdBase{
 		return lookUp(keyword,false);
 	}
 	String HeaderTextStr,TailterTextStr;
+
 	public int lookUp(String keyword,boolean isSrict)
     {
     	if(_key_block_info_list==null) read_key_block_info();
@@ -420,7 +418,7 @@ public class mdict extends mdBase{
     	if(record_block_==null)
     		decode_record_block_header();
     	if(position<0||position>=_num_entries) return null;
-        int blockId = accumulation_blockId_tree.xxing(new myCpr<Integer,Integer>(position,1)).getKey().value;
+        int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
         key_info_struct infoI = _key_block_info_list[blockId];
         
         //准备
@@ -580,31 +578,31 @@ public class mdict extends mdBase{
 				} 
 
             if(combining_search_tree_4[it]==null)
-            	combining_search_tree_4[it] = new ArrayList<Integer>();
+            	combining_search_tree_4[it] = new ArrayList<>();
             
         	if(split_recs_thread_number>thread_number) countDelta(1);
         	
 	        fixedThreadPool.execute(
-	        new Runnable(){@Override public void run() 
+	        new Runnable(){@Override public void run()
 	        {
 	        	if(searchCancled) { poolEUSize=0; return; }
 	            final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
 	            final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
-	            try 
+	            try
 	            {
 		            InputStream data_in = mOpenInputStream();
 		            data_in.skip(_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width);
 		            int jiaX=0;
 		            if(it==split_recs_thread_number-1) jiaX=yuShu;
-	            	for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks 
+	            	for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
 	            	{
 	            		if(searchCancled) { poolEUSize=0; return; }
 	                    record_info_struct RinfoI = _record_info_struct_list[i];
-	                    
+
 	                    int compressed_size = (int) RinfoI.compressed_size;
 	                    int decompressed_size = (int) RinfoI.decompressed_size;
 	                    data_in.read(record_block_compressed,0, compressed_size);//,0, compressed_size
-	                    
+
 	                    //解压开始
 	                    if(compareByteArrayIsPara(record_block_compressed,0,_zero4)){
 	                        System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
@@ -616,11 +614,11 @@ public class mdict extends mdBase{
 	                        //MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block_,len);
 	                        new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
 	                    }
-	                    else if(compareByteArrayIsPara(record_block_compressed,0,_2zero3)){    
+	                    else if(compareByteArrayIsPara(record_block_compressed,0,_2zero3)){
 	                        Inflater inf = new Inflater();
 	                        inf.setInput(record_block_compressed,8,compressed_size-8);
-	                        int ret = inf.inflate(record_block_,0,decompressed_size);  		
-	                    	//CMN.show("asdasd"+ret);		
+	                        int ret = inf.inflate(record_block_,0,decompressed_size);
+	                    	//CMN.show("asdasd"+ret);
 	                    }
 	                    //内容块解压完毕
                     	long off = RinfoI.decompressed_size_accumulator;
@@ -632,56 +630,56 @@ public class mdict extends mdBase{
                     		long[] ko = infoI_cacheI.key_offsets;
                     		//show("binary_find_closest "+binary_find_closest(ko,off)+"  :  "+off);
 	                    	for(int relative_pos=binary_find_closest(ko,off);relative_pos<ko.length;relative_pos++) {
-	                    		
-	                    		
+
+
 	                    		int recordodKeyLen = 0;
 		                    	if(relative_pos<ko.length-1){//不是最后一个entry
 		                    		recordodKeyLen=(int) (ko[relative_pos+1]-ko[relative_pos]);
 		                    	}//else {
 		                    	//	recordodKeyLen = (int) (prepareItemByKeyInfo(null,key_block_id+1,null).key_offsets[0]-ko[ko.length-1]);
 		                    	//}
-		                    	
+
 		                    	else if(key_block_id<keyBlocksHeaderTextKeyID.length-1){//不是最后一块key block
 		                    		recordodKeyLen=(int) (keyBlocksHeaderTextKeyID[key_block_id+1]-ko[relative_pos]);
 		                    	}else {
 		                    		recordodKeyLen = (int) (decompressed_size-(ko[ko.length-1]-RinfoI.decompressed_size_accumulator));
 		                    	}
-		                    	
-		                    	
+
+
 		                    	//show(getEntryAt((int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator),infoI_cacheI));
 		                    	//CMN.show(record_block_.length-1+" ko[relative_pos]: "+ko[relative_pos]+" recordodKeyLen: "+recordodKeyLen+" end: "+(ko[relative_pos]+recordodKeyLen-1));
-		                    	
+
 		                    	/*
 		                    	if(getEntryAt((int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator),infoI_cacheI).equals("鼓钟"))
-		                    	{		                    	
+		                    	{
 		                    		CMN.show("decompressed_size: "+decompressed_size+" record_block_: "+(record_block_.length-1)+" ko[relative_pos]: "+ko[relative_pos]+" recordodKeyLen: "+recordodKeyLen+" end: "+(ko[relative_pos]+recordodKeyLen-1));
 
 			                    	CMN.show(flowerIndexOf(record_block_,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,matcher,0,0)+"");
-			                    	
+
 
 			                    	CMN.show(new String(record_block_,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator)+248,10,_charset));
 			                    	CMN.show(recordodKeyLen+" =recordodKeyLen");
 			                    	CMN.show((ko[relative_pos]-RinfoI.decompressed_size_accumulator+recordodKeyLen)+" sdf "+RinfoI.decompressed_size+" sdf "+RinfoI.compressed_size);
-			                    	
+
 		                    		CMN.show("\r\n"+new String(record_block_,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,_charset));
 
 		                    	}*/
-		                    	
+
 		                    	if(ko[relative_pos]-RinfoI.decompressed_size_accumulator+recordodKeyLen>RinfoI.decompressed_size) {
 		                    		//show("break OUT");
 		                    		break OUT;
 		                    	}
-		                    	
-		                    	
+
+
 		                    	//if(indexOf(record_block_,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,keys[0],0,keys[0].length,0)!=-1) {
 		                    	if(flowerIndexOf(record_block_,(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator),recordodKeyLen,matcher,0,0)!=-1) {
 		                    		int pos = (int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator);
 		                    		fuzzyKeyCounter++;
-		                    		
+
 		                    		//String LexicalEntry = getEntryAt(pos,infoI_cacheI);
 		                    		//show(getEntryAt(pos,infoI_cacheI));
 		                    		//ripemd128.printBytes(record_block_,offIdx,recordodKeyLen);
-		                    		
+
 		                    		combining_search_tree_4[it].add(pos);
 		                    	}
 		                    	dirtyfzPrgCounter++;
@@ -690,7 +688,7 @@ public class mdict extends mdBase{
                     	}
 	                }
 	            	data_in.close();
-	                
+
 	            } catch (Exception e) {e.printStackTrace();}
             	thread_number_count--;
 	            if(split_recs_thread_number>thread_number) countDelta(-1);
@@ -854,7 +852,7 @@ public class mdict extends mdBase{
 		            int jiaX=0;
 		            if(it==split_keys_thread_number-1) jiaX=yuShu;
 		            if(combining_search_tree2[it]==null)
-		            	combining_search_tree2[it] = new ArrayList<Integer>();
+		            	combining_search_tree2[it] = new ArrayList<>();
 	           	
 		            
 		            int compressedSize_many = 0, _maxDecomKeyBlockSize = 0;
@@ -913,7 +911,7 @@ public class mdict extends mdBase{
 								  //byte[] arraytmp = new byte[(int) compressedSize];
 								  //System.arraycopy(_key_block_compressed_many, (startI+8), arraytmp, 0, (compressedSize-8));
 								  //MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block,len);
-					              new LzoDecompressor1x().decompress(_key_block_compressed_many, startI+8, (int)(compressedSize-8), key_block, 0,new lzo_uintp());
+					              new LzoDecompressor1x().decompress(_key_block_compressed_many, startI+8, compressedSize-8, key_block, 0,new lzo_uintp());
 							}
 							else if(compareByteArrayIsPara(_key_block_compressed_many,startI,_2zero3))
 							{
@@ -1318,7 +1316,7 @@ public class mdict extends mdBase{
 		  			DataInputStream data_in = getStreamAt(_key_block_offset+start);
 		  					
 		  			byte[]  _key_block_compressed = new byte[(int) compressedSize];
-		  			data_in.read(_key_block_compressed, (int)(0), _key_block_compressed.length);
+		  			data_in.read(_key_block_compressed, 0, _key_block_compressed.length);
 		  			data_in.close();
 		  			
 		            //int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
@@ -1415,7 +1413,7 @@ public class mdict extends mdBase{
 						if(combining_search_tree!=null)
 							combining_search_tree.insert(kI,SelfAtIdx,(int)(idx+infoI.num_entries_accumulator));
 						else
-							_combining_search_list.add(new myCpr<String,Integer>(kI,(int)(idx+infoI.num_entries_accumulator)));
+							_combining_search_list.add(new myCpr<>(kI,(int)(idx+infoI.num_entries_accumulator)));
 						theta--;
 					}else
 						return;
@@ -1525,7 +1523,7 @@ public class mdict extends mdBase{
 
     public static String byteTo16(byte bt){
         String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-        String resStr=emptyStr;
+        String resStr;
         int low =(bt & 15);
         int high = bt>>4 & 15;
         resStr = strHex[high]+strHex[low];
@@ -1550,7 +1548,7 @@ public class mdict extends mdBase{
     }
     
     static boolean EntryStartWith(byte[] source, int sourceOffset, int sourceCount, byte[][][] matchers) {
-		boolean Matched = false;
+		boolean Matched;
 		int fromIndex=0;
     	for(int lexiPartIdx=0;lexiPartIdx<matchers[0].length;lexiPartIdx++) {
     		Matched = false;
@@ -1633,7 +1631,7 @@ public class mdict extends mdBase{
 				}
 				continue;
 			}
- 			transcriptor.append(input.substring(lastEnd, m.start()));
+ 			transcriptor.append(input, lastEnd, m.start());
  			if(last!=null) transcriptor.append(last);
  			transcriptor.append(StringEscapeUtils.unescapeHtml(nowArr[0]));
  			lastEnd = m.end();
@@ -1643,7 +1641,7 @@ public class mdict extends mdBase{
  		if(returnRaw)
  			return input;
  		else
- 			return transcriptor.append(last==null?"":last).append(input.substring(lastEnd,input.length())).toString();
+ 			return transcriptor.append(last==null?"":last).append(input.substring(lastEnd)).toString();
  	}
 
 

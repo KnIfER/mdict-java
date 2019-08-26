@@ -19,12 +19,12 @@ import com.knziha.rbtree.RBTree_additive;
 public class MdTest {
 	public static long stst;//static start time
 
-	
+
     //static ArrayList<Integer> fuzzy_search_result;
     static int d=0;
     public static void main(String[] args) throws IOException, DataFormatException  {
     //assign Mdx File here!
-    	mdict md =  new mdict("E:\\assets\\mdicts\\wordsmyth2018.mdx");//牛津高阶英汉双解词典.mdx
+    	mdict md =  new mdict("D:\\assets\\mdicts\\藏英Rang Jung Ye She 2003词典,liuzhean,20070921.mdx");//牛津高阶英汉双解词典.mdx
     	//final mdict md =  new mdict("E:\\mdict\\MDictPC\\doc\\清华大学藏战国竹简（伍）.mdx");
     	
     //A keyword to search!			//简明英汉汉英词典.mdx      古生物图鉴.mdx
@@ -80,18 +80,18 @@ public class MdTest {
 
         
     	//![3]fuzzy search ✔
-        if(false)
+        if(true)
         {	/* false  true  */
 	        CMN.show("\n\n—————————————————————— fuzzy search ——————————————————————");
 	        
         	final boolean isCombinedSearching=true;
         	final int adapter_idx=0;
         	final ArrayList<mdict> mdicts = new ArrayList<>();
-        	mdicts.add(new mdict("E:\\assets\\mdicts\\牛津高阶英汉双解词典.mdx"));
+        	mdicts.add(new mdict("F:\\assets\\mdicts\\牛津高阶英汉双解词典.mdx"));
         	
 	    	CMN.show("\r\n糊匹配测试START...");
 	    	
-	    	final String keyf = "c*gr.phy";
+	    	final String keyf = "a*b";
 	    	stst=System.currentTimeMillis();
 	    	if(isCombinedSearching) {
 	    		for(mdict mdx:mdicts) {
@@ -175,7 +175,7 @@ public class MdTest {
         
         
         //![6] fulltext search
-        if(true) 
+        if(false) 
         {	/* false  true  */
 	        CMN.show("\n\n—————————————————————— 多线程全文搜索测试 ——————————————————————");
 	    	CMN.show("...\r\n");

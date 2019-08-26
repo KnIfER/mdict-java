@@ -1,22 +1,12 @@
 package com.knziha.plod.PDPC; 
  
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.awt.*;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import static javafx.concurrent.Worker.State.FAILED;
 
@@ -24,19 +14,17 @@ import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import javafx.event.ActionEvent;
 import org.w3c.dom.NodeList;
 
-import com.knziha.plod.PDPC.MdictServer.OnMirrorRequestListener;
 import com.knziha.plod.dictionary.mdict;
 
-import fi.iki.elonen.NanoHTTPD.Response;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Worker.State;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
@@ -71,7 +59,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebEvent;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -126,35 +113,27 @@ public class PlaneDictionaryPcJFX extends Application {
     AppHandle apphaha = new AppHandle();
     
     public void loadURL(final String url) {
-        Platform.runLater(new Runnable() {
-            @Override 
-            public void run() {
-                String tmp = toURL(url);
-                if (tmp == null) {
-                    tmp = toURL("http://" + url);
-                }
-                engine.load(tmp);
-            }
-        });
+        Platform.runLater(() -> {
+			String tmp = toURL(url);
+			if (tmp == null) {
+				tmp = toURL("http://" + url);
+			}
+			engine.load(tmp);
+		});
     }
 	protected void loadContent(final String content) {
-		 Platform.runLater(new Runnable() {
-	            @Override 
-	            public void run() {
-	                engine.loadContent(content);
-	            }
-	        });
+		 Platform.runLater(() -> engine.loadContent(content));
 		
 	}
 
 	protected void executeJavaScript(final String script) {
-		Platform.runLater(new Runnable() {
-            @Override 
-            public void run() {
-                engine.executeScript(script);
-            }
-        });
+		Platform.runLater(() -> engine.executeScript(script));
 	}
+
+	protected void executeJavaScriptSilent(final String script) {
+		Platform.runLater(() -> {try{engine.executeScript(script);}catch (Exception e){}});
+	}
+
     private static String toURL(String str) {
         try {
             return new URL(str).toExternalForm();
@@ -163,12 +142,13 @@ public class PlaneDictionaryPcJFX extends Application {
         }
     }
 
-   
-    
+
+	ResourceBundle bundle;
     
     //构造
     public PlaneDictionaryPcJFX() {
         super();
+		bundle = ResourceBundle.getBundle("UIText" , Locale.CHINA);
     	if(!new File(projectPath).exists()) {
     		
     	}
@@ -182,7 +162,11 @@ public class PlaneDictionaryPcJFX extends Application {
     }
 
 
-    
+    static class UI{
+    	final static String open="open";
+    	final static String browser ="browser";
+    	final static String manager="manager";
+	}
 
     Scene scene;
     WebView view;
@@ -190,31 +174,31 @@ public class PlaneDictionaryPcJFX extends Application {
 	public void start(Stage stage_) throws Exception {
 		md = server.md;
 		scanInFiles();
-		server.setOnMirrorRequestListener(new OnMirrorRequestListener() {
-			@Override
-			public Response onMirror(String uri) {
-				if(uri==null)uri="";
-				String[] args = uri.split("&");
-				int pos=currentDisplaying;try { pos=Integer.valueOf(args[1].split("=")[1]);}catch(Exception e) {}
-				int dx=server.adapter_idx;try { dx=Integer.valueOf(args[0].split("=")[1]);}catch(Exception e) {}
-				String key=etSearch.getText();try {key=URLDecoder.decode(args[2].split("=")[1],"UTF-8");}catch(Exception e) {}
-				//CMN.show("currentDisplaying"+currentDisplaying);
-				NodeList xx = engine.getDocument().getElementsByTagName("iframe");
-				//CMN.show(xx.item(0).getTextContent());
-				//showNodeContent(engine.getDocument(),0);
-				StringBuilder sb=new StringBuilder();
-				for(int i=0;i<xx.getLength();i++) {
-					String content = xx.item(i).getTextContent();
-					int split=content.indexOf("@");
-					sb.append("<p style=\"background: rgb(43, 67, 129); margin-left: 0px; color: rgb(255, 255, 255);\">"+md.get(Integer.parseInt(content.substring(0,split)))._Dictionary_fName+"</p>")
-					  .append("<iframe id='").append(content.substring(0,split))
-					  .append("' src='").append(content.substring(split+1))
-					  .append("' width=\"100%\" frameborder=\"0\" height=\"171\"></iframe>");
-				}
-				
-				//CMN.show("keykey"+key);
-				return server.newFixedLengthResponse(server.constructDerivedHtml(key, pos, dx,sb.toString()));
-			}});
+		server.setOnMirrorRequestListener(uri -> {
+			if(uri==null)uri="";
+			String[] args = uri.split("&");
+			int pos=currentDisplaying;try { pos=Integer.valueOf(args[1].split("=")[1]);}catch(Exception e) {}
+			int dx=server.adapter_idx;try { dx=Integer.valueOf(args[0].split("=")[1]);}catch(Exception e) {}
+			String key=etSearch.getText();try {key=URLDecoder.decode(args[2].split("=")[1],"UTF-8");}catch(Exception e) {}
+			//CMN.show("currentDisplaying"+currentDisplaying);
+			NodeList xx = engine.getDocument().getElementsByTagName("iframe");
+			//CMN.show(xx.item(0).getTextContent());
+			//showNodeContent(engine.getDocument(),0);
+			StringBuilder sb=new StringBuilder();
+			for(int i=0;i<xx.getLength();i++) {
+				String content = xx.item(i).getTextContent();
+				CMN.show("content?"+content);
+				int split=content.indexOf("@");
+				if(split==-1) continue; //TODO
+				sb.append("<p style=\"background: rgb(43, 67, 129); margin-left: 0px; color: rgb(255, 255, 255);\">"+md.get(Integer.parseInt(content.substring(0,split)))._Dictionary_fName+"</p>")
+				  .append("<iframe id='").append(content.substring(0,split))
+				  .append("' src='").append(content.substring(split+1))
+				  .append("' width=\"100%\" frameborder=\"0\" height=\"171\"></iframe>");
+			}
+
+			//CMN.show("keykey"+key);
+			return server.newFixedLengthResponse(server.constructDerivedHtml(key, pos, dx,sb.toString()));
+		});
 		stage = stage_;
 		stage.setTitle("平典");
 		stage.setOnHidden(e -> {
@@ -228,45 +212,29 @@ public class PlaneDictionaryPcJFX extends Application {
 				dumpLonelyInteger(new File(usrHome,"combined-search"),advancedSearchDialog.box2.isCombinedSearching?1:0);
 			Platform.exit();
 			});
-		stage.resizableProperty().addListener(new ChangeListener<Boolean>(){
-		    @Override
-		    public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean arg2){
-		        //throw new UnsupportedOperationException("Not supported yet.");
-		    }
-
+		stage.resizableProperty().addListener((arg0, arg1, arg2) -> {
+			//throw new UnsupportedOperationException("Not supported yet.");
 		});
-		stage.heightProperty().addListener(new ChangeListener<Number>(){
-		    @Override
-		    public void changed(ObservableValue<? extends Number> arg0, Number v1, Number v2){
-		        if(advancedSearchDialog!=null) {
-		        	advancedSearchDialog.setX(advancedSearchDialog.xProperty().doubleValue()+v2.doubleValue()-v1.doubleValue());
-		        }
-		    }
-
+		stage.heightProperty().addListener((arg0, v1, v2) -> {
+			if(advancedSearchDialog!=null) {
+				advancedSearchDialog.setX(advancedSearchDialog.xProperty().doubleValue()+v2.doubleValue()-v1.doubleValue());
+			}
 		});
-		stage.xProperty().addListener(new ChangeListener<Number>(){
-		    @Override
-		    public void changed(ObservableValue<? extends Number> arg0, Number v1, Number v2){
-		        if(advancedSearchDialog!=null) {
-		        	advancedSearchDialog.setX(advancedSearchDialog.xProperty().doubleValue()+v2.doubleValue()-v1.doubleValue());
-		        }
-		    }
-
+		stage.xProperty().addListener((arg0, v1, v2) -> {
+			if(advancedSearchDialog!=null) {
+				advancedSearchDialog.setX(advancedSearchDialog.xProperty().doubleValue()+v2.doubleValue()-v1.doubleValue());
+			}
 		});
-		stage.yProperty().addListener(new ChangeListener<Number>(){
-		    @Override
-		    public void changed(ObservableValue<? extends Number> arg0, Number v1, Number v2){
-	    		if(advancedSearchDialog!=null) {
-		        	advancedSearchDialog.setY(advancedSearchDialog.yProperty().doubleValue()+v2.doubleValue()-v1.doubleValue());
-		        }
-		    }
-
+		stage.yProperty().addListener((arg0, v1, v2) -> {
+			if(advancedSearchDialog!=null) {
+				advancedSearchDialog.setY(advancedSearchDialog.yProperty().doubleValue()+v2.doubleValue()-v1.doubleValue());
+			}
 		});
 		//        setIconImage(Toolkit.getDefaultToolkit().createImage("G:\\.0PtClm\\Muse\\_All_the_spirites\\app图标\\PLOD\\launcherMax_white.png"));
 
 		int width=1250;
 		int height=810;
-		int tmp = -1;
+		int tmp;
 		tmp = getLonelyInteger(new File(usrHome,"width"));
 		if(tmp!=-1) width=tmp;
 		tmp = getLonelyInteger(new File(usrHome,"height"));
@@ -278,118 +246,150 @@ public class PlaneDictionaryPcJFX extends Application {
 		
         scene = new Scene(new VBox(), width, height);
         
-		 
+		 //开始画UI菜单
         // --- Menu File
-        Menu menuFile = new Menu("文件(F)");
- 
- 
+        Menu menuFile = new Menu(bundle.getString("file"));
+
         // --- Menu View
-        Menu menuView = new Menu("视图");
- 
-        MenuItem add = new MenuItem("打开");
-        add.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-            	FileChooser fileChooser = new FileChooser();
-            	fileChooser.getExtensionFilters().addAll(
-            			new ExtensionFilter("mdict file",new String[] {"*.mdx"})
-    			);
-            	fileChooser.setInitialDirectory(new File(lastMdlibPath));
-            	List<File> files = fileChooser.showOpenMultipleDialog(stage);
-            	if(files!=null) {
-	            	for(File fI:files) {
-	            		try {
-							server.md.add(new mdict(fI.getAbsolutePath()));
-						} catch (IOException e) {
-							e.printStackTrace();
+        Menu menuView = new Menu(bundle.getString("view"));
+
+        MenuItem add = new MenuItem(bundle.getString(UI.open));
+		add.setId(UI.open);
+        MenuItem manage = new MenuItem(bundle.getString(UI.manager));
+		manage.setId(UI.manager);
+
+        add.setAccelerator(KeyCombination.valueOf("CTRL+O"));
+        manage.setAccelerator(KeyCombination.valueOf("CTRL+O"));
+        menuFile.getItems().addAll(add,manage);
+
+        MenuItem menuView_icon = new MenuItem(bundle.getString(UI.browser));
+		menuView_icon.setId(UI.browser);
+        menuView.getItems().add(menuView_icon);
+
+		EventHandler clicker1 = (EventHandler<ActionEvent>) event -> {
+			switch(((MenuItem)event.getSource()).getId()){
+				case UI.open:{
+					FileChooser fileChooser = new FileChooser();
+					fileChooser.getExtensionFilters().addAll(
+							new ExtensionFilter("mdict file", "*.mdx")
+					);
+					fileChooser.setInitialDirectory(new File("D:\\assets"));//lastMdlibPath
+					List<File> files = fileChooser.showOpenMultipleDialog(stage);
+					int sizebrefore=mdlibsCon.size();
+
+					if(files!=null) {
+						HashSet<String> mdict_cache = new HashSet<>(md.size());
+						for(mdict mdTmp:md)
+							mdict_cache.add(mdTmp.getPath());
+						ArrayList<String> toAdd = new ArrayList<>(md.size());
+						for(File fI:files) {
+							String fileNameKey=fI.getAbsolutePath();
+							if(!mdict_cache.contains(fileNameKey))
+							try {
+								server.md.add(new mdict(fileNameKey));
+								mdict_cache.add(fileNameKey);
+								if(!mdlibsCon.contains(fileNameKey)){
+									toAdd.add(fileNameKey);
+								}
+							} catch (Exception e) { e.printStackTrace(); }
 						}
-	            	}
-	            	engine.executeScript("ScanInDicts();");
-            	}
-            }
-        });
-        MenuItem manage = new MenuItem("词典管理中心 🚩");
-        manage.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-            	  final Stage dialog = new Stage();
-                  dialog.setTitle("词典管理中心 ");
+						if(toAdd.size()>0){
+							File rec = new File(projectPath,"CONFIG/mdlibs.txt");
+							try {
+								BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(rec, true));
+								for(String sI:toAdd){
+									out.write(sI.getBytes(StandardCharsets.UTF_8));
+									out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+								}
+								out.flush();
+								out.close();
+								mdlibsCon.addAll(toAdd);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+						engine.executeScript("ScanInDicts();");
+					}
+					if(sizebrefore!=mdlibsCon.size()){
+						SaveMdicts();
+					}
+					CMN.Log(server.md.size());for(mdict mI:server.md)CMN.Log(mI);
+					break;
+				}
+				case UI.manager:{
+					CMN.Log("action_handler",event.getSource(), event.getTarget());
+					final Stage dialog = new Stage();
+					dialog.setTitle(bundle.getString("manager"));
 
-                  Button yes = new Button("Yes");
+					Button yes = new Button("Yes");
 
-                  //label displayLabel = new Label("What do you want to do ?");
-                  //displayLabel.setFont(Font.font(null, FontWeight.BOLD, 14));
+					//label displayLabel = new Label("What do you want to do ?");
+					//displayLabel.setFont(Font.font(null, FontWeight.BOLD, 14));
 
-                  dialog.initModality(Modality.WINDOW_MODAL);
-                  dialog.initOwner(stage);
+					dialog.initModality(Modality.WINDOW_MODAL);
+					dialog.initOwner(stage);
 
-                  //SplitPane dialogHbox = new SplitPane();
-                  HBox dialogHbox = new HBox();
-                  
-                  ManagerFragment region1 = new ManagerFragment(lastMdlibPath,server.md);
-                  
-                  
-                  
+					//SplitPane dialogHbox = new SplitPane();
+					HBox dialogHbox = new HBox();
 
-                  
-                  region1.getStyleClass().add("rounded");
-                  //region2.getStyleClass().add("rounded");
-
-                  HBox.setHgrow(region1, Priority.ALWAYS);
-                  //SplitPane.setResizableWithParent(region1, true);
-                  //dialogHbox.setDividerPositions(1);
-                  
-                  VBox region2 = new VBox();
-                  
-
-                  VBox.setMargin(yes, new Insets(5,0,5,0));
-                  region2.getChildren().add(yes);
-                  region2.getChildren().add(new Button("Yes"));
-
-                  
-                  
-
-                  final String hidingSplitPaneCss = HiddenSplitPaneApp.class.getResource("HiddenSplitPane.css").toExternalForm();
-                  dialogHbox.setId("hiddenSplitter");
-                  dialogHbox.getChildren().addAll(region1, region2);
-                  dialogHbox.getStylesheets().add(hidingSplitPaneCss);
+					ManagerFragment region1 = new ManagerFragment(lastMdlibPath,server.md);
 
 
-                  //dialogHbox.get(new Label("What do you want to do ?"));
-                  //dialogHbox.getChildren().add(new Label("What do you want to do ?"));
-                  
-                  yes.addEventHandler(MouseEvent.MOUSE_CLICKED,
-                          new EventHandler<MouseEvent>() {
-                              @Override
-                              public void handle(MouseEvent e) {
-                                  // inside here you can use the minimize or close the previous stage//
-                                  dialog.close();
-                              }
-                          });
+					region1.getStyleClass().add("rounded");
+					//region2.getStyleClass().add("rounded");
+
+					HBox.setHgrow(region1, Priority.ALWAYS);
+					//SplitPane.setResizableWithParent(region1, true);
+					//dialogHbox.setDividerPositions(1);
+
+					VBox region2 = new VBox();
 
 
-                  Scene dialogScene = new Scene(dialogHbox, 800, 600);
-                  dialog.onCloseRequestProperty().set((new EventHandler<WindowEvent>() {
-					@Override
-					public void handle(WindowEvent event) {
+					VBox.setMargin(yes, new Insets(5,0,5,0));
+					region2.getChildren().add(yes);
+					region2.getChildren().add(new Button("Yes"));
+
+
+
+
+					final String hidingSplitPaneCss = HiddenSplitPaneApp.class.getResource("HiddenSplitPane.css").toExternalForm();
+					dialogHbox.setId("hiddenSplitter");
+					dialogHbox.getChildren().addAll(region1, region2);
+					dialogHbox.getStylesheets().add(hidingSplitPaneCss);
+
+
+					//dialogHbox.get(new Label("What do you want to do ?"));
+					//dialogHbox.getChildren().add(new Label("What do you want to do ?"));
+
+					yes.addEventHandler(MouseEvent.MOUSE_CLICKED,
+							e -> {
+								// inside here you can use the minimize or close the previous stage//
+								dialog.close();
+							});
+
+
+					Scene dialogScene = new Scene(dialogHbox, 800, 600);
+					dialog.onCloseRequestProperty().set((e -> {
 						//CMN.show("close");
 						if(region1.tableView.isDirty) {
 							ObservableList<mdict> xx = region1.tableView.getItems();
-					        File def = new File(PU.getProjectPath(),"default.txt");
-					        try {
-					        	BufferedWriter out = new BufferedWriter(new FileWriter(def,false));
-					        	String parent = new File(lastMdlibPath).getAbsolutePath()+"\\";
-						        for(mdict mdTmp:xx) {
-						        	String name = mdTmp.getPath();
-						        	if(name.startsWith(parent))
-						        		name = name.substring(parent.length());
-						        	out.write(name);
-						        	out.write("\n");
-						        }
-						        out.flush();
-						        out.close();
+							File def = new File(PU.getProjectPath(),"default.txt");
+							try {
+								BufferedWriter out = new BufferedWriter(new FileWriter(def,false));
+								String parent = new File(lastMdlibPath).getAbsolutePath()+File.separatorChar;
+								for(mdict mdTmp:xx) {
+									String name = mdTmp.getPath();
+									if(name.startsWith(parent))
+										name = name.substring(parent.length());
+									out.write(name);
+									out.write("\n");
+								}
+								out.flush();
+								out.close();
 							} catch (IOException e2) {
 								e2.printStackTrace();
 							}
-					        
+
 							ArrayList<mdict> mdNew = new ArrayList<>();
 							for(mdict mdTmp:xx) {
 								if(!mdict_nonexist.class.isInstance(mdTmp)) {
@@ -400,131 +400,97 @@ public class PlaneDictionaryPcJFX extends Application {
 							engine.executeScript("ScanInDicts();");
 						}
 						//event.consume();
-					}}));
-                  dialog.setScene(dialogScene);
-                  dialog.show();
-            }
-        });
-        
-        add.setAccelerator(KeyCombination.valueOf("CTRL+O"));
-        menuFile.getItems().addAll(add,manage);	
-      
-        
-        
-        
-        MenuItem menuView_icon = new MenuItem("用浏览器打开...");
-        menuView_icon.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-            	//stage.setIconified(true);
-            	//Stage stage2 = new Stage();
-        		//stage2.setTitle("平典");
-        		//        setIconImage(Toolkit.getDefaultToolkit().createImage("G:\\.0PtClm\\Muse\\_All_the_spirites\\app图标\\PLOD\\launcherMax_white.png"));
-
-                //Scene scene2 = new Scene(new VBox(), 1250, 810);
-                //stage2.setScene(scene2);
-                //stage2.show();
-                
-            	//stage.close();
-            	//stage=null;
-            	//engine=null;
-
-            	//System.gc();
-            	//Platform.exit();
-                //创建一个URI实例
-				java.net.URI uri = null;
-				try {
-					uri = java.net.URI.create("http://127.0.0.1:8080/MIRROR.jsp?DX="+server.adapter_idx+"&POS="+currentDisplaying+"&KEY="+URLEncoder.encode(etSearch.getText(),"UTF-8"));
-				} catch (UnsupportedEncodingException e1) {
-					e1.printStackTrace();
+					}));
+					dialog.setScene(dialogScene);
+					dialog.show();
+					break;
 				}
-				// 获取当前系统桌面扩展
-				java.awt.Desktop dp = java.awt.Desktop.getDesktop();
-				// 判断系统桌面是否支持要执行的功能
-				if (dp.isSupported(java.awt.Desktop.Action.BROWSE)) {
-					// 获取系统默认浏览器打开链接
+				case UI.browser:{
+					//创建一个URI实例
+					URI uri = null;
 					try {
-						NodeList list = engine.getDocument().getElementsByTagName("iframe");
-						
-						dp.browse(uri);
-					} catch (IOException e) {
-						e.printStackTrace();
+						uri = URI.create("http://127.0.0.1:8080/MIRROR.jsp?DX="+server.adapter_idx+"&POS="+currentDisplaying+"&KEY="+URLEncoder.encode(etSearch.getText(),"UTF-8"));
+					} catch (UnsupportedEncodingException e1) {
+						e1.printStackTrace();
 					}
+					// 获取当前系统桌面扩展
+					Desktop dp = Desktop.getDesktop();
+					// 判断系统桌面是否支持要执行的功能
+					if (dp.isSupported(Desktop.Action.BROWSE)) {
+						// 获取系统默认浏览器打开链接
+						try {
+							NodeList list = engine.getDocument().getElementsByTagName("iframe");
+							dp.browse(uri);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					break;
 				}
+			}
+		};
 
-                
-                
-            }
-        });
-        menuView.getItems().addAll(menuView_icon);        
-        
-        
+		add.setOnAction(clicker1);
+		manage.setOnAction(clicker1);
+		menuView_icon.setOnAction(clicker1);
 
 
         
-        Label menuLabel1 = new Label("配置");
-        menuLabel1.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-            }
-        });
+        Label menuLabel1 = new Label(bundle.getString("set"));
+        menuLabel1.setOnMouseClicked(event -> {
+		});
         Menu fileMenuButton = new Menu();
         fileMenuButton.setGraphic(menuLabel1);
         
-        Label menuLabel = new Label("词典");
-        menuLabel.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-            	//engine.executeScript("highlight('h');");
-            }
-        });
+        Label menuLabel = new Label(bundle.getString("dict"));
+        menuLabel.setOnMouseClicked(event -> {
+			//engine.executeScript("highlight('h');");
+		});
         Menu fileMenuButton1 = new Menu();
         fileMenuButton1.setGraphic(menuLabel);
         
-        advancedSearch = new Label("高级搜索");
-        advancedSearch.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-            	if(advancedSearchDialog==null) {
-            		advancedSearchDialog = new AdvancedSearchDialog();
-            		advancedSearchDialog.setOnCloseRequest(e -> {advancedSearch.getOnMouseClicked().handle(new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.PRIMARY, 1, false, false, false, false, false, false, false, false, false, false, null));e.consume();});
-            	}
-            	advancedSearchDialog.setWidth(350);
-            	advancedSearchDialog.setHeight(stage.getHeight());
-            	if(advancedSearchDialog.isShowing())
-            		advancedSearchDialog.hide();
-            	else {
-            		advancedSearchDialog.show();
-	                if(stage.isMaximized()) {
-	                	advancedSearchDialog.setMaximized(true);
-	                }else {
-		                advancedSearchDialog.setX(stage.xProperty().doubleValue()-335);
-		                advancedSearchDialog.setY(stage.yProperty().doubleValue());
-	                }
-            	}
-            	File flg = new File(usrHome, "show-advanced");
-            	File flg2 = new File(usrHome, "hide-advanced");
-            	if(advancedSearchDialog.isShowing()) {
-            		if(!flg.exists()) {
-	            		if(flg2.exists())
-	            			flg2.renameTo(flg);
-						else
-							try {
-								flg.createNewFile();
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-            		}else
-            			flg2.delete();
-            	}else {
-            		if(flg.exists()) {
-	            		flg.renameTo(flg2);
-            		} else
-            		if(flg.exists()) {
-	            		flg.delete();
-            		}
-            	}
-            }
-        });
+        advancedSearch = new Label(bundle.getString("advsearch"));
+        advancedSearch.setOnMouseClicked(event -> {
+			if(advancedSearchDialog==null) {
+				advancedSearchDialog = new AdvancedSearchDialog();
+				advancedSearchDialog.setOnCloseRequest(e -> {advancedSearch.getOnMouseClicked().handle(new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.PRIMARY, 1, false, false, false, false, false, false, false, false, false, false, null));e.consume();});
+			}
+			advancedSearchDialog.setWidth(350);
+			advancedSearchDialog.setHeight(stage.getHeight());
+			if(advancedSearchDialog.isShowing())
+				advancedSearchDialog.hide();
+			else {
+				advancedSearchDialog.show();
+				if(stage.isMaximized()) {
+					advancedSearchDialog.setMaximized(true);
+				}else {
+					advancedSearchDialog.setX(stage.xProperty().doubleValue()-335);
+					advancedSearchDialog.setY(stage.yProperty().doubleValue());
+				}
+			}
+			File flg = new File(usrHome, "show-advanced");
+			File flg2 = new File(usrHome, "hide-advanced");
+			if(advancedSearchDialog.isShowing()) {
+				if(!flg.exists()) {
+					if(flg2.exists())
+						flg2.renameTo(flg);
+					else
+						try {
+							flg.createNewFile();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+				}else
+					flg2.delete();
+			}else {
+				if(flg.exists()) {
+					flg.renameTo(flg2);
+				} else
+				if(flg.exists()) {
+					flg.delete();
+				}
+			}
+		});
         //Menu advancedSearchBtn = new Menu();
         //advancedSearchBtn.setGraphic(advancedSearch);
         Menu advancedSearchBtn = new Menu("", advancedSearch);
@@ -544,77 +510,35 @@ public class PlaneDictionaryPcJFX extends Application {
         engine.setJavaScriptEnabled(true);
         loadURL("http://127.0.0.1:8080");
         //engine.setUserAgent("");
-        engine.titleProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, final String newValue) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override 
-                    public void run() {
-                        //PlaneDictionaryPc.this.setTitle(newValue);
-                    }
-                });
-            }
-        });
-        engine.setOnStatusChanged(new EventHandler<WebEvent<String>>() {
-            @Override 
-            public void handle(final WebEvent<String> event) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override 
-                    public void run() {
-                        //lblStatus.setText(event.getData());
-                    }
-                });
-            }
-        });
-        engine.locationProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldValue, final String newValue) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override 
-                    public void run() {
-                        txtURL.setText(newValue);
-                    }
-                });
-            }
-        });
-        engine.getLoadWorker().workDoneProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observableValue, Number oldValue, final Number newValue) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override 
-                    public void run() {
-                        //progressBar.setValue(newValue.intValue());
-                    	executeJavaScript("document.getElementById('wordP').style.display='none';document.getElementById('lv').style.paddingTop='0';document.getElementById('lv').style.marginTop='5px';document.getElementById('seekbar_container').style.marginTop='-5px';");
-
-                    }
-                });
-            }
-        });
+        engine.titleProperty().addListener((observable, oldValue, newValue) -> SwingUtilities.invokeLater(() -> {
+			//PlaneDictionaryPc.this.setTitle(newValue);
+		}));
+        engine.setOnStatusChanged(event -> SwingUtilities.invokeLater(() -> {
+			//lblStatus.setText(event.getData());
+		}));
+        engine.locationProperty().addListener((ov, oldValue, newValue) -> SwingUtilities.invokeLater(() -> txtURL.setText(newValue)));
+        engine.getLoadWorker().workDoneProperty().addListener((observableValue, oldValue, newValue) -> SwingUtilities.invokeLater(() -> {
+			//progressBar.setValue(newValue.intValue());
+			CMN.Log("LoadWorker executing JavaScript...");
+			executeJavaScriptSilent("console.log(document.getElementById('wordP').style);document.getElementById('wordP').style.display='none';document.getElementById('lv').style.paddingTop='0';document.getElementById('lv').style.marginTop='5px';document.getElementById('seekbar_container').style.marginTop='-5px';");
+		}));
         engine.getLoadWorker()
                 .exceptionProperty()
-                .addListener(new ChangeListener<Throwable>() {
-                    public void changed(ObservableValue<? extends Throwable> o, Throwable old, final Throwable value) {
-                        if (engine.getLoadWorker().getState() == FAILED) {
-                            SwingUtilities.invokeLater(new Runnable() {
-                                @Override public void run() {}
-                            });
-                        }
-                    }
-                });
+                .addListener((o, old, value) -> {
+					if (engine.getLoadWorker().getState() == FAILED) {
+						SwingUtilities.invokeLater(() -> {});
+					}
+				});
         engine.getLoadWorker().stateProperty()
         .addListener(
-        	      new ChangeListener<State>() {
-        	        @Override
-        	        public void changed(ObservableValue<? extends State> ov, 
-        	            State oldState, State newState) { 
-        	          if (newState == State.SUCCEEDED) {
-        	            JSObject win = (JSObject) engine.executeScript("window");
-        	            win.setMember("app", apphaha);
-        	            CMN.show("ChangeListener added");
-        	          }
-        	        }
-        	      }
-        	    );
+				(ov, oldState, newState) -> {
+				  if (newState == State.SUCCEEDED) {
+					JSObject win = (JSObject) engine.executeScript("window");
+					win.setMember("app", apphaha);
+					CMN.show("ChangeListener added");
+				  }
+				}
+		);
         
         view.getStyleClass().add("browser");
         ((VBox) scene.getRoot()).getChildren().addAll(menuBar);
@@ -623,13 +547,11 @@ public class PlaneDictionaryPcJFX extends Application {
         etSearch = box.textBox;//new TextField ();
         box.searchButton.setOnMouseClicked(e -> {etSearch.getOnKeyPressed().handle(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.ENTER, false, false, false, false));});
         etSearch.clear();
-        etSearch.setOnKeyPressed(new EventHandler<KeyEvent>() {
-			@Override
-			public void handle(KeyEvent event) {
-				//executeJavaScript("lookup('"+etSearch.getText()+"')");
-				if(event.getCode()==KeyCode.ENTER)
-					executeJavaScript("lookup('"+etSearch.getText()+"')");
-			}});
+        etSearch.setOnKeyPressed(event -> {
+			//executeJavaScript("lookup('"+etSearch.getText()+"')");
+			if(event.getCode()==KeyCode.ENTER)
+				executeJavaScript("lookup('"+etSearch.getText()+"')");
+		});
         //etSearch.setOnKeyReleased(new EventHandler<KeyEvent>() {
 		//	@Override
 		//	public void handle(KeyEvent event) {
@@ -645,28 +567,23 @@ public class PlaneDictionaryPcJFX extends Application {
         
         etSearch.addEventHandler(
                 DragEvent.DRAG_OVER,
-                new EventHandler<DragEvent>(){
-				@Override
-				public void handle(DragEvent event) {
+				event -> {
                     if (event.getDragboard().hasString()) {
                         event.acceptTransferModes(TransferMode.COPY);
                     }
                     event.consume();
-                }});
+                });
         etSearch.addEventHandler(
                 DragEvent.DRAG_DROPPED,
-                new EventHandler<DragEvent>(){
-					@Override
-					public void handle(DragEvent event) {
-	                    Dragboard dragboard = event.getDragboard();
-	                    if (event.getTransferMode() == TransferMode.COPY && 
-	                            dragboard.hasString()) {
-	                    	etSearch.setText(dragboard.getString());
-	                        event.setDropCompleted(true);
-	                    }
-	                    event.consume();
-	                }
-                });
+				event -> {
+					Dragboard dragboard = event.getDragboard();
+					if (event.getTransferMode() == TransferMode.COPY &&
+							dragboard.hasString()) {
+						etSearch.setText(dragboard.getString());
+						event.setDropCompleted(true);
+					}
+					event.consume();
+				});
         
         GridPane grid = new GridPane();
         
@@ -706,11 +623,11 @@ public class PlaneDictionaryPcJFX extends Application {
             
         	//server.currentPage = server.md.get(server.adapter_idx).lookUp("wolf");
         	
-        	try {
-    			Thread.sleep(1000);
-    		} catch (InterruptedException e) {
-    			e.printStackTrace();
-    		}
+        	//try {
+    		//	Thread.sleep(1000);
+    		//} catch (InterruptedException e) {
+    		//	e.printStackTrace();
+    		//}
 
     	 	//CMN.show(grid.getHeight()+"");
         	//executeJavaScript("document.getElementById('lv').style.visibility='hidden';");
@@ -719,15 +636,29 @@ public class PlaneDictionaryPcJFX extends Application {
 			//browser.loadContent("asdasd<img src='E:\\assets\\mdicts\\wordsmyth2018.png'></img>");
 
         	if(new File(usrHome, "show-advanced").exists())
-        	Platform.runLater(new Runnable() {
-	            @Override 
-	            public void run() {
-	            		advancedSearch.getOnMouseClicked().handle(new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.PRIMARY, 1, false, false, false, false, false, false, false, false, false, false, null));
-	        	}
-	        });
+        	Platform.runLater(() -> advancedSearch.getOnMouseClicked().handle(new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.PRIMARY, 1, false, false, false, false, false, false, false, false, false, false, null)));
 	
 	}
-	
+
+	private void SaveMdicts() {
+		File def = new File(PU.getProjectPath(),"default.txt");
+		try {
+			BufferedWriter out = new BufferedWriter(new FileWriter(def,false));
+			String parent = new File(lastMdlibPath).getAbsolutePath()+File.separatorChar;
+			for(mdict mdTmp:server.md) {
+				String name = mdTmp.getPath();
+				if(name.startsWith(parent))
+					name = name.substring(parent.length());
+				out.write(name);
+				out.write("\r\n");
+			}
+			out.flush();
+			out.close();
+		} catch (IOException e2) {
+			e2.printStackTrace();
+		}
+	}
+
 	private void dumpLonelyInteger(File tmp, int val) {
 		if(!tmp.exists()) tmp.mkdirs();
 		File tmp0 = new File(tmp, String.valueOf(val));
@@ -770,19 +701,17 @@ public class PlaneDictionaryPcJFX extends Application {
 		//CMN.show(System.getProperty("java.version"));
 		//1.8.0_171
 		//10.0.2
-		//CMN.show(System.getProperty("user.home"));
     	projectPath = PU.getProjectPath();
 		userPath = System.getProperty("user.home");
-		CMN.show("projectPath"+projectPath);
 		String VersionCode = System.getProperty("java.version");
-		if(VersionCode.startsWith("9") || VersionCode.startsWith("10"))
-			isNeoJRE=true;
+		CMN.Log("projectPath", projectPath);
+		CMN.Log("usrHome", System.getProperty("user.home"));
+		CMN.Log("VersionCode", VersionCode);
+		if(VersionCode.startsWith("9") || VersionCode.startsWith("10")) isNeoJRE=true;
         launch(args);
     }
 	
 	public static boolean isNeoJRE=false;
-	
-	
 
 	HashSet<String> mdlibsCon;
 
@@ -791,7 +720,8 @@ public class PlaneDictionaryPcJFX extends Application {
 	
 	ArrayList<mdict> md;
     private void scanInFiles() {
-    	File def = new File(projectPath,"default.txt");      //!!!原配
+    	//![] start loading dictionaries
+    	File def = new File(projectPath,"default.txt");      //!!!原配置
 	    File rec = new File(projectPath,"CONFIG/mdlibs.txt");
 	    final boolean retrieve_all=!def.exists() && rec.exists();
 	    
@@ -822,10 +752,10 @@ public class PlaneDictionaryPcJFX extends Application {
 	    	def.getParentFile().mkdirs();
 	    	try {
 	    		def.createNewFile();
-			} catch (IOException e) {}
+			} catch (IOException ignored) {}
 	    }
 	
-			//dbCon = new DBWangYiLPController(this,true);   getExternalFilesDir(null).getAbsolutePath()
+		//dbCon = new DBWangYiLPController(this,true);   getExternalFilesDir(null).getAbsolutePath()
 	    mdlibsCon = new HashSet<>();
 	    if(rec.exists())
 			try {
@@ -844,7 +774,7 @@ public class PlaneDictionaryPcJFX extends Application {
 	    	rec.getParentFile().mkdirs();
 	    	try {
 				rec.createNewFile();
-			} catch (IOException e) {}
+			} catch (IOException ignored) {}
 	    }
 	    
 	    
@@ -860,42 +790,43 @@ public class PlaneDictionaryPcJFX extends Application {
 	    //	mdlibsCon.clear();
 	    //dbCon.prepareContain();
 	    File mdlib = new File(lastMdlibPath);
-	    if(mdlib.exists() && mdlib.isDirectory())
-	 	for(final File i:mdlib.listFiles(new FileFilter() {
-				@Override
-				public boolean accept(File pathname) {
-					if(pathname.isFile()) {
-						String fn = pathname.getName();
-						if(fn.toLowerCase().endsWith(".mdx")) {
-				            //if(!dbCon.contains(fn)) {
-					     	//	dbCon.insert(fn,pathname.getAbsolutePath());
-							//	return true;
-				            //}
-							if(retrieve_all || !mdlibsCon.contains(fn)) {                                             //!!!新欢
-								try {
-									mdlibsCon.add(fn);
-									output.write(fn);
-									output.write("\n");
-									output2.write(fn);
-									output2.write("\n");
-								} catch (IOException e) {
-									e.printStackTrace();
-								}
-								return true;
+		if(mdlib.exists() && mdlib.isDirectory()) {
+			File[] arr = mdlib.listFiles(pathname -> {
+				if(pathname.isFile()) {
+					String fn = pathname.getName();
+					if(fn.toLowerCase().endsWith(".mdx")) {
+						//if(!dbCon.contains(fn)) {
+						//	dbCon.insert(fn,pathname.getAbsolutePath());
+						//	return true;
+						//}
+						if(retrieve_all || !mdlibsCon.contains(fn)) {                                             //!!!新欢
+							try {
+								mdlibsCon.add(fn);
+								output.write(fn);
+								output.write("\n");
+								output2.write(fn);
+								output2.write("\n");
+							} catch (IOException e) {
+								e.printStackTrace();
 							}
-							
+							return true;
 						}
+
 					}
-					return false;
-				}})){
-					try{
-						mdict mdtmp = new mdict(i.getAbsolutePath());
-						md.add(mdtmp);
-				}catch (Exception e){
+				}
+				return false;
+			});
+			if(arr!=null)
+			for (final File i :arr) {
+				try {
+					mdict mdtmp = new mdict(i.getAbsolutePath());
+					md.add(mdtmp);
+				} catch (Exception e) {
 					e.printStackTrace();
 					//show(R.string.err,i.getName(),i.getAbsolutePath(),e.getLocalizedMessage());
 				}
-	 		}
+			}
+		}
 	 	try {
 				output.flush();
 				output.close();
@@ -965,7 +896,8 @@ class ColorCell extends ListCell<Integer> {
 		AdvancedSearchDialog()
 		{
 			super();
-    		setTitle("高级搜索");
+			//高级搜索
+    		setTitle(bundle.getString("advsearch"));
     		getIcons().add(new Image(HiddenSplitPaneApp.class.getResourceAsStream("shared-resources/galaxy.png")));
 
             //label displayLabel = new Label("What do you want to do ?");
@@ -1012,16 +944,16 @@ class ColorCell extends ListCell<Integer> {
             tabPane.getStylesheets().add(tabCss);
             tabPane.styleProperty().set("-fx-content-display:right;");
             Tab tab1 = new Tab();
-            tab1.setText("模糊搜索");
-            tab1.setTooltip(new Tooltip("通配符：. *"));
+            tab1.setText(bundle.getString("wildmatch"));
+            tab1.setTooltip(new Tooltip(bundle.getString("hintwm")));
             tab1.setClosable(false);
             Text lable = new Text("");
             lable.setStyle("-fx-fill: #ff0000;");
             tab1.setGraphic(lable);
             
             Tab tab2 = new Tab();
-            tab2.setText("全文搜索");
-            tab2.setTooltip(new Tooltip("通配符：. *"));
+			tab2.setText(bundle.getString("fulltext"));
+			tab2.setTooltip(new Tooltip(bundle.getString("hintwm")));
             tab2.setClosable(false);
             Text lable1 = new Text("");
             lable1.setStyle("-fx-fill: #ff0000;");

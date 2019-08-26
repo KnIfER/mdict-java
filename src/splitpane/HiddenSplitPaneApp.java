@@ -44,8 +44,8 @@ import javafx.stage.Stage;
  * @sampleName Hidden SplitPane
  * @preview preview.png
  * @docUrl http://www.oracle.com/pls/topic/lookup?ctx=javase80&id=JFXUI336 Using JavaFX UI Controls
- * @see javafx.scene.control.SplitPane
- * @see javafx.scene.layout.Region
+ * @see SplitPane
+ * @see Region
  * @embedded
  *
  * @related /Language/SwingInterop

@@ -23,6 +23,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.util.Callback;
 
+/** dictionary manager ui*/
 public class ManagerFragment extends Region{
 	Region MainView;
 	String lastMdlibPath;
@@ -36,7 +37,7 @@ public class ManagerFragment extends Region{
         tableView.getColumns().add(createCol("名称", propertyMapper_Name, 150));
         tableView.getColumns().add(createCol("相对路径", propertyMapper_rName, 150));
 
-        HashMap<String,mdict> mdict_cache = new HashMap<>();
+        HashMap<String,mdict> mdict_cache = new HashMap<>(md.size());
         
         for(mdict mdTmp:md) {
 			mdict_cache.put(mdTmp.getPath(),mdTmp);
@@ -50,13 +51,15 @@ public class ManagerFragment extends Region{
 	        String line = in.readLine();
 	        int idx=0;
 	        while(line!=null){
-        		if(!line.startsWith("\\"))
-        			line=lastMdlibPath+line;
-        		if(!mdict_cache.containsKey(line)) {
-        			if(idx<=md.size())
-        				tableView.getItems().add(idx,new mdict_nonexist(line));//若是md加会memory报错。
-        		}
-        		idx++;
+        		if(line.length()>0){
+					if((line.charAt(0)==File.separatorChar))
+						line=lastMdlibPath+line;
+					if(!mdict_cache.containsKey(line)) {
+						if(idx<=md.size())
+							tableView.getItems().add(idx,new mdict_nonexist(line));//若是md加会memory报错。
+					}
+					idx++;
+				}
 	        	line = in.readLine();
 	        }
 	        in.close();
@@ -65,19 +68,11 @@ public class ManagerFragment extends Region{
 			e2.printStackTrace();
 		}
         
-        
-        
-        
-        
-        
+
         
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        
-        
-        getSions().add(tableView);
-        
-        
-        
+
+		getChildren().add(tableView);
 	}
 	
 	
@@ -143,9 +138,6 @@ public class ManagerFragment extends Region{
     	MainView.resize(getWidth(), getHeight());
         //clearButton.resizeRelocate(getWidth() - 18, 6, 12, 13);
     }
-	
-	public ObservableList<Node> getSions(){
-		return getChildren();
-	}
+
 	
 }

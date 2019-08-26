@@ -45,7 +45,7 @@ import org.anarres.lzo.lzo_uintp;
 
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.rbtree.RBTree;
-
+import test.CMN;
 
 
 class mdBase {
@@ -320,7 +320,7 @@ class mdBase {
 	    //![0] head word text
 	        int text_head_size;
 	        if(_version<2)
-	        	text_head_size = key_block_info[bytePointer++];
+	        	text_head_size = key_block_info[bytePointer++] & 0xFF;
 	    	else {
 	    		text_head_size = BU.toChar(key_block_info,bytePointer);
 	    		bytePointer+=2;
@@ -346,8 +346,8 @@ class mdBase {
 	    //![1]  tail word text
 	        int text_tail_size;
 	        if(_version<2)
-	        	text_tail_size = key_block_info[bytePointer++];
-	    	else {
+				text_tail_size = key_block_info[bytePointer++] & 0xFF;
+			else {
 	    		text_tail_size = BU.toChar(key_block_info,bytePointer);
 	    		bytePointer+=2;
 	    	}
@@ -414,8 +414,8 @@ class mdBase {
 		data_in1.read(numers);
 		data_in1.close();
 		for(int i=0;i<_num_record_blocks;i++){
-			long compressed_size = _version>=2?BU.toLong(numers,(int) (i*16)):BU.toInt(numers,(int) (i*8));
-	        long decompressed_size = _version>=2?BU.toLong(numers,(int) (i*16+8)):BU.toInt(numers,(int) (i*8+4));
+			long compressed_size = _version>=2?BU.toLong(numers, i*16):BU.toInt(numers, i*8);
+	        long decompressed_size = _version>=2?BU.toLong(numers, i*16+8):BU.toInt(numers, i*8+4);
             maxComRecSize = Math.max(maxComRecSize, compressed_size);
             
             maxDecompressedSize = Math.max(maxDecompressedSize, decompressed_size);

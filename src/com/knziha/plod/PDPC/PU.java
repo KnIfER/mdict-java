@@ -68,7 +68,7 @@ public class PU {
 
         if (cls==null )  
 
-        throw new java.lang.IllegalArgumentException("参数不能为空！"); 
+        throw new IllegalArgumentException("参数不能为空！");
 
  
 
@@ -82,7 +82,7 @@ public class PU {
 
         if (clsName.startsWith("java.")||clsName.startsWith("javax.")) {
 
-        throw new java.lang.IllegalArgumentException("不要传送系统类！");
+        throw new IllegalArgumentException("不要传送系统类！");
 
         }
 

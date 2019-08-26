@@ -304,7 +304,8 @@ public class MdictServer extends NanoHTTPD{
             	//CMN.show(md.getRecordAt(currentPage));
             	if(baseHtml==null) {
             		//InputStream fin = MdictServer.class.getResourceAsStream("Mdict-browser/mdict_browser.html");
-            		InputStream fin = new FileInputStream("E:\\eclispe_wrkst3\\PLOD2\\mdict-java-master\\src\\com\\knziha\\plod\\PDPC\\Mdict-browser\\mdict_browser.html");
+            		//InputStream fin = new FileInputStream("E:\\eclispe_wrkst3\\PLOD2\\mdict-java-master\\src\\com\\knziha\\plod\\PDPC\\Mdict-browser\\mdict_browser.html");
+            		InputStream fin = new FileInputStream("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\com\\knziha\\plod\\PDPC\\Mdict-browser\\mdict_browser.html");
             		
             		//CMN.show(""+this.getClass().getResource("Mdict-browser/mdict_browser.html").getFile());
             		byte[] data = new byte[fin.available()];
@@ -408,23 +409,27 @@ public class MdictServer extends NanoHTTPD{
 	
 	public String constructDerivedHtml(String key,int pos,int dictionaryIndice,String...iframes) {
 		if(derBaseLen == -1) {
+			//int idx1=baseHtml.indexOf("function postInit(){");
 			int idx1=baseHtml.indexOf("function postInit(){");
-			int idx2=baseHtml.indexOf("<div class=\"def\" id=\"def\"></div>",idx1);
+			int idx2=baseHtml.indexOf("<div class=\"def\" id=\"def\"></div>",idx1);//  <div class="def" id="def"></div>
 			String f1 = baseHtml.substring(0,idx1+"function postInit(){".length()+1);
 			String f2 = baseHtml.substring(baseHtml.indexOf("}",idx1),idx2);
 			String f3 = baseHtml.substring(baseHtml.indexOf("</div>",idx2));
 			fragments = new String[] {f2,f3};
 			derivedHtmlBase = new StringBuilder(f1);
+			//CMN.show("f1"+f1);
 			derBaseLen = f1.length();
 		}
 		derivedHtmlBase.setLength(derBaseLen);
 		//derivedHtmlBase.append("alert(\"asd\");");
 		//derivedHtmlBase.append("$(\"#word\").val(\"Happy\");");
+		//CMN.show("key"+key);
 		derivedHtmlBase.append("editText.value='"+key+"';");
-		derivedHtmlBase.append("pengDingPos="+pos+";");
-		derivedHtmlBase.append("lastSelection_="+pos+";");
-		derivedHtmlBase.append("pendingDX="+dictionaryIndice+";");
-		derivedHtmlBase.append("pendingDX="+dictionaryIndice+";");
+		//derivedHtmlBase.append("pengDingPos="+pos+";");
+		//derivedHtmlBase.append("lastSelection_="+pos+";");
+		//derivedHtmlBase.append("pendingDX="+dictionaryIndice+";");
+		//derivedHtmlBase.append("pendingDX="+dictionaryIndice+";");
+		derivedHtmlBase.append("loookup();");
 		CMN.show("pengDingPos"+pos);
 		derivedHtmlBase.append(fragments[0]);
 		

@@ -276,6 +276,7 @@
           _trail;                   // store latest visited record block & position when search for candidate keys
       var lastDingX=0;
       var pos = 0;
+      var pengDingPos = -1;
       var lv  = document.getElementById("lv");
       var defP;
       var dictsP;
@@ -343,11 +344,11 @@
 				if(lastTarget) lastSelection = parseInt(lastTarget.id);
 				else if(lastSelection_!=-1) lastSelection=lastSelection_;
 				if(lv.hasChildNodes()) {
-				var childs = lv.childNodes,
-				ln = childs.length;
-				for (var i = 0; i < ln; i++) {
-					lv.removeChild(childs[0]);
-				}
+                    var childs = lv.childNodes,
+                    ln = childs.length;
+                    for (var i = 0; i < ln; i++) {
+                        lv.removeChild(childs[0]);
+                    }
 				}
 			
 				//console.log(data);
@@ -399,7 +400,6 @@
       
 	  var chrome_ = 0;
 	  function isChrome(){
-	    //垃圾chrome  撒比chrome 鄙视chrome 谷歌滚出地球！谷歌滚出地球！谷歌滚出地球！
 		if(chrome_==1) return true; if(chrome_==2) return false; if(navigator.userAgent.toLocaleLowerCase().match(/chrome/)) {chrome_=1;return true;}else{chrome_=2;}
 		return false;
 	  }
@@ -471,8 +471,8 @@
               currentDict = currentDicts[lastDingX];
 
               if(currentDict.OldKey){
-                  $("#word").val(currentDict.OldKey);
-              } else $("#word").val("");
+                  //TODO????? $("#word").val(currentDict.OldKey);
+              }
               if(currentDict.OldSel){
                   lastSelection_ = currentDict.OldSel;
                   currentDict.renderDef(currentDict.OldSel)
@@ -480,6 +480,9 @@
               if(currentDict.OldPos)
                   pos=currentDict.OldPos;
               else pos=0;
+              
+              if(pengDingPos!=-1)
+                pos = pengDingPos;
 
               setListSize(currentDict);
 
@@ -518,6 +521,7 @@
           setListSize(667);//900719925474101000
 
           editText = document.getElementById("word");
+
           if(document.all){
               editText.onpropertychange=loookup;
           }
@@ -599,10 +603,16 @@
                       loookup();
                   }
               }
-
+          
           });
-			ScanInDicts();
-          }
+
+          ScanInDicts();
+      }
+      
+      function postInit(){
+      }
+      
+      
       function setListSize(name){
 	      $("#jsonid").load("/MdbRSize/"+encodeURIComponent(name),
 		   function(data) {
@@ -697,69 +707,74 @@
           //////console.log("attr6: "+$(window).outerHeight());
       });
 
-	  
-	  function ScanInDicts(){
-	  //console.log("123");
-		$("#jsonid").load("/dicts.json",
-		function(data) {
-			//alert(typeof(data));
-			if(data){
-				//setListSize(mdicts[0].value()._num_entries);//原来还可以这样玩!
-				var base = currentDicts.length;
-				var e = [];
-				e.id=base;
-				var arr=data.split('\n');
-				//console.log(arr.length);
-				for(var i=0;i<arr.length;i++){
-				  currentDicts.push(arr[i]);
-				  var item = document.createElement('p');
-				  var itemi = document.createElement('span');
-				  itemi.style.setProperty("background-color","#4296FA");
 
-				  itemi.id=item.id = base+i;
-				  item.className="cp2";
-				  item.onclick=itemi.onclick = p2;
-				  itemi.innerText = arr[i];
-
-				  item.style.setProperty("background-color","#4296FA");
-				  item.appendChild(itemi);
-				  dictsP.appendChild(item);
-			  }
+      function ScanInDicts(){
+	      //console.log("123");
+        $("#jsonid").load("/dicts.json",
+          function(data) {
+          //alert(typeof(data));
+          if(data){
+              //setListSize(mdicts[0].value()._num_entries);//原来还可以这样玩!
+              var base=0;
+              //重来
+              currentDicts.length=0;
+              dictsP.innerHTML="";
+              var e = [];
+              e.id=base;
+              var arr=data.split('\n');
+              //console.log(arr.length);
+              for(var i=0;i<arr.length;i++){
+                currentDicts.push(arr[i]);
+                var item = document.createElement('p');
+                var itemi = document.createElement('span');
+                itemi.style.setProperty("background-color","#4296FA");
+  
+                itemi.id=item.id = base+i;
+                item.className="cp2";
+                item.onclick=itemi.onclick = p2;
+                itemi.innerText = arr[i];
+  
+                item.style.setProperty("background-color","#4296FA");
+                item.appendChild(itemi);
+                dictsP.appendChild(item);
+            }
 		  p2(e);
+          postInit();
 		  }
-			
 		});
 	  }
-	  var oldHeight;
-		function reinitIframe(){
-			//alert(12);
-			var iframes = document.getElementsByTagName("iframe");
-			//console.log(iframes);
-			for (var i=0; i<iframes.length; i++)
-			try{
-				var bHeight = iframes[i].contentWindow.document.body.scrollHeight;  
-				//var dHeight = iframes[i].contentWindow.document.documentElement.scrollHeight;  
-				//var height = Math.max(bHeight, dHeight);
-				iframes[i].height =  bHeight;
-				//alert(bHeight);
-				//console.log(bHeight);
-			}catch (ex){}
-		}
-		function reinitIframe2(idid){
-				//alert(item);
-				//https://stackoverflow.com/questions/153152/resizing-an-iframe-based-on-content#answer-701521
-				item = document.getElementById(idid);
-				item.style.height = 'auto';
-				//while(!item.contentWindow){}
-				var bHeight = item.contentWindow.document.body.offsetHeight;  
-				//var dHeight = iframes[i].contentWindow.document.documentElement.offsetHeight;  
-				//var height = Math.max(bHeight, dHeight);
 
-				item.style.height =  (bHeight+80)+"px";
-				//iframes[i].height =  bHeight;
-				//alert(bHeight);
-				console.log(bHeight);
-		}
+      var oldHeight;
+      function reinitIframe(){
+          //alert(12);
+          var iframes = document.getElementsByTagName("iframe");
+          //console.log(iframes);
+          for (var i=0; i<iframes.length; i++)
+          try{
+              var bHeight = iframes[i].contentWindow.document.body.scrollHeight;
+              //var dHeight = iframes[i].contentWindow.document.documentElement.scrollHeight;
+              //var height = Math.max(bHeight, dHeight);
+              iframes[i].height =  bHeight;
+              //alert(bHeight);
+              //console.log(bHeight);
+          }catch (ex){}
+      }
+      
+      function reinitIframe2(idid){
+          //alert(item);
+          //https://stackoverflow.com/questions/153152/resizing-an-iframe-based-on-content#answer-701521
+          item = document.getElementById(idid);
+          item.style.height = 'auto';
+          //while(!item.contentWindow){}
+          var bHeight = item.contentWindow.document.body.offsetHeight;
+          //var dHeight = iframes[i].contentWindow.document.documentElement.offsetHeight;
+          //var height = Math.max(bHeight, dHeight);
+
+          item.style.height =  (bHeight+80)+"px";
+          //iframes[i].height =  bHeight;
+          //alert(bHeight);
+          console.log(bHeight);
+      }
   </script>
 
 
@@ -775,7 +790,7 @@
 
 <div id="parentR">
   <div class="navR">
-    <input id="fileBtn" type='button'  value='全'  OnClick=''/>
+    <image id="fileBtn" src='MdbR/joint.png'  OnClick="if(this.src.indexOf('MdbR/joint.png')!=-1) {this.src='MdbR/sin.png';  }else{this.src='MdbR/joint.png'; }"/>
     <image id="viewToggle" src='MdbR/viewAll.png'  OnClick="if(this.src.indexOf('MdbR/viewAll.png')!=-1) {this.src='MdbR/viewSets.png'; scrollExpandAll=false;}else{this.src='MdbR/viewAll.png'; scrollExpandAll=true; var iframes = document.getElementsByTagName('iframe');for (var i=0; i<iframes.length; i++)iframes[i].height =  100;}"/>
     <div id="fileName" >...</div>
     <div id="dictsP"></div>
@@ -794,8 +809,8 @@
   <p id="seekbar_container" ></p>
   <p id="drag_resizer" ></p>
 
-  <div id="wordP">
-    <input id="word" type="text" value="" >
+  <div id="wordP" style="">
+    <input id="word" type="text" value=""  >
   </div>
 
 </div>
