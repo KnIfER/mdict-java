@@ -6,5 +6,4 @@
 **/META-INF/
 **/out/
 **/privateTest/
-*.jar
 *.iml
