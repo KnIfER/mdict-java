@@ -1,4 +1,7 @@
 # MDict Library in pure java ！
+
+![image](https://github.com/KnIfER/mdict-java/raw/master/screenshots/PDPC.png)  
+
 It supports:  
 &nbsp;&nbsp;&nbsp;I.lzo(via lzo-core-1.0.5.jar)  
 &nbsp;&nbsp;II.Ripemd128 key-info decryption.  
@@ -10,9 +13,8 @@ and is able to do:
 &nbsp;III.Fast wildcard match entry.  
 &nbsp;IV.Fast Fulltext retrieval (also with wild cards).  
 
-# App Released!    
-<a href="https://play.google.com/store/apps/details?id=com.knziha"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" height="50px"/></a>  
-![image](https://lh3.googleusercontent.com/gCP2nSx3V5MCksPy6NPj1MrFhCJm1GHfpMXm4lDkz3TUnNyJoJRGGdhy7Odec7nAfoyX=w1440-h620-rw)  
+# Android App
+https://github.com/KnIfER/PlainDictionaryAPP
 
 # Usage:
 ### 1.Basic query:
@@ -48,13 +50,6 @@ html_contents2 = mdxs.get(1).getRecordAt(16906);
 ...
 */
 ```
-
-### 3. Other search methods
-See test/MdTest.java and the newly uploaded mdict-javafx demo! It's not yet complete though.  
-Uploaded: PlaneDictionary-javafx (using nanohttpd to serve a dictionary server and Javafx webview to show it. )  
-  
-截图：
-![image](https://github.com/KnIfER/tuChuang/raw/master/javaFx_PDPC_α.png)  
 
 
 # details
