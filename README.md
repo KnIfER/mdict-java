@@ -3,9 +3,9 @@
 ![image](https://github.com/KnIfER/mdict-java/raw/master/screenshots/PDPC.png)  
 
 It supports:  
-&nbsp;&nbsp;&nbsp;I.lzo(via lzo-core-1.0.5.jar)  
+&nbsp;&nbsp;&nbsp;I.Lzo compressed contents. (via lzo-core)  
 &nbsp;&nbsp;II.Ripemd128 key-info decryption.  
-&nbsp;III.Builders to make Mdx add Mdd .  
+&nbsp;III.Builders to make Mdx add Mdd.  
 
 and is able to do:  
 &nbsp;&nbsp;&nbsp;I.Basic query.  
