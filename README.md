@@ -74,5 +74,11 @@ public static int reduce(int phrase, int[] array,int start,int end) {
 }
 ```
 	
+	
+MDX File Format
+===============
+<img src="https://rawgit.com/csarron/mdict-analysis/master/MDX.svg">
 
-<img src="https://github.com/KnIfER/mdict-parsr-java/raw/master/doc/MDX.svg">
+MDD File Format
+===============
+<img src="https://rawgit.com/csarron/mdict-analysis/master/MDD.svg">
