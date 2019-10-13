@@ -10,7 +10,7 @@ It supports:
 and is able to do:  
 &nbsp;&nbsp;&nbsp;I.Basic query.  
 &nbsp;&nbsp;II.Conjuction search.  
-&nbsp;III.Fast wildcard entry match.  
+&nbsp;III.Fast wildcard match among entries.  
 &nbsp;IV.Fast Fulltext retrieval (also with wild cards).  
 
 # Android App
