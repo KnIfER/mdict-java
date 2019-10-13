@@ -4,7 +4,6 @@
 /.project
 **/.idea/
 **/META-INF/
-**/libs/
 **/out/
 **/privateTest/
 *.jar
