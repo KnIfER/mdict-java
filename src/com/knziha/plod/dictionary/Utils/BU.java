@@ -124,13 +124,13 @@ public class  BU{//byteUtils
     @Deprecated
     public static void printBytes(byte[] b){
     	for(int i=0;i<b.length;i++)
-    		System.out.print(byteTo16(b[i])+",");
+    		System.out.print("0x"+byteTo16(b[i])+",");
     	System.out.println();
     }
     @Deprecated
     public static void printBytes(byte[] b,int off,int ln){
     	for(int i=off;i<off+ln;i++)
-    		System.out.print(byteTo16(b[i])+",");
+    		System.out.print("0x"+byteTo16(b[i])+",");
     	System.out.println();
     }
     @Deprecated

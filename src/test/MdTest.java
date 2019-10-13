@@ -7,6 +7,7 @@ import java.util.zip.DataFormatException;
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.mdictRes;
+import com.knziha.plod.dictionarymodels.resultRecorderScattered2;
 import com.knziha.rbtree.RBTree_additive;
 
 
@@ -185,7 +186,7 @@ public class MdTest {
 	    	mdicts.add(new mdict("E:\\assets\\mdicts\\高级汉语词典.mdx"));//牛津高阶英汉双解词典.mdx
 	    	for(mdict mdTmp:mdicts)
 	    		mdTmp.flowerFindAllContents(key,0,30);
-	        resultRecorderScattered2 gross = new resultRecorderScattered2(mdicts);
+	        resultRecorderScattered2 gross = new resultRecorderScattered2(mdicts, null);
 	        gross.invalidate();
 	        for(int i=0;i<gross.size();i++) {
 	        	CMN.show(gross.getResAt(i));

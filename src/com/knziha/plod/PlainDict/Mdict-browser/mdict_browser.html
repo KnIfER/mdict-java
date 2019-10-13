@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<!--Copyright (c) 2018 by KnIfER Released under the MIT license based on: mdict-broswer-->
+<meta name="robots" content="noindex">
+<html>
+<head>
+	
+	<meta name="description" content="MDict JS">
+	<script>
+      window.TextEncoder = window.TextDecoder = null;
+  
+	</script>
+	<script src="MdbR/lib/encoding-indexes.js"></script>
+	<script src="MdbR/lib/encoding.js"></script>
+	
+	<script src="MdbR/jquery-1.11.3.min.js"></script>
+	<script src="MdbR/mark.js"></script>
+	<script src="MdbR/listview/jquery.mousewheel.js"></script>
+	<script src="MdbR/listview/seekbar.js"></script>
+	
+	<link rel="icon" href="MdbR/MdbR.png" type="image/x-icon"/>
+	<link rel="shortcut icon" href="MdbR/MdbR.png" type="image/x-icon"/>
+	
+	<link rel="stylesheet" type="text/css" href="MdbR/css/seekbar.css"/>
+	<style>
+
+    .cp:hover
+    {
+      background-color: #BBE8F2;
+      background-color:#397CCD;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background-color: #B3E5EE;
+    }
+    #parentR {
+      position: relative;
+      height: 100%;	/*NO!!!width: 100%;!!!*/
+      margin-left: 195px;
+      padding: 0;
+    }
+    .defP {
+      position:absolute;
+      top: 0px;
+      bottom: 0px;
+      margin-top:70px;
+      overflow:scroll;
+      width: 100%;	/*NO!!!height: 100%;!!!*/
+    }
+    .def {
+      position:absolute;
+      padding:4px 4px 100px 4px;
+    }
+    .navR {
+      margin: 0; padding: 0;
+      height: 70px;
+      width: 100%;
+      background-color: rgba(133, 195, 255, 1);
+    }
+    #fileBtn{
+      position: relative;
+      margin-left: 4px;
+      width: 25px;
+      height: 25px;
+      bottom: -37px;
+      border-radius: 30%;
+      color: white;
+      z-index: 2;
+      float: left;
+      vertical-align: bottom;
+    }
+	#viewToggle{
+      position: relative;
+      margin-right: 4px;
+      width: 25px;
+      height: 25px;
+      bottom: -37px;
+      border-radius: 10%;
+      color: white;
+      z-index: 2;
+      float: right;
+      vertical-align: bottom;
+    }
+    #fileName{
+      position: relative;
+      width: 1px;
+      bottom: -41px;
+      float:left;
+      white-space: nowrap;
+      color: white;
+      z-index: 1;
+    }
+    .cp2
+    {
+      top:0;
+      background-color:#397CCD;
+      width:50px;
+      margin:20px 25px 0 0px;
+      display: inline-block;
+      overflow-x:hidden;
+      padding:10px 0 0px 0;
+      vertical-align: top;
+    }
+    .cp2:hover
+    {
+      white-space: pre-wrap;
+      overflow: visible;
+      word-wrap: break-word;
+      z-index: 1;
+      margin-right:5px;
+      width:70px;
+    }
+    .cp3
+    {
+      //background-color:#397CCD;
+      background:linear-gradient(to top, #3477C9 , #397CCD);
+      width:100%;
+      margin:0px 25px 0 0px;
+      display: inline-block;
+      color:white;
+      padding:10px;
+    }
+    #dictsP{
+      white-space: nowrap;
+      position: absolute;
+      left:0;top:0;
+      margin-left: 30px;
+      margin-top:-15px;
+      overflow-y: hidden;
+      width:100%;
+      float: left;
+      vertical-align: top;
+    }
+    #ListView{
+      position: absolute; top: 0; left: 0;
+      width: 195px;
+      height: 100%;
+      box-sizing: border-box;
+      background: #191919;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    #lv {
+      position: absolute;
+      top:0;
+      right:20px;
+      float:left;
+      color: #dddddd;
+      overflow: hidden;
+      overflow-x:hidden;
+      white-space:nowrap;
+      padding: 0px;
+      padding-top:16px;
+      margin:0;
+      margin-left:5px;
+      margin-top: 10px;
+    }
+    p{
+      width:100%;
+      font-size: 16px;
+      position: relative;
+      top:0;
+      margin: 0 0 0 25px  ;
+      padding:6px 0 6px 2px;
+    }
+    #seekbar_container {
+      position: absolute;
+	  top: 0;
+      right: -3px;
+      height: 100%;
+      width: 30px;
+      float:right;
+      padding-left:0;
+      margin-top: 8px;
+    }
+    #drag_resizer{
+      position: absolute;
+      top:0;
+      right: 0px;
+      height: 100%;
+      width: 4px;
+      float:right;
+      padding:0;
+      cursor: ew-resize;
+    }
+    #wordP{
+      position: absolute;
+      top:0;
+      right:5px;
+      padding-left: 10px;
+      margin: 0 0 0 10px ;
+      height: 40px;
+      width: 100%;
+      overflow: hidden;
+      display: flex;
+    }
+    #word{
+      float: left;
+      margin: 4px 0 0 10px ;
+      height: 15px;
+      width: 100%;
+      overflow: hidden;
+    }
+	
+	#body{
+		width:70em;
+		max-width:100%;
+		margin:0 auto;
+	}
+	iframe{
+		scrolling:yes;
+		width: 100%;
+		overflow:scroll;
+	}
+	#title_menu{
+		position: absolute;
+		width: 200px;
+		height: auto;
+		border: 1px #ccc solid;
+		display: none;
+		padding:2px 0;
+		box-shadow: 5px 5px 5px #6a397CCD;
+		background-color: #fff;
+	}
+	.menu-item{
+		height: 25px;
+		margin:4px 0;
+		padding:0 10px;
+		cursor: pointer;
+	}
+	.menu-item:hover{
+		background-color: #ccc;
+	}
+	.menu-item-separator{
+		border-top:1px #ccc solid;
+		height: 1px;
+	}
+	</style>
+	
+	<script type="text/javascript">
+		/* jQuery.Drag-Resizable items via wuxinxi007 于 2011-5-14
+				 blog : http://wuxinxi007.cnblogs.com 以下中二注释是原作者所写！*/
+		$(function(){
+			//绑定需要拖拽改变大小的元素对象
+			bindResize(document.getElementById('drag_resizer'));
+		});
+	
+		function bindResize(el){
+			console.log("mousedown: ",el);
+			var lvP = document.getElementById('ListView');
+			//初始化参数
+			var lvPs = lvP.style,
+					pRs = document.getElementById('parentR').style,
+					//鼠标的 X 和 Y 轴坐标
+					x = y = 0;
+			//邪恶的食指
+			$(el).mousedown(function(e){
+				console.log("mousedown");
+				//按下元素后，计算当前鼠标与对象计算后的坐标
+				x = e.clientX - lvP.offsetWidth;
+				//在支持 setCapture 做些东东
+				el.setCapture ? (
+						//捕捉焦点
+						el.setCapture(),
+						//设置事件
+						el.onmousemove = function(ev){
+					mouseMove(ev || event)
+				},
+				el.onmouseup = mouseUp
+				  ) : (
+						//绑定事件
+						$(document).bind("mousemove",mouseMove).bind("mouseup",mouseUp)
+				)
+				//防止默认事件发生
+				e.preventDefault()
+			});
+			//移动事件
+			function mouseMove(e){
+					//console.log("move");
+					//宇宙超级无敌运算中...
+					lvPs.width = e.clientX - x + 'px';
+			pRs.marginLeft = lvPs.width;
+			defP.style.visibility="hidden";
+			  }
+			//停止事件
+			function mouseUp(){
+				defP.style.visibility="visible";
+				//在支持 releaseCapture 做些东东
+				el.releaseCapture ? (
+						//释放焦点
+						el.releaseCapture(),
+						//移除事件
+						el.onmousemove = el.onmouseup = null
+				  ) : (
+						//卸载事件
+						$(document).unbind("mousemove", mouseMove).unbind("mouseup", mouseUp)
+				)
+			}
+		}
+	</script>
+	
+	<script>
+		var
+		  _cached_keys,             // cache latest keys
+		  _trail;                   // store latest visited record block & position when search for candidate keys
+		var lastDingX=0;
+		var pos = 0;
+		var pengDingPos = -1;
+		var lv  = document.getElementById("lv");
+		var defP;
+		var dictsP;
+		var seekBarmyCon  = document.getElementById("seekbar_container");
+		var capacity = 30;
+		var listSize = 100;
+		var seekBarmy;
+		var lastTarget,lastSelection_;
+		var currentDict;var currentDicts=[];
+		var currentDictPos;
+		var editText;
+		var chrome_ = 0;
+		var app;
+	 
+		var isCombinedSeaching=false;
+		var scrollExpandAll=true;
+		
+		var menu;
+		var dictTitleMenu = document.getElementById("title_menu");
+	
+		var MultiSearchResult=[];
+		var MultiSearchResultStamp="";
+		var displayingMultiSearch=false;
+	 
+		var onmousewheelDown = function(event) {
+			event.preventDefault();
+			pos+=event.deltaY*-1;
+			//console.log("pos: "+pos);
+			seekBarmy.setValue(getListSize()-pos);
+			rePopulate();
+		}
+		//bind mouse wheel
+		$(function() {
+			$('#lv').bind('mousewheel', onmousewheelDown);
+			$('#seekbar_container').bind('mousewheel', onmousewheelDown);
+		});
+	
+		//simple listview
+		function rePopulate(){//TODO: optimise
+			//计算一屏能放下几行。
+			var line_height=0;
+	
+			var tmp = $("p").css("font-size");
+			if(tmp.indexOf("px")!=-1)
+				line_height = parseFloat(tmp.substring(0,tmp.length-2));
+			tmp = $("p").css("padding-top");
+			if(tmp.indexOf("px")!=-1)
+				line_height += parseFloat(tmp.substring(0,tmp.length-2));
+	
+			capacity = Math.floor($(window).innerHeight()/line_height);
+			//console.log("line_height: "+line_height);
+			//console.log("capacity: "+capacity);
+			var lastSelection=-1;
+	
+			var _listSize=getListSize();
+			if(pos<0) pos=0;
+			if(pos>=_listSize) pos = _listSize-1;
+			var couterfeitCounter = pos+capacity;
+	
+			//if(couterfeitCounter>=Number.MAX_SAFE_INTEGER){
+			//    console.log("Integer Overflow Error! max is  "+Number.MAX_SAFE_INTEGER);
+			//    console.log("Integer Overflow Error! now has "+couterfeitCounter);
+			//    console.log("Integer Overflow Error! delta is"+(couterfeitCounter-Number.MAX_SAFE_INTEGER));
+			//    console.log("Integer Overflow Error! delta is"+(couterfeitCounter+100));
+			//    couterfeitCounter = Number.MAX_SAFE_INTEGER;
+			//}
+			//if(couterfeitCounter>_listSize) couterfeitCounter = _listSize;
+			if(pos+capacity>_listSize) capacity = _listSize-pos;
+			if(isMultiSearchView()){//联合
+				rePopulateByData(MultiSearchResult, lastSelection);
+			}
+			else if(currentDict){//请求数据
+				$("#jsonid").load("/MdbRGetEntries/"+encodeURIComponent(currentDict)+"/"+pos+"/"+capacity,
+					function(data){ rePopulateByData(data.split('\n'), lastSelection); }
+				);
+			}
+			else{//demo items
+				if(lastTarget) lastSelection = parseInt(lastTarget.id);
+				else if(lastSelection_!=-1) lastSelection=lastSelection_;
+				if(lv.hasChildNodes()) {
+					var childs = lv.childNodes,
+							ln = childs.length;
+					for (var i = 0; i < ln; i++) {
+						lv.removeChild(childs[0]);
+					}
+				}
+				for (var i=0; i<capacity; i++){
+					var item = document.createElement('p');
+					item.id = pos+i;
+					item.className="cp";
+					item.onclick = p;
+					item.innerText = "N/A " + (pos+i);
+					//lv.append(item);
+					if(lastSelection==pos+i){
+						lastTarget = item;
+						item.style.setProperty("background-color","#4296FA");
+					}
+					lv.appendChild(item);
+				}
+				lastSelection_=-1;
+			}
+		}
+	
+		function rePopulateByData(data, lastSelection) {
+			//清空的代码放到里面！
+			if(lastTarget) lastSelection = parseInt(lastTarget.id);
+			else if(lastSelection_!=-1) lastSelection=lastSelection_;
+			if(lv.hasChildNodes()) {
+				var childs = lv.childNodes, ln = childs.length;
+				for (var i = 0; i < ln; i++) {
+					lv.removeChild(childs[0]);
+				}
+			}
+			//app.log(typeof(data));
+			//app.log(data.length);
+			var isCombinedView = isMultiSearchView();
+			var startIndex=isCombinedView?pos:0;
+			for(var i=startIndex;i<capacity+startIndex;i++){
+				var item = document.createElement('p');
+				item.id = isCombinedView?i:pos+i;
+				item.className="cp";
+				item.onclick = p;
+				item.innerText = isCombinedView?data[i].split("\r")[0]:data[i];
+				//lv.append(item);
+				if(lastSelection==item.id){
+					lastTarget = item;
+					item.style.setProperty("background-color","#4296FA");
+				}
+				lv.appendChild(item);
+			}
+			lastSelection_=-1;
+		}
+		
+		
+		function isMultiSearchView(){
+			return displayingMultiSearch && MultiSearchResult!=undefined;
+		}
+		
+		function isChrome(){
+			if(chrome_==1) return true; if(chrome_==2) return false; if(navigator.userAgent.toLocaleLowerCase().match(/chrome/)) {chrome_=1;return true;}else{chrome_=2;}
+			return false;
+		}
+	
+		function reinitIframe3(){
+			var iframes = document.getElementsByTagName("iframe");
+			//console.log(iframes);
+			for (var i=0; i<iframes.length; i++)
+			try{
+				var bHeight = iframes[i].contentWindow.document.body.clientHeight+65;
+				if(scrollExpandAll){
+					if(!isChrome()) iframes[i].scrolling="no";
+					iframes[i].height =  bHeight;
+				}else{
+					if(!isChrome()) iframes[i].scrolling="yes";
+					iframes[i].height =  500;
+				}
+				//alert(bHeight);
+				//console.log(bHeight);
+				//console.log(iframes[i].scrolling); offsetHeight  clientHeight
+				//console.log(iframes[i].contentWindow.document.body.scrollHeight);
+			}catch (ex){console.log(ex);}
+		}
+		window.setInterval("reinitIframe3()", 200);
+
+		function ClearAllPages(){
+			if(defP.hasChildNodes()) {
+				var childs = defP.childNodes, ln = childs.length;
+				for (var i = 0; i < ln; i++) {
+					defP.removeChild(childs[0]);
+				}
+			}
+		}
+		
+		function p(e){//列表点击
+			//console.log("p: "+e.target.id+typeof(e.target.id));
+			//console.log(e.target.style);
+			if(lastTarget)
+				//lastTarget.style.setProperty("background-color", "transparent");
+				lastTarget.removeAttribute("style");
+			lastTarget=e.target;
+			lastTarget.style.setProperty("background-color","#4296FA");
+			if(isMultiSearchView()){
+				ClearAllPages();
+				var arr = MultiSearchResult[e.target.id].split("\r")[1].split("&");
+				if(app) app.log(" 列表点击: "+MultiSearchResult[e.target.id]);
+				for (var i = 0; i < arr.length; i++) {
+					var currentDing=parseInt(arr[i].split("")[0]);
+					var title = document.createElement('div');
+					title.innerHTML=currentDicts[currentDing];
+					title.className='cp3';
+					title.onclick=p3;
+					defP.appendChild(title);
+					
+					var item = document.createElement('iframe');
+					//if(!isChrome()) item.scrolling="no";
+					item.id='md_'+currentDing;
+					item.src="\\content\\"+arr[i];
+					item.width="100%";
+					item.frameBorder=0;
+					item.height=100;
+					defP.appendChild(item);
+					//item.onload=reinitIframe2(currentDict);
+				}
+			}else if(currentDict){
+				ClearAllPages();
+				//for (var i = 0; i < 3; i++) {
+				var item = document.createElement('iframe');
+				//if(!isChrome()) item.scrolling="no";
+				item.id='md_'+lastDingX;
+				item.src="\\content\\"+lastDingX+"@"+e.target.id;
+				item.width="100%";
+				item.frameBorder=0;
+				//item.height=100;
+				defP.appendChild(item);
+				//item.onload=reinitIframe2(currentDict);
+				//}
+			}
+			//e.target.background("#0000ff");
+		}
+		
+		function p2(e){//切换词典
+			if(currentDicts){
+				_cached_keys=_trail=undefined;
+				currentDicts[lastDingX].OldPos = pos;
+				currentDicts[lastDingX].OldKey = $("#word").val();
+				if(lastTarget)currentDicts[lastDingX].OldSel = parseInt(lastTarget.id);
+	
+				if(e.name!=undefined)
+					lastDingX = parseInt(e.name);
+				else if(e.target!=undefined)
+					lastDingX = parseInt(e.target.id);
+				else
+					lastDingX = parseInt(e.id);
+					
+	
+				if(lastDingX!=Number.NaN){
+					currentDict = currentDicts[lastDingX];
+					if(app) app.log("clicking dict: "+currentDict+currentDict.OldSel);
+				
+					if(currentDict.OldKey){
+						//TODO????? $("#word").val(currentDict.OldKey);
+					}
+					if(currentDict.OldSel){
+						lastSelection_ = currentDict.OldSel;
+						currentDict.renderDef(currentDict.OldSel)
+					} else $(".def").html("");
+					
+					if(currentDict.OldPos)
+						pos=currentDict.OldPos;
+					else pos=0;
+	
+					if(pengDingPos!=-1)
+						pos = pengDingPos;
+	
+					setListSize(currentDict);
+	
+					console.log("currdict: ",currentDict);
+					//console.log("currdicts: ",currentDicts);
+					$("#fileName").html(currentDict);
+				}
+			}
+			try{
+				e.stopPropagation();
+			}catch(e){}
+			//e.target.background("#0000ff");
+		}
+	
+		function p3(e){//折叠内容
+			var framei = e.srcElement.nextSibling;
+			if(framei instanceof HTMLIFrameElement){
+				framei.style.display=framei.style.display!='none'?'none':'block';
+				e.preventDefault();
+			}
+		}
+	
+		function Initialize() {
+			lv = document.getElementById("lv");
+			defP = document.getElementById("defP");
+			dictsP = document.getElementById("dictsP");
+			seekBarmyCon = document.getElementById("seekbar_container");
+			dictTitleMenu = document.getElementById("title_menu");
+			rePopulate();
+			seekBarmy = new Seekbar.Seekbar({
+					renderTo: "#seekbar_container",
+					minValue: 0, maxValue: 255,
+					valueListener: function (value) {
+				this.value = Math.round(value);
+				updateProgress();
+				//console.log("valueListener: ",value);
+			},
+			barSize:10,
+					needleSize:0.3,
+					thumbColor: '#00cccccc',
+					negativeColor: '#000',
+					positiveColor: '#000',
+					value: 0
+			});
+			seekBarmy.setValue(seekBarmy.maxValue)
+			setListSize(667);//900719925474101000
+	
+			editText = document.getElementById("word");
+	
+			if(document.all){
+				editText.onpropertychange=loookup;
+			}
+			else{
+				editText.oninput=loookup;
+			}
+	
+			document.onkeydown = function(e) {
+				var keyCode = e.keyCode || e.which || e.charCode;
+				var ctrlKey = e.ctrlKey || e.metaKey;
+				//console.log("word isFocused:",$("#word").is(':focus'));
+				if($(':focus').length==0){
+					if(!ctrlKey &&((keyCode<=90&&keyCode>=65))){//abc keyboard
+						$("#word").val("");
+						$("#word").focus();
+						return true;
+					}
+					//if(keyCode==32){//space
+					//    if(lastTarget){
+					//        pos=parseInt(lastTarget.id);
+					//        rePopulate();
+					//    }
+					//    return true;
+					//}
+					if(keyCode==8 ||keyCode==37||keyCode==39 ) {//left right
+						$("#word").focus();
+						return true;
+					}
+				}
+				if($(':focus').length==0 || $("#word").is(':focus'))
+					if(lastTarget){//up down
+						var re=false;
+						if(keyCode==38){
+							lastSelection_=parseInt(lastTarget.id)-1;
+							if(lastSelection_<0)
+								lastSelection_=0;
+							lastTarget=null;
+							re=true;
+						}
+						if(keyCode==40){
+							lastSelection_=parseInt(lastTarget.id)+1;
+							if(lastSelection_>=getListSize())
+								lastSelection_=getListSize()-1;
+							lastTarget=null;
+							re=true;
+						}
+						if(re){
+							e.preventDefault();
+							if(lastSelection_<pos) pos=lastSelection_;
+							else{
+								var ca =  capacity - 6;
+								if(lastSelection_>pos+ca)
+									pos=lastSelection_-ca;
+							}
+							if(currentDict){
+								//console.log(""+lastSelection_);
+								currentDict.renderDef(lastSelection_);
+							}
+							rePopulate();
+							return;
+						}
+					}else{
+						lastTarget=document.getElementById("0");
+						rePopulate();
+					}
+				return true;
+			}
+	
+			$(document.body).bind({
+					paste: function(e) {
+				if($(':focus').length==0){/*defaulf paste receptor*/
+					var clipboardData = window.clipboardData; /*ie*/
+					if (!clipboardData) { /*Cr*/
+						clipboardData = e.originalEvent.clipboardData
+					}
+					var data = clipboardData.getData('Text');
+					//console.log("bindp: ",data);
+					$("#word").val(data);
+					loookup();
+				}
+			}
+	
+			});
+	
+			ScanInDicts();
+		}
+	
+		function postInit(){
+		}
+	
+		function setListSize(name){
+			$("#jsonid").load("/MdbRSize/"+encodeURIComponent(name),
+					function(data) {
+				//alert(typeof(data));
+				if(data){
+					var size=parseInt(data);
+					listSize=size;
+					lastTarget= undefined;
+					adjustSeekbar(size);
+					rePopulate();
+				}
+			});
+		}
+		
+		function adjustSeekbar(size){
+			seekBarmy.maxValue=size;
+			seekBarmy.setValue(size);
+			seekBarmy.refresh();
+		}
+		
+		function getListSize(){
+			return isMultiSearchView()?MultiSearchResult.length:listSize;
+		}
+	
+		function setListPos(p){
+			console.log("list pos is: ",listSize-p);
+			seekBarmy.setValue(listSize-p);
+			pos=p;
+			//seekBarmy.render();
+			rePopulate();
+		}
+	
+		function setCurrMdict(mdict){
+			//
+		}
+		
+		//scroll bar scrolled
+		function updateProgress() {
+			if(!seekBarmy) return;
+			pos = getListSize() - seekBarmy.value.toString(10);
+			rePopulate();
+			// $("#color-code").html(red);
+		}
+		
+		function loookup(){
+			lookup(editText.value);
+		}
+	
+		function lookup(word){
+			if(word.trim()===""){
+				if(displayingMultiSearch)
+					displayingMultiSearch=false;
+				setListPos(0);
+				adjustSeekbar(listSize);
+				return;
+			}
+			if(currentDict){
+				if(isCombinedSeaching)
+				$("#jsonid").load("/MdbRJointQuery/"+encodeURIComponent(word),
+						function(data) {
+							//app.log("received 联合搜索: "+data);
+							MultiSearchResult = data.split('\n');
+							MultiSearchResultStamp=word;
+							displayingMultiSearch=true;
+							setListPos(0);
+							adjustSeekbar(MultiSearchResult.length);
+					});
+				else
+				$("#jsonid").load("/MdbRSingleQuery/"+lastDingX+"/"+encodeURIComponent(word),
+						function(data) {
+							//app.log(typeof(data));
+							if(data){
+								var newPos=parseInt(data);
+								setListPos(newPos);
+							}
+					});
+			}
+		}
+	
+	
+		updateProgress();
+		//$(window).on('resize', 0, function() {
+	
+		$(window).resize(function() {
+			if(seekBarmy){
+				if(seekBarmyCon.hasChildNodes()) {
+					//var childs = seekBarmyCon.childNodes,
+					//    ln = childs.length;
+					//console.log("del: ",ln);
+					//for (var i = 0; i < ln; i++) {
+					//    seekBarmyCon.removeChild(childs[0]);
+					//}
+				}
+				seekBarmy.refresh();
+			}
+			rePopulate();
+			//  alert($(window).width()); //浏览器时下窗口可视区域宽度
+			//  alert($(window).height()); //浏览器时下窗口可视区域高度
+			//  alert($(document).height()); //浏览器时下窗口文档的高度
+			//  alert($(document.body).height());//浏览器时下窗口文档body的高度
+			//  alert($(document.body).outerHeight(true));//浏览器时下窗口文档body的总高度 包括border padding margin
+			//
+			//  alert($(document).width());//浏览器时下窗口文档对于象宽度
+			//  alert($(document.body).width());//浏览器时下窗口文档body的高度
+			//  alert($(document.body).outerWidth(true));//浏览器时下窗口文档body的总宽度 包括border padding margin
+			////////////console.log("line: "+$(document).height());
+			////////////console.log("attr: "+document.getElementById("1").style.fontSize);
+			////////////console.log("attr2: "+document.getElementsByTagName("p")[1].getAttribute("font-size"));
+			////////////console.log("attr3: "+document.getElementsByTagName("p")[1].fontSize);
+	
+			//////console.log("attr4: "+$("p").css("margin"));//16 0 16 15 px
+			//////console.log("attr4: "+$("p").css("font-size"));//16 0 16 15 px
+			////////console.log("attr5: "+$("html").css("height"));
+			//////console.log("attr6: "+$(window).outerHeight());
+		});
+	
+	
+		function ScanInDicts(){
+			//console.log("123");
+			$("#jsonid").load("/dicts.json",
+					function(data) {
+				//alert(typeof(data));
+				if(data){
+					//setListSize(mdicts[0].value()._num_entries);//原来还可以这样玩!
+					var base=0;
+					//重来
+					currentDicts.length=0;
+					dictsP.innerHTML="";
+					var e = [];
+					e.id=base;
+					var arr=data.split('\n');
+					//console.log(arr.length);
+					for(var i=0;i<arr.length;i++){
+						currentDicts.push(arr[i]);
+						var item = document.createElement('p');
+						var itemi = document.createElement('span');
+						itemi.style.setProperty("background-color","#4296FA");
+	
+						itemi.id=item.id = base+i;
+						item.className="cp2";
+						item.onclick=itemi.onclick = p2;
+						itemi.innerText = arr[i];
+	
+						item.style.setProperty("background-color","#4296FA");
+						item.appendChild(itemi);
+						dictsP.appendChild(item);
+					}
+					p2(e);
+					postInit();
+				}
+			});
+		}
+	
+	
+		function foldAll(){
+			var iframes = document.getElementsByTagName("iframe");
+			for (var i=0; i<iframes.length; i++)
+				iframes[i].style.display="none";
+		}
+			
+		function unFoldAll(){
+			var iframes = document.getElementsByTagName("iframe");
+			for (var i=0; i<iframes.length; i++)
+				iframes[i].style.display="block";
+		}
+		
+		var oldHeight;
+		function reinitIframe(){
+			var iframes = document.getElementsByTagName("iframe");
+			for (var i=0; i<iframes.length; i++)
+				try{
+					var bHeight = iframes[i].contentWindow.document.body.scrollHeight;
+					//var dHeight = iframes[i].contentWindow.document.documentElement.scrollHeight;
+					//var height = Math.max(bHeight, dHeight);
+					iframes[i].height =  bHeight;
+					//alert(bHeight);
+					//console.log(bHeight);
+				}catch (ex){}
+		}
+	
+		function reinitIframe2(idid){
+			//alert(item);
+			//https://stackoverflow.com/questions/153152/resizing-an-iframe-based-on-content#answer-701521
+			item = document.getElementById(idid);
+			item.style.height = 'auto';
+			//while(!item.contentWindow){}
+			var bHeight = item.contentWindow.document.body.offsetHeight;
+			//var dHeight = iframes[i].contentWindow.document.documentElement.offsetHeight;
+			//var height = Math.max(bHeight, dHeight);
+	
+			item.style.height =  (bHeight+80)+"px";
+			//iframes[i].height =  bHeight;
+			//alert(bHeight);
+			console.log(bHeight);
+		}
+  
+		window.oncontextmenu = function(e){
+			if('cp3'==e.srcElement.className){
+				e.preventDefault();
+				menu=dictTitleMenu;
+				menu.style.display="block";
+				menu.style.left=e.clientX+"px";
+				menu.style.top=e.clientY+"px";
+			}
+		}
+		window.onclick=function(e){
+			dismiss_menu();
+		}
+		function dismiss_menu(){
+			if(menu){
+				menu.style.display="none";
+				menu=null;
+			}
+		}
+		function clearHighlights(){
+			var iframes = document.getElementsByTagName("iframe");
+			for (var i=0; i<iframes.length; i++){
+				iframes[i].contentWindow.clearHighlights();
+			}
+		}
+		function highlight(keyword){
+			var iframes = document.getElementsByTagName("iframe");
+			for (var i=0; i<iframes.length; i++){
+				iframes[i].contentWindow.highlight(keyword);
+			}
+		}
+	</script>
+	
+	
+	<link rel="stylesheet" type="text/css" href="">
+	<meta charset="utf-8">
+	<title>平典 · MDict Browser</title>
+
+</head>
+<!------------------------------------------------------------------>
+<body id="body_" onload="Initialize()">
+
+
+<div id="parentR">
+	<div class="navR">
+		<image id="fileBtn" src='MdbR/sin.png'
+			   onclick="if(this.src.indexOf('MdbR/joint.png')!=-1) {this.src='MdbR/sin.png'; isCombinedSeaching=false; }else{this.src='MdbR/joint.png'; isCombinedSeaching=true;} if(app)app.setCombinedSeaching(isCombinedSeaching);"></image>
+		<image id="viewToggle" src='MdbR/viewAll.png'
+			   onclick="if(this.src.indexOf('MdbR/viewAll.png')!=-1) {this.src='MdbR/viewSets.png'; scrollExpandAll=false;}else{this.src='MdbR/viewAll.png'; scrollExpandAll=true; var iframes = document.getElementsByTagName('iframe');for (var i=0; i<iframes.length; i++)iframes[i].height =  100;}"></image>
+		<div id="fileName">...</div>
+		<div id="dictsP"></div>
+	</div>
+	
+	<div class='defP' id='defP' onscroll='dismiss_menu();'>
+		<div class='def' id='def'></div>
+		<!--iframe name="frame1" src="/content/x/0"></iframe-->
+	</div>
+
+</div>
+
+
+<div id="ListView">
+	<p id="lv"></p>
+	<p id="seekbar_container"></p>
+	<p id="drag_resizer"></p>
+	
+	<div id="wordP" style="">
+		<input id="word" type="text" value="">
+	</div>
+</div>
+
+<div id="jsonid" style="display:none;"></div>
+
+<div id="title_menu">
+	<div class="menu-item" onclick="foldAll()">折叠全部</div>
+	<div class="menu-item" onclick="unFoldAll()">展开全部</div>
+	<div class="menu-item-separator"></div>
+</div>
+
+</body>
+</html>

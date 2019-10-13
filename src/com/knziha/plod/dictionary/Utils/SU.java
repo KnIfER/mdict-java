@@ -17,19 +17,9 @@
 
 package com.knziha.plod.dictionary.Utils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.zip.Adler32;
-import java.util.zip.InflaterOutputStream;
-
-
-/**
- * @author KnIfER
- * @date 2018/05/31
- */
-public class  SU{//StringUtils
+//StringUtils
+public class  SU{
+    public static boolean debug;
 
 	public static String trimStart(String input) {
 		int len = input.length();
