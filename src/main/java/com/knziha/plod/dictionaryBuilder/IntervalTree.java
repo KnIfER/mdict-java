@@ -3,9 +3,7 @@ package com.knziha.plod.dictionaryBuilder;
 
 import java.util.HashMap;
 
-import com.knziha.plod.dictionary.myCpr;
-
-import test.CMN;
+import com.knziha.plod.dictionary.Utils.myCpr;
 
 public class IntervalTree extends ArrayListTree<myCpr<Integer,Integer>>{
 	

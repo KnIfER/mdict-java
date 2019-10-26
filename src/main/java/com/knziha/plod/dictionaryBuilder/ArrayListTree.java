@@ -2,10 +2,7 @@ package com.knziha.plod.dictionaryBuilder;
 
 import java.util.ArrayList;
 
-import com.knziha.plod.dictionary.myCpr;
 import com.knziha.rbtree.RBTNode;
-
-import test.CMN;
 
 public class ArrayListTree<T extends Comparable<T>> {
 	//wonderful!

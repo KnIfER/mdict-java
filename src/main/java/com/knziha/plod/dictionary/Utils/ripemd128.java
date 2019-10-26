@@ -15,7 +15,7 @@
 	Mdict-Java Query Library
 */
 
-package com.knziha.plod.dictionary;
+package com.knziha.plod.dictionary.Utils;
 
 
 import java.io.ByteArrayOutputStream;

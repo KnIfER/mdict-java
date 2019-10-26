@@ -34,15 +34,15 @@ import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
+import com.knziha.plod.dictionary.Utils.Flag;
+import com.knziha.plod.dictionary.Utils.myCpr;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.Utils.IU;
-import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.rbtree.RBTree_additive;
 import org.apache.commons.text.StringEscapeUtils;
-import test.CMN;
 
 
 /**
@@ -128,7 +128,7 @@ public class mdict extends mdBase{
 	}
 
 	//for lv
-	public String getEntryAt(int position,Flag mflag) {
+	public String getEntryAt(int position, Flag mflag) {
 		if(position==-1) return "about:";
 		if(_key_block_info_list==null) read_key_block_info();
 		int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;

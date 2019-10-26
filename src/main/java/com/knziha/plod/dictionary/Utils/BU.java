@@ -17,8 +17,6 @@
 
 package com.knziha.plod.dictionary.Utils;
 
-import com.knziha.plod.dictionary.ripemd128;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;

@@ -1,6 +1,6 @@
 package com.knziha.plod.dictionarymodels;
 
-import com.knziha.plod.dictionary.Flag;
+import com.knziha.plod.dictionary.Utils.Flag;
 
 public class resultRecorderDiscrete {
 

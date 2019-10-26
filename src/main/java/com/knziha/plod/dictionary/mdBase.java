@@ -30,6 +30,7 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
+import com.knziha.plod.dictionary.Utils.myCpr;
 import org.anarres.lzo.*;
 //import org.jvcompress.lzo.MiniLZO;
 //import org.jvcompress.util.MInt;

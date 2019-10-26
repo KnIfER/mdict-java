@@ -31,6 +31,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
+import com.knziha.plod.dictionary.Utils.myCpr;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 

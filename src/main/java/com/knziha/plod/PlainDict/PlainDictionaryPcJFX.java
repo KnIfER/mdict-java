@@ -381,10 +381,8 @@ public class PlainDictionaryPcJFX extends Application {
 		if(PlainDictAppOptions.userPath==null || !new File(PlainDictAppOptions.userPath).exists()) {
 			PlainDictAppOptions.userPath=PlainDictAppOptions.projectPath;
 		}
-		usrHome = new File(PlainDictAppOptions.userPath,".PLOD.plaindictionary");
-		//usrHome.mkdir();
 		PlainDictAppOptions.userPath=null;
-		SU.debug=true;
+		//SU.debug=true;
 	}
 
 
@@ -830,19 +828,21 @@ public class PlainDictionaryPcJFX extends Application {
 		if(opt.GetShowAdvanced())
 			Platform.runLater(() -> clicker1.handle(new VirtualEvent(advancedSearchLabel)));
 
-		//tg
-		//Platform.runLater(() -> clicker1.handle(new VirtualEvent(settings)));
-		new Timer().schedule(new TimerTask() {
-			@Override
-			public void run() {
-				Platform.runLater(() -> {
-					if(searchInPageBox!=null)searchInPageBox.textBox.setText("happy");
-					etSearch.setText("happiness");
-					//clicker1.handle(new ActionEvent(manager,null));
-					//clicker1.handle(new ActionEvent(qiehuanLabel,null));
-				});
-			}
-		},800);
+		if(SU.debug){
+			//t
+			//Platform.runLater(() -> clicker1.handle(new VirtualEvent(settings)));
+			new Timer().schedule(new TimerTask() {
+				@Override
+				public void run() {
+					Platform.runLater(() -> {
+						if(searchInPageBox!=null)searchInPageBox.textBox.setText("happy");
+						etSearch.setText("happiness");
+						//clicker1.handle(new ActionEvent(manager,null));
+						//clicker1.handle(new ActionEvent(qiehuanLabel,null));
+					});
+				}
+			},800);
+		}
 
 
 		server.setOnMirrorRequestListener(uri -> {
@@ -1029,8 +1029,6 @@ public class PlainDictionaryPcJFX extends Application {
 		}
 	}
 
-
-	File usrHome;
 	public static void main(String[] args) {
 		//CMN.show(System.getProperty("java.version"));
 		//1.8.0_171

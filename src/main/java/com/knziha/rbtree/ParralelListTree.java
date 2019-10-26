@@ -2,9 +2,6 @@ package com.knziha.rbtree;
 
 import java.util.ArrayList;
 
-import com.knziha.plod.dictionary.myCpr;
-import com.knziha.rbtree.RBTNode;
-
 import test.CMN;
 
 public class ParralelListTree<T1 extends Comparable<T1>,T2 extends Comparable<T2>> {

@@ -17,7 +17,7 @@ import org.apache.commons.text.StringEscapeUtils;
 
 import com.knziha.plod.dictionary.key_info_struct;
 import com.knziha.plod.dictionary.mdict;
-import com.knziha.plod.dictionary.myCpr;
+import com.knziha.plod.dictionary.Utils.myCpr;
 import com.knziha.plod.dictionary.record_info_struct;
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.Utils.IU;
@@ -84,12 +84,11 @@ public class mdictBuilder{
 		data_tree.insert(new myCprKey<>(key+"[<>]",nullStr));
 		bookTree.put(key, bioc);
 	}
-
-
 	public void append(String key, File inhtml) {
 		data_tree.add(new myCprKey<>(key,nullStr));
 		fileTree.put(key, inhtml);
 	}
+
 	private String constructHeader() {
 		String encoding = _encoding;
 		if(encoding.equals("UTF-16LE"))
@@ -98,7 +97,7 @@ public class mdictBuilder{
 			encoding = "UTF-8";
 		float _version = 2.0f;
 		SimpleDateFormat timemachine = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-		StringBuilder sb = new StringBuilder()
+		StringBuilder sb = new StringBuilder().append(new String(new byte[] {(byte) 0xff,(byte) 0xfe}, StandardCharsets.UTF_16LE))
 				.append("<Dictionary GeneratedByEngineVersion=")//v
 				.append("\"").append(_version).append("\"")
 				.append(" CreationDate=")//v
@@ -125,7 +124,7 @@ public class mdictBuilder{
 				.append(" StyleSheet=")
 				.append("\"").append(_stylesheet).append("\"")
 				.append("/>");
-		return new String(new byte[] {(byte) 0xff,(byte) 0xfe}, StandardCharsets.UTF_16LE)+sb.toString();
+		return sb.toString();
 	}
 
 	public void write(String path) throws IOException {
@@ -195,15 +194,9 @@ public class mdictBuilder{
 
 			if(globalCompressionType==1) {
 				fOut.write(new byte[]{1,0,0,0});
-
 				int in_len = data_raw_out.length;
 				int out_len_preEmpt =  (in_len + in_len / 16 + 64+ 3);//xxx
 				byte[] record_block_data = new byte[out_len_preEmpt];
-
-				//MInt out_len = new MInt();   //CMN.show(":"+in_len+":"+out_len_preEmpt); 字典太小会抛出
-				//MiniLZO.lzo1x_1_compress(data_raw_out, in_len, record_block_data, out_len, dict);
-
-
 				lzo_uintp out_len = new lzo_uintp();
 				new LzoCompressor1x_1().compress(data_raw_out, 0, in_len, record_block_data, 0, out_len);
 				//xxx
