@@ -1,0 +1,28 @@
+.rounded {
+    -fx-border-color: dodgerblue;
+    -fx-border-width: 2px;
+    -fx-border-radius: 15px;
+    -fx-padding: 0px;
+}
+#hiddenSplitter {
+    -fx-background-color: null;
+    -fx-padding: 10px;
+}
+#hiddenSplitter *.split-pane-divider,
+        #hiddenSplitter *.vertical-grabber,
+        #hiddenSplitter *.horizontal-grabber {
+    -fx-background-color: null;
+    -fx-border-color: null;
+    -fx-padding: 5px;
+}
+#hiddenFrame {
+    -fx-background-color: null;
+    -fx-border-color: #6666663f;
+    -fx-border-width: 2px;
+    -fx-border-radius: 2px;
+}
+#hiddenFrame *.split-pane-divider,
+        #hiddenSplitter *.vertical-grabber,
+        #hiddenSplitter *.horizontal-grabber {
+    -fx-background-color: null;
+}
