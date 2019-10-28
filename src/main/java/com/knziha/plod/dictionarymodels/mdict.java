@@ -12,9 +12,10 @@ import java.io.IOException;
  data:2019.10.22
  author:KnIfER
 */
-
-
 public class mdict extends com.knziha.plod.dictionary.mdict {
+	static{
+		System.setProperty("file.encoding", "UTF-8");
+	}
 	public boolean tmpIsFilter;
 	@Deprecated
 	public mdict(){

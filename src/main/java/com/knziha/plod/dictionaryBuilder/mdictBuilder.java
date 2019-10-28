@@ -1,6 +1,7 @@
 package com.knziha.plod.dictionaryBuilder;
 
 import java.io.*;
+import java.io.ByteArrayOutputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -15,10 +16,10 @@ import org.anarres.lzo.LzoCompressor1x_1;
 import org.anarres.lzo.lzo_uintp;
 import org.apache.commons.text.StringEscapeUtils;
 
-import com.knziha.plod.dictionary.key_info_struct;
+import com.knziha.plod.dictionary.Utils.key_info_struct;
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.Utils.myCpr;
-import com.knziha.plod.dictionary.record_info_struct;
+import com.knziha.plod.dictionary.Utils.record_info_struct;
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.rbtree.RBTNode;

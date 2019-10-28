@@ -1,16 +1,11 @@
 <!DOCTYPE html>
 <!--Copyright (c) 2019 Released by KnIfER under the GPL3.0 license based on previous work-->
 <!--Copyright (c) 2018 Released by KnIfER under the MIT license based on: mdict-broswer-->
-<meta name="robots" content="noindex">
 <html>
 <head>
 	<meta name="description" content="MDict JS">
-	<script>
-      window.TextEncoder = window.TextDecoder = null;
-  
-	</script>
-	<script src="MdbR/lib/encoding-indexes.js"></script>
-	<script src="MdbR/lib/encoding.js"></script>
+	<meta name="robots" content="noindex">
+	<meta charset="utf-8">
 	
 	<script src="MdbR/jquery-1.11.3.min.js"></script>
 	<script src="MdbR/mark.js"></script>
@@ -463,6 +458,9 @@
 	  -ms-transform:translateY(-20px) rotate(-90deg) translateY(-50%);
 	  transform:translateY(-20px) rotate(-90deg) translateY(-50%);
 	}
+	.contents {
+	  
+	}
 	</style>
 	
 	<script type="text/javascript">
@@ -574,6 +572,7 @@
 		var displayingMultiSearch=false;
 		
 		var aboutPage;
+		var type_bold;
 		
 		var onmousewheelDown = function(event) {
 			event.preventDefault();
@@ -687,32 +686,25 @@
 		function isMultiSearchView(){
 			return displayingMultiSearch && MultiSearchResult!=undefined;
 		}
-		
-		function isChrome(){
-			if(chrome_==1) return true; if(chrome_==2) return false; if(navigator.userAgent.toLocaleLowerCase().match(/chrome/)) {chrome_=1;return true;}else{chrome_=2;}
-			return false;
-		}
-	
+
 		function reinitIframe3(){
-			//console.log(iframes);
 			for (var i=0; i<iframes.length; i++)
 			try{
-				var bHeight = iframes[i].contentWindow.document.body.clientHeight+65;
 				if(scrollExpandAll){
-					//if(!isChrome()) 
-					iframes[i].scrolling="no";
-					iframes[i].height =  bHeight;
+					/*let's take a step bold.  offsetHeight  clientHeight scrollHeight*/
+					var tbh=iframes[i].contentWindow;
+					if(tbh){
+						tbh = type_bold?(tbh.document.body.clientHeight+65):(tbh.document.body.scrollHeight);
+						iframes[i].scrolling="no";
+						iframes[i].height=tbh;
+					}
 				}else{
-					//if(!isChrome()) 
 					iframes[i].scrolling="yes";
 					iframes[i].height = "100%";// iframes.length==1?:500;
 				}
-				//alert(bHeight);
-				//console.log(bHeight);
-				//console.log(iframes[i].scrolling); offsetHeight  clientHeight
-				//console.log(iframes[i].contentWindow.document.body.scrollHeight);
-			}catch (ex){console.log(ex);}//console.log(ex);
+			}catch (ex){/*console.log(ex);*/}
 		}
+		
 		window.setInterval("reinitIframe3()", 200);
 
 		function ClearAllPages(){
@@ -759,6 +751,8 @@
 			}
 		}
 		
+		/** Multi result format : entry1 \r 0@1@2 & 1@1@2 & 5@1024 \n entry2...
+			where 0@1@2 means contents at position 1 and 2 of dict. no.0 */
 		function processContents(e){
 			var arr = e.split("\r")[1].split("&");
 			for (var i = 0; i < arr.length; i++) {
@@ -771,17 +765,16 @@
 				defP.appendChild(title);
 				
 				var item = document.createElement('iframe');
-				//if(!isChrome()) item.scrolling="no";
 				item.id='md_'+(item.frameAt=currentDing);
 				item.src="\\content\\"+arr[i];
 				item.innerHTML=arr[i];
 				item.width="100%";
 				item.frameBorder=0;
 				item.height=100;
+				item.className='contents';
 				defP.appendChild(item);
 				item.contentWindow.frameAt=i;
 				iframes.push(item);
-				//item.onload=reinitIframe2(currentDict);
 			}
 		}
 
@@ -791,6 +784,7 @@
 			item.innerHTML=e;
 			item.src="\\content\\"+item.innerHTML;
 			item.width="100%";
+			item.className='contents';
 			item.frameBorder=0;
 			defP.appendChild(item);
 			item.contentWindow.frameAt=0;
@@ -819,6 +813,8 @@
 	
 				if(lastDingX!=Number.NaN){
 					currentDict = currentDicts[lastDingX];
+					if(app)
+						app.setLastMd(lastDingX);
 					//if(app) app.log("clicking dict: "+currentDict+currentDict.OldSel);
 				
 					if(currentDict.OldKey){
@@ -975,7 +971,10 @@
 			}
 	
 			});
-	
+			
+			var useagent=navigator.userAgent;
+			console.log(useagent);
+			type_bold = useagent.match(/Chrome/)||useagent.match(/JavaFX\/8.0/);
 			ScanInDicts();
 		}
 	
@@ -1014,6 +1013,20 @@
 			pos=p;
 			//seekBarmy.render();
 			rePopulate();
+		}
+		
+		function setDictAndPos(ding,p){
+			currentDicts[ding].OldSel=ding;
+			lastTarget=null;
+			lastSelection_=p;
+			if(lastDingX!=ding){
+				var e = [];
+				e.name=ding;
+				pengDingPos=p;
+				p2(e);
+			}else{
+				setListPos(p);
+			}
 		}
 	
 		function setCurrMdict(mdict){
@@ -1236,35 +1249,6 @@
 			$('#aboutP')[0].style.display="none";
 		}
 		
-		var oldHeight;
-		function reinitIframe(){
-			for (var i=0; i<iframes.length; i++)
-				try{
-					var bHeight = iframes[i].contentWindow.document.body.scrollHeight;
-					//var dHeight = iframes[i].contentWindow.document.documentElement.scrollHeight;
-					//var height = Math.max(bHeight, dHeight);
-					iframes[i].height =  bHeight;
-					//alert(bHeight);
-					//console.log(bHeight);
-				}catch (ex){}
-		}
-	
-		function reinitIframe2(idid){
-			//alert(item);
-			//https://stackoverflow.com/questions/153152/resizing-an-iframe-based-on-content#answer-701521
-			item = document.getElementById(idid);
-			item.style.height = 'auto';
-			//while(!item.contentWindow){}
-			var bHeight = item.contentWindow.document.body.offsetHeight;
-			//var dHeight = iframes[i].contentWindow.document.documentElement.offsetHeight;
-			//var height = Math.max(bHeight, dHeight);
-	
-			item.style.height =  (bHeight+80)+"px";
-			//iframes[i].height =  bHeight;
-			//alert(bHeight);
-			console.log(bHeight);
-		}
-
 		window.oncontextmenu = function(e){
 			dismiss_menu();
 			if(toastToken!=-1)
@@ -1498,12 +1482,10 @@
 	</script>
 	
 	
-	<link rel="stylesheet" type="text/css" href="">
-	<meta charset="utf-8">
 	<title>平典 · MDict Browser</title>
 
 </head>
-<!------------------------------------------------------------------>
+<!--一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一-->
 <body id="body_" onload="Initialize()">
 
 
@@ -1548,7 +1530,7 @@
 	<div id="rightP" onclick="do_showAbout(1)"> <a id="right"></a> </div>
 	<div id="closeP" onclick="closeAbout()"> <a id="close"></a> </div>
 </div>
-<!------------------------------------------------------------------>
+<!--一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一一-->
 <div id="title_menu" class='ctx_menu'>
 	<div class="menu_item" onclick="foldAll()">折叠全部</div>
 	<div class="menu_item" onclick="unFoldAll()">展开全部</div>

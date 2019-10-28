@@ -34,15 +34,13 @@ import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
-import com.knziha.plod.dictionary.Utils.Flag;
-import com.knziha.plod.dictionary.Utils.myCpr;
+import com.knziha.plod.dictionary.Utils.*;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 
-import com.knziha.plod.dictionary.Utils.BU;
-import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.rbtree.RBTree_additive;
 import org.apache.commons.text.StringEscapeUtils;
+import test.CMN;
 
 
 /**
@@ -65,10 +63,9 @@ public class mdict extends mdBase{
 	public final static Pattern markerReg = Pattern.compile("`([\\w\\W]{1,3}?)`");// for `1` `2`...
 	private final static String linkRenderStr = "@@@LINK=";
 
-	public mdictRes mdd;
+	protected ArrayList<mdictRes> mdd;
 
 	public String _Dictionary_fName;
-	public String _Dictionary_Name;
 	public String _Dictionary_fSuffix;
 
 	public boolean getIsDedicatedFilter(){
@@ -102,24 +99,53 @@ public class mdict extends mdBase{
 			_Dictionary_fSuffix = _Dictionary_fName.substring(tmpIdx+1);
 			_Dictionary_fName = _Dictionary_fName.substring(0, tmpIdx);
 		}
+		// ![0] load options
+		ScanSettings();
+		// ![1] load mdds
 		String fnTMP = f.getName();
 		File p =f.getParentFile();
 		if(p!=null) {
-			File f2 = new File(p.getAbsolutePath()+"/"+fnTMP.substring(0,fnTMP.lastIndexOf("."))+".mdd");
-			if(f2.exists()){
-				mdd=new mdictRes(f2.getAbsolutePath());
+			String fname = fnTMP;
+			int idx = fnTMP.lastIndexOf(".");
+			if(idx!=-1){
+				fname=fnTMP.substring(0,idx);
 			}
-			if(mdd==null) {
-				if(_header_tag.containsKey("SharedMdd")) {
-					File SharedMddF=new File(f.getParentFile(),_header_tag.get("SharedMdd")+".mdd");
-					if(SharedMddF.exists())
-						mdd=new mdictRes(SharedMddF.getAbsolutePath());
+			File f2 = new File(p.getAbsolutePath(), fname+".mdd");
+			if(f2.exists()){
+				mdd = new ArrayList<>();
+				mdd.add(new mdictRes(f2.getAbsolutePath()));
+				int cc=1;
+				while((f2 = new File(p.getAbsolutePath(), fname+"."+(cc++)+".mdd")).exists()){
+					mdd.add(new mdictRes(f2.getAbsolutePath()));
 				}
 			}
+			if(_header_tag.containsKey("SharedMdd")) {
+				//File SharedMddF=new File(f.getParentFile(),_header_tag.get("SharedMdd")+".mdd");
+				//if(SharedMddF.exists())
+				//	mdd=new mdictRes(SharedMddF.getAbsolutePath());
+			}
 		}
-		if(_header_tag.containsKey("Title"))
-			_Dictionary_Name=_header_tag.get("Title");
 		calcFuzzySpace();
+	}
+
+	public byte[] getResourceByKey(String key) {
+		if(mdd!=null && mdd.size()>0){
+			for(mdictRes mddTmp:mdd){
+				int idx = mddTmp.lookUp(key);
+				if(idx>=0) {
+					try {
+						return mddTmp.getRecordAt(idx);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				else CMN.Log("chrochro inter_ key is not find:",key, idx);
+			}
+		}
+		return null;
+	}
+
+	protected void ScanSettings() {
 
 	}
 
@@ -137,9 +163,8 @@ public class mdict extends mdBase{
 			mflag.data = new String(infoI.headerKeyText,_charset);
 		else
 			mflag.data = null;
-		prepareItemByKeyInfo(infoI,blockId,null);
 		//TODO null pointer error
-		return new String(infoI_cache_.keys[(int) (position-infoI.num_entries_accumulator)],_charset);
+		return new String(prepareItemByKeyInfo(infoI,blockId,null).keys[(int) (position-infoI.num_entries_accumulator)],_charset);
 	}
 
 
@@ -433,6 +458,8 @@ public class mdict extends mdBase{
 				sb.append("<HR>");
 			c++;
 		}
+		sb.append("<div class='bd_body'/>");
+		if(mdd!=null) sb.append("<div class='MddExist'/>");
 		return processStyleSheet(sb.toString(), positions[0]);
 	}
 
@@ -450,20 +477,20 @@ public class mdict extends mdBase{
 	}
 
 	public String getRecordAt(int position) throws IOException {
-		if(record_block_==null)
+		if(maxDecompressedSize==0)
 			decode_record_block_header();
 		if(position<0||position>=_num_entries) return null;
 		int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
 		key_info_struct infoI = _key_block_info_list[blockId];
 
 		//准备
-		prepareItemByKeyInfo(infoI,blockId,null);
-		//String[] key_list = infoI_cache_.keys;
+		cached_key_block infoI_cache = prepareItemByKeyInfo(infoI, blockId, null);
+		//String[] key_list = infoI_cache.keys;
 
 		//decode record block
 		// actual record block data
 		int i = (int) (position-infoI.num_entries_accumulator);
-		Integer Rinfo_id = reduce(infoI_cache_.key_offsets[i],0,_record_info_struct_list.length);//accumulation_RecordB_tree.xxing(new mdictRes.myCpr(,1)).getKey().value;//null 过 key前
+		Integer Rinfo_id = reduce(infoI_cache.key_offsets[i],0,_record_info_struct_list.length);//accumulation_RecordB_tree.xxing(new mdictRes.myCpr(,1)).getKey().value;//null 过 key前
 		record_info_struct RinfoI = _record_info_struct_list[Rinfo_id];
 
 		byte[] record_block = prepareRecordBlock(RinfoI,Rinfo_id);
@@ -471,16 +498,16 @@ public class mdict extends mdBase{
 
 		// split record block according to the offset info from key block
 		//String key_text = key_list[i];
-		long record_start = infoI_cache_.key_offsets[i]-RinfoI.decompressed_size_accumulator;
+		long record_start = infoI_cache.key_offsets[i]-RinfoI.decompressed_size_accumulator;
 		long record_end;
 		if (i < infoI.num_entries-1){
-			record_end = infoI_cache_.key_offsets[i+1]-RinfoI.decompressed_size_accumulator;
+			record_end = infoI_cache.key_offsets[i+1]-RinfoI.decompressed_size_accumulator;
 		}//TODO construct a margin checker
 		else{
 			if(blockId+1<_key_block_info_list.length) {
 				prepareItemByKeyInfo(null,blockId+1,null);//没办法只好重新准备一个咯
 				//难道还能根据text末尾的0a 0d 00来分？不大好吧、
-				record_end = infoI_cache_.key_offsets[0]-RinfoI.decompressed_size_accumulator;
+				record_end = infoI_cache.key_offsets[0]-RinfoI.decompressed_size_accumulator;
 			}else
 				record_end = rec_decompressed_size;
 			//SU.Log(record_block.length+":"+compressed_size+":"+decompressed_size);
@@ -526,7 +553,8 @@ public class mdict extends mdBase{
 				data_in.read(_key_block_compressed, 0,(int) compressedSize);
 				data_in.close();
 
-				switch (_key_block_compressed[0]|_key_block_compressed[1]<<8|_key_block_compressed[2]<<16|_key_block_compressed[2]<<32){
+				//解压开始
+				switch (_key_block_compressed[0]|_key_block_compressed[1]<<8|_key_block_compressed[2]<<16|_key_block_compressed[3]<<32){
 					case 0://no compression
 						System.arraycopy(_key_block_compressed, 8, key_block, 0,(int) (compressedSize-8));
 					case 1:
@@ -570,9 +598,10 @@ public class mdict extends mdBase{
 		if(matcher.length==2)
 			matcher[1] = flowerSanLieZhi(upperKey);
 
-		if(_key_block_info_list==null) read_key_block_info();
+		if(_key_block_info_list==null)
+			read_key_block_info();
 
-		if(record_block_==null)
+		if(maxDecompressedSize==0)
 			decode_record_block_header();
 
 		fetch_keyBlocksHeaderTextKeyID();
@@ -634,22 +663,19 @@ public class mdict extends mdBase{
 								data_in.read(record_block_compressed,0, compressed_size);//,0, compressed_size
 
 								//解压开始
-								if(compareByteArrayIsPara(record_block_compressed,0,_zero4)){
-									System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
+								switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
+									case 0:
+										System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
+									case 1:
+										new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
+									break;
+									case 2:
+										Inflater inf = new Inflater();
+										inf.setInput(record_block_compressed,8,compressed_size-8);
+										int ret = inf.inflate(record_block_,0,decompressed_size);
+									break;
 								}
-								else if(compareByteArrayIsPara(record_block_compressed,0,_1zero3)){
-									//MInt len = new MInt((int) decompressed_size);
-									//byte[] arraytmp = new byte[ compressed_size];
-									//System.arraycopy(record_block_compressed, 8, arraytmp, 0, (compressed_size-8));
-									//MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block_,len);
-									new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
-								}
-								else if(compareByteArrayIsPara(record_block_compressed,0,_2zero3)){
-									Inflater inf = new Inflater();
-									inf.setInput(record_block_compressed,8,compressed_size-8);
-									int ret = inf.inflate(record_block_,0,decompressed_size);
-									//SU.Log("asdasd"+ret);
-								}
+
 								//内容块解压完毕
 								long off = RinfoI.decompressed_size_accumulator;
 								int key_block_id = binary_find_closest(keyBlocksHeaderTextKeyID,off);
@@ -933,19 +959,20 @@ public class mdict extends mdBase{
 								//int adler32 = getInt(_key_block_compressed_many[(int) (startI+4)],_key_block_compressed_many[(int) (startI+5)],_key_block_compressed_many[(int)(startI+6)],_key_block_compressed_many[(int) (startI+7)]);
 
 								//SU.Log(key_block.length+";;"+infoI.key_block_decompressed_size+";;"+maxDecomKeyBlockSize);
-								if(compareByteArrayIsPara(_key_block_compressed_many,startI,_zero4)){
-									System.arraycopy(_key_block_compressed_many, (startI+8), key_block, 0, (int)(_key_block_size-8));
-								}else if(compareByteArrayIsPara(_key_block_compressed_many,startI,_1zero3))
-								{
-									new LzoDecompressor1x().decompress(_key_block_compressed_many, startI+8, compressedSize-8, key_block, 0,new lzo_uintp());
-								}
-								else if(compareByteArrayIsPara(_key_block_compressed_many,startI,_2zero3))
-								{
-									Inflater inf = new Inflater();
-									inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
-									try {
-										int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
-									} catch (DataFormatException e) {e.printStackTrace();}
+								//解压开始
+								switch (_key_block_compressed_many[startI]|_key_block_compressed_many[startI+1]<<8|_key_block_compressed_many[startI+2]<<16|_key_block_compressed_many[startI+3]<<32){
+									case 0:
+										System.arraycopy(_key_block_compressed_many, (startI+8), key_block, 0, (int)(_key_block_size-8));
+									case 1:
+										new LzoDecompressor1x().decompress(_key_block_compressed_many, startI+8, compressedSize-8, key_block, 0,new lzo_uintp());
+									break;
+									case 2:
+										Inflater inf = new Inflater();
+										inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
+										try {
+											int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
+										} catch (DataFormatException e) {e.printStackTrace();}
+									break;
 								}
 								find_in_keyBlock(keyPattern, key_block,infoI,matcher,SelfAtIdx,it);
 							}
@@ -967,9 +994,10 @@ public class mdict extends mdBase{
 		//System.gc();
 	}
 
-
-	HashSet<Integer> miansi = new HashSet<>();//. is 免死金牌  that exempt you from death for just one time
-	HashSet<Integer> yueji = new HashSet<>();//* is 越级天才, i.e., super super genius leap
+	/** .is 免死金牌  that exempt you from death for just one time */
+	HashSet<Integer> miansi = new HashSet<>();
+	/** *is 越级天才, i.e., super super genius leap */
+	HashSet<Integer> yueji = new HashSet<>();
 
 	int flowerIndexOf(byte[] source, int sourceOffset, int sourceCount, byte[][][] matchers,int marcherOffest, int fromIndex)
 	{
@@ -1454,7 +1482,9 @@ public class mdict extends mdBase{
 
 
 
-	public String processKey(byte[] in){ return processMyText(new String(in,_charset));  }
+	public String processKey(byte[] in){
+		return processMyText(new String(in,_charset));
+	}
 
 
 
@@ -1550,7 +1580,7 @@ public class mdict extends mdBase{
 		DecimalFormat numbermachine = new DecimalFormat("#.00");
 		return new StringBuilder()
 				.append("Engine Version: ").append(_version).append("<BR>")
-				.append("CreationDate: ").append((_header_tag.containsKey("CreationDate")?_header_tag.get("CreationDate"):"UNKNOWN")).append("<BR>")
+				.append("CreationDate: ").append(_header_tag.get("CreationDate")).append("<BR>")
 				.append("Charset &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; : ").append(this._encoding).append("<BR>")
 				.append("Num Entries: ").append(_num_entries).append("<BR>")
 				.append("Num Key Blocks: ").append(_num_key_blocks).append("<BR>")
@@ -1560,8 +1590,8 @@ public class mdict extends mdBase{
 				.append("Compact  排序: ").append(isCompact).append("<BR>")
 				.append("StripKey 排序: ").append(isStripKey).append("<BR>")
 				.append("Case Sensitive: ").append(isKeyCaseSensitive).append("<BR>")
-				.append(mdd==null?"&lt;no assiciated mdRes&gt;":("MdResource count "+mdd.getNumberEntries()+","+mdd._encoding+","+mdd._num_key_blocks+","+mdd._num_record_blocks)).append("<BR>")
-				.append("Internal Name: ").append(_Dictionary_Name).append("<BR>")
+				//.append(mdd==null?"&lt;no assiciated mdRes&gt;":("MdResource count "+mdd.getNumberEntries()+","+mdd._encoding+","+mdd._num_key_blocks+","+mdd._num_record_blocks)).append("<BR>")
+				.append("Internal Name: ").append(_header_tag.get("Title")).append("<BR>")
 				.append("Path: ").append(getPath()).toString();
 	}
 

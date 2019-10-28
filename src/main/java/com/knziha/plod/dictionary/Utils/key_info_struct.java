@@ -15,7 +15,7 @@
 	Mdict-Java Query Library
 */
 
-package com.knziha.plod.dictionary;
+package com.knziha.plod.dictionary.Utils;
 /*store key_block's summary*/
 public class key_info_struct{
 	public key_info_struct(byte[] headerKeyText, byte[] tailerKeyText,

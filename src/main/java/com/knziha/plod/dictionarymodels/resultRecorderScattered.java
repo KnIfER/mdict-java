@@ -8,13 +8,13 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 	
 	private List<mdict> md;
 	private WebEngine engine;
-	
 	private int[] firstLookUpTable;
-	
 	private int size=0;
 	
 	@Override
 	public void invalidate() {
+		if(md.size()==0)
+			return;
 		if(firstLookUpTable.length<md.size())
 			firstLookUpTable = new int[md.size()];
 		
@@ -121,34 +121,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 				continue;
 			if(pos-idxCount<max) {
 				int renderIdx = mdtmp.combining_search_tree2[ti].get(pos-idxCount);
-				engine.executeScript("setListPos("+renderIdx+"); pendingRendering="+renderIdx+";pendingHL='"+currentSearchTerm+"'");
-				if(false)
-				engine.executeScript("if(defP.hasChildNodes()) {\r\n" + 
-						"var childs = defP.childNodes,\r\n" + 
-						"ln = childs.length;\r\n" + 
-						"for (var i = 0; i < ln; i++) {\r\n" + 
-						"defP.removeChild(childs[0]);\r\n" + 
-						"}\r\n" + 
-						"}\r\n" + 
-						"\r\n" + 
-						"var itemi = document.createElement('p');\r\n" + 
-						"itemi.height='100px';\r\n" + 
-						"itemi.width='100%';\r\n" + 
-						"itemi.style.background='#2b4381';\r\n" + 
-						"itemi.style.marginLeft=0;\r\n" + 
-						"itemi.innerText='"+mdtmp._Dictionary_fName+"';\r\n" + 
-						"itemi.style.color='#ffffff';\r\n" + 
-						"defP.appendChild(itemi);\r\n" + 
-						"\r\n" + 
-						"\r\n" + 
-						"var item = document.createElement('iframe');\r\n" + 
-						"item.id='md_'+"+Rgn+";\r\n" + 
-						"item.src='\\\\content\\\\'+"+Rgn+"+'@'+"+mdtmp.combining_search_tree2[ti].get(pos-idxCount)+";\r\n" + 
-						"item.innerText="+Rgn+"+'@'+item.src;\r\n" + 
-						"item.width='100%';\r\n" + 
-						"item.frameBorder=0;\r\n" + 
-						"defP.appendChild(item);");
-				//mdtmp.getEntryAt(mdtmp.combining_search_tree2[ti].get(pos-idxCount),mflag);
+				engine.executeScript("setDictAndPos("+Rgn+","+renderIdx+");ClearAllPages();processContents('\\r"+Rgn+"@"+renderIdx+"');pendingHL='"+currentSearchTerm+"'");
 				return;
 			}
 			idxCount+=max;

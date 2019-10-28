@@ -31,7 +31,9 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
+import com.knziha.plod.dictionary.Utils.key_info_struct;
 import com.knziha.plod.dictionary.Utils.myCpr;
+import com.knziha.plod.dictionary.Utils.record_info_struct;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 
@@ -63,7 +65,7 @@ public class mdictRes extends mdBase{
    
     public byte[] getRecordAt(int position) throws IOException {//异步
     	if(position<0||position>=_num_entries) return null;
-    	if(record_block_==null)
+		if(maxDecompressedSize==0)
     		decode_record_block_header();
     	
         int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
@@ -194,8 +196,7 @@ public class mdictRes extends mdBase{
 		if(_key_block_info_list==null) read_key_block_info();
     	int blockCounter = 0;
     	for(key_info_struct infoI:_key_block_info_list){
-    		prepareItemByKeyInfo(infoI,blockCounter,null);
-    		for(byte[] entry:infoI_cache_.keys){
+    		for(byte[] entry:prepareItemByKeyInfo(infoI,blockCounter,null).keys){
     			//CMN.show(entry);
     			System.out.println(new String(entry,_charset));
     		}
@@ -269,7 +270,7 @@ public class mdictRes extends mdBase{
     //解压
     public static byte[] zlib_decompress(byte[] encdata,int offset) {
 	    try {
-			    ByteArrayOutputStream out = new ByteArrayOutputStream(); 
+			    ByteArrayOutputStream out = new ByteArrayOutputStream();
 			    InflaterOutputStream inf = new InflaterOutputStream(out); 
 			    inf.write(encdata,offset, encdata.length-offset); 
 			    inf.close(); 
@@ -281,7 +282,7 @@ public class mdictRes extends mdBase{
     }
     public static byte[] zlib_decompress(byte[] encdata,int offset,int size) {
 	    try {
-			    ByteArrayOutputStream out = new ByteArrayOutputStream(); 
+			    ByteArrayOutputStream out = new ByteArrayOutputStream();
 			    InflaterOutputStream inf = new InflaterOutputStream(out); 
 			    inf.write(encdata,offset, size); 
 			    inf.close(); 
@@ -299,7 +300,7 @@ public class mdictRes extends mdBase{
         decompresser.reset();  
         decompresser.setInput(data,offset,data.length-offset);  
 
-        ByteArrayOutputStream o = new ByteArrayOutputStream(data.length);  
+        ByteArrayOutputStream o = new ByteArrayOutputStream(data.length);
         try {  
             byte[] buf = new byte[1024];  
             while (!decompresser.finished()) {  
@@ -325,7 +326,7 @@ public class mdictRes extends mdBase{
         if (bytes == null || bytes.length == 0) {  
             return null;  
         }  
-        ByteArrayOutputStream out = new ByteArrayOutputStream();  
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayInputStream in = new ByteArrayInputStream(bytes,offset, bytes.length-offset);  
         try {  
             GZIPInputStream ungzip = new GZIPInputStream(in);  

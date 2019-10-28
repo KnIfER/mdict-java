@@ -47,7 +47,7 @@ public class  BU{//byteUtils
     @Deprecated
     public static byte[] zlib_decompress(byte[] encdata,int offset,int ln) {
 	    try {
-			    ByteArrayOutputStream out = new ByteArrayOutputStream(); 
+			    ByteArrayOutputStream out = new ByteArrayOutputStream();
 			    InflaterOutputStream inf = new InflaterOutputStream(out); 
 			    inf.write(encdata,offset, ln); 
 			    inf.close(); 

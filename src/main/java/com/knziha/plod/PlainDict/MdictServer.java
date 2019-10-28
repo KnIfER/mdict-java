@@ -18,6 +18,8 @@ package com.knziha.plod.PlainDict;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.knziha.plod.dictionary.Utils.SU;
@@ -25,16 +27,24 @@ import com.knziha.plod.dictionarymodels.mdict;
 import com.knziha.rbtree.RBTree_additive;
 import com.knziha.rbtree.additiveMyCpr1;
 
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.AudioClip;
+
 import org.nanohttpd.protocols.http.NanoHTTPD;
 import org.nanohttpd.protocols.http.IHTTPSession;
+import org.nanohttpd.protocols.http.content.CookieHandler;
+import org.nanohttpd.protocols.http.request.Method;
 import org.nanohttpd.protocols.http.response.Response;
 import org.nanohttpd.protocols.http.response.Status;
+import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
+
+
+//import fi.iki.elonen.NanoHTTPD;
+//import fi.iki.elonen.NanoHTTPD.Response.Status;
+
+import org.xiph.speex.ByteArrayRandomOutputStream;
+import org.xiph.speex.manyclass.JSpeexDec;
 import test.CMN;
 
-import static org.nanohttpd.protocols.http.response.Response.newChunkedResponse;
-import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
 
 /**
  * Mdict Server
@@ -49,8 +59,6 @@ public class MdictServer extends NanoHTTPD {
 	String baseHtml;
     public ArrayList<mdict> md = new ArrayList<>();
 	public ArrayList<mdict> currentFilter = new ArrayList<>();
-    mdict currentDictionary;
-    public int adapter_idx;
     int currentPage=0;
     RBTree_additive combining_search_tree = new RBTree_additive();
     StringBuilder sb = new StringBuilder();
@@ -62,7 +70,7 @@ public class MdictServer extends NanoHTTPD {
 	
     @Override
     public Response serve(IHTTPSession session) {
-    	int adapter_idx_ = adapter_idx;
+    	int adapter_idx_ = 0;
     	String uri = session.getUri();
 		//CMN.Log("serving with honor : ", uri);
     	Map<String, String> headerTags = session.getHeaders();
@@ -130,7 +138,7 @@ public class MdictServer extends NanoHTTPD {
     			if(i!=combining_search_result.size()-1)
     				sb_.append("\n");
     		}
-    		//CMN.show(sb_.toString());
+    		CMN.show(sb_.toString());
     		return newFixedLengthResponse(sb_.toString());
     	}
     	////////////////////////////////////////////////////////
@@ -168,15 +176,15 @@ public class MdictServer extends NanoHTTPD {
     	
     	try {
         	if(uri.toLowerCase().endsWith(".js")) {
-				//Log.e("candi",url);
-				File candi = new File(new File(md.get(adapter_idx).getPath()).getParentFile(),new File(uri).getName());
+				//CMN.Log("candi",uri);
+				File candi = new File(new File(md.get(adapter_idx_).getPath()).getParentFile(),new File(uri).getName());
 				if(candi.exists())
 					return newFixedLengthResponse(Status.OK,"application/x-javascript",  new FileInputStream(candi), candi.length());
 					
 			}
         	else if(uri.toLowerCase().endsWith(".css")) {
 				//Log.e("candi",url);
-				File candi = new File(new File(md.get(adapter_idx).getPath()).getParentFile(),new File(uri).getName());
+				File candi = new File(new File(md.get(adapter_idx_).getPath()).getParentFile(),new File(uri).getName());
 				//CMN.show("candi"+candi.getAbsolutePath());
 				if(candi.exists()) {
 					//CMN.show(uri+"```");
@@ -248,55 +256,30 @@ public class MdictServer extends NanoHTTPD {
     		
     		//adapter_idx_ = 
     	}
-		
-    	if(false)
-    	if(uri.contains(".mp3"))
-    	if(usr.contains("Java/") || !usr.contains("Java")){
-    		//return_file_stream to java client,or the Chrome browser.
-			CMN.show("returning file stream to java...");
-    		try {
-				return newFixedLengthResponse(Status.OK,"*/*", new FileInputStream("F:\\123.mp3"),new File("F:\\123.mp3").length());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-    	
-    	//CMN.show("\n\n");for (Map.Entry<String, String> entry : headerTags.entrySet())  System.out.println(entry.getKey() + " : " + entry.getValue()); 
 
-		if(uri.equals("/sound/"))
-    		return emptyResponse;
-    	
-    	if(uri.contains(".mp3") && uri.startsWith("/sound/")) {
-			CMN.show("-sound requset format: "+Acc+" to"+uri);
+    	if(uri.startsWith("/sound/")) {
+			CMN.show("-sound requset format: "+Acc+" to "+uri);
 			if(false && usr.contains("Java")) {
 				uri=uri.substring("/sound".length());
-				if(mediaPlayer!=null)
-            		mediaPlayer.stop();
-				mediaPlayer = new MediaPlayer(new Media("http://127.0.0.1:8080/JAVAUDIO"+uri));
+				CMN.Log("playing right on the java-client");
+				if(audioClip!=null)
+					audioClip.stop();
+				audioClip = new AudioClip("http://127.0.0.1:8080/JAVAUDIO"+uri);
+				audioClip.play();
 				return emptyResponse;
 			}
-			else {
-				if(Acc.contains("text/html,application/xhtml+xml")) {
-					//页面跳转拦截
-					//intercepting page loading
-					//CMN.show("eval href sound...");
-					//browser.executeJavaScript("new Audio('"+"\\124.mp3"+"').play();");
-					//return newFixedLengthResponse(Status.OK,"*/*", new FileInputStream("F:\\123.mp3"),new File("F:\\123.mp3").length());
-					
-	            	//mediaPlayer.play();
-	        		return emptyResponse;
-				}
-			}
+			key=uri.substring(6).replace("/","\\");
     	}
     	if(uri.startsWith("/JAVAUDIO/"))
-			uri=uri.substring("/JAVAUDIO".length());
+			key=uri.substring(9).replace("/","\\");
     		
     	//headerTags.get("accept").contains("text/html,application/xhtml+xml,application/xml;") && 
-    	if(uri.equals("/")){												//new Audio('"+"\\sound\\asd.mp3"+"').play()
+    	if(uri.equals("/")){
+			CMN.show("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
+    		//new Audio('"+"\\sound\\asd.mp3"+"').play()
             //return newFixedLengthResponse(msg + "<img src='\\wordsmyth2018.png'></img><a href='\\sound\\asd.mp3'>asdasd</a></body></html>\n");
             //return newFixedLengthResponse("<img src='\\wordsmyth2018.png'></img>  <a onclick=\"function(){new Audio('\\sound\\123.mp3').play();}\" href='\\sound\\asd.mp3'>asdasd</a> ") ;
             //return newFixedLengthResponse("<img src='\\wordsmyth2018.png'></img>  <a onclick=\"new Audio('https://www.collinsdictionary.com/sounds/6/669/66956/66956.mp3').play();\">asdasd</a> ");
-            CMN.show("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
     		try {
             	//CMN.show(md.getRecordAt(currentPage));
             	if(true || baseHtml==null) {//rrr
@@ -317,8 +300,9 @@ public class MdictServer extends NanoHTTPD {
 				e.printStackTrace();
 			}
     	}
-		if(uri.startsWith("/about/")) {//  /content/1@6
-			//CMN.Log("about received : ", uri);
+
+    	if(uri.startsWith("/about/")) {
+    		//CMN.Log("about received : ", uri);//  /content/1@6
 			uri = uri.substring(7);
 			try {
 				mdict mdTmp = md.get(Integer.parseInt(uri));
@@ -326,8 +310,8 @@ public class MdictServer extends NanoHTTPD {
 			} catch (Exception ignored) { }
 		}
 
-    	if(uri.startsWith("/content/")) {//  /content/1@6
-			//CMN.Log("content received : ", uri);
+    	if(uri.startsWith("/content/")) {
+    		//CMN.Log("content received : ", uri); //  /content/1@6
     		uri = uri.substring(9);
     		String[] list = uri.split("@");
     		if(!list[0].equals("")) {
@@ -349,19 +333,11 @@ public class MdictServer extends NanoHTTPD {
     	
     	
 
-    	byte[] restmp = null;
-    	if(md.get(adapter_idx_).mdd!=null)
-		try {
-    		int idx = md.get(adapter_idx_).mdd.lookUp(key);
-    		if(idx==-1) { 
-        		CMN.show("chrochro inter_ key is not find: "+key);
-    		}else
-    			restmp = md.get(adapter_idx_).mdd.getRecordAt(idx);
-		} catch (IOException e1) {
-			e1.printStackTrace();
+    	byte[] restmp = md.get(adapter_idx_).getResourceByKey(key);
+
+    	if(restmp==null){
+			return emptyResponse;
 		}
-    	if(restmp==null)
-    		return emptyResponse;
     	
     	if(Acc.contains("javascript/") || uri.endsWith(".js")) {
 			return newFixedLengthResponse(Status.OK,"application/x-javascript", 
@@ -376,11 +352,28 @@ public class MdictServer extends NanoHTTPD {
     	}
     	
     	if(Acc.contains("/mp3") || uri.endsWith(".mp3")) {
-    		CMN.show("mp3"+uri);
-			return newFixedLengthResponse(Status.OK,"audio/mpeg", 
+    		CMN.show("mp3 : "+uri);
+			return newFixedLengthResponse(Status.OK,"audio/mpeg",
 					new ByteArrayInputStream(restmp),
 					restmp.length);
     	}
+
+    	if(uri.endsWith(".spx")) {
+			CMN.show("spx : "+uri);
+			InputStream rawIn = new ByteArrayInputStream(restmp);
+			ByteArrayRandomOutputStream bos = new ByteArrayRandomOutputStream();
+			JSpeexDec decoder = new JSpeexDec();
+			try {
+				decoder.decode(new DataInputStream(new ByteArrayInputStream(restmp)) , bos, JSpeexDec.FILE_FORMAT_WAVE);
+				CMN.Log("success");
+				return newFixedLengthResponse(Status.OK,"text/x-wav", new ByteArrayInputStream(bos.toByteArray()) , bos.size());
+				//return newFixedLengthResponse(Status.OK,"audio/x-wav", new FileInputStream("D:\\assets\\mdicts\\朗文精排版\\GB_ld5_happy_eater3.wav") , new File("D:\\assets\\mdicts\\朗文精排版\\GB_ld5_happy_eater3.wav").length());
+				//return newFixedLengthResponse(Status.OK,"audio/*", rawIn , restmp.length);
+			} catch (Exception e) { e.printStackTrace(); }
+			return newFixedLengthResponse(Status.OK,"audio/mpeg", rawIn , restmp.length);
+    	}
+
+
     	
     	if(Acc.contains("image/") ) {
 			return newFixedLengthResponse(Status.OK,"image/*", 
@@ -416,7 +409,7 @@ public class MdictServer extends NanoHTTPD {
 
 		//return "<!DOCTYPE html><html><head>    <script>var cmy = function (ev) {var ev = ev || window.event; var target=ev.target || ev.srcElement; if(target.nodeName.toLocaleLowerCase() == 'a'){href=target.href;if (href) {/*处理页内跳转 alert(word); */idx = href.indexOf('entry/#');var word;if(idx!=-1){word = href.substring(idx+7);target.href='entry://#'+word;}else if(href.substring(0,9)=='entry://#')word=href.substring(9);if(word){console.log(word);alert(parent.document.getElementById('md_'+"+dictIdx+"));var toPos; var ele=document.getElementsByName(word); if(ele&&ele.length>0)toPos=ele[0].getBoundingClientRect().top;else {ele=document.getElementById(word); if(ele)toPos=ele.getBoundingClientRect().top; } alert(toPos); if(toPos)parent.document.getElementById('md_'+"+dictIdx+").scrollTop=0+'px';scrollBy(0,toPos);   }} } } </script>             <base href=\"/base/"+dictIdx+"/\" /> <base target=\"_self\" /><script charset=\"utf-8\" type=\"text/javascript\" language=\"javascript\">function loadFragmentInToElement(fragment_url, element) { var xmlhttp = new XMLHttpRequest(\"\"); xmlhttp.open(\"POST\", fragment_url); xmlhttp.onreadystatechange = function() { if(xmlhttp.readyState == 4 && xmlhttp.status == 200) { var txtconent = xmlhttp.responseText; element.innerHTML = txtconent; } }; xmlhttp.send(null); };</script></head><body    onclick=\"cmy();\"  onload=\"var val=this.document.body.innerHTML;if(new RegExp('^@@@LINK=').test(val)) loadFragmentInToElement('\\@@@\\\\'+val.substring(8), this.document.body);\">"+record.replace("sound://", "sound/").replace("entry://", "entry/")+"</body></html>";
     	//return "<!DOCTYPE html><html><head>    <script>var cmy = function (ev) {var ev = ev || window.event; var target=ev.target || ev.srcElement; if(target.nodeName.toLocaleLowerCase() == 'a'){href=target.href;if (href) {/*处理页内跳转 alert(word); */idx = href.indexOf('entry/#');var word;if(idx!=-1){word = href.substring(idx+7);target.href='entry://#'+word;}else if(href.substring(0,9)=='entry://#')word=href.substring(9);if(word){console.log(word);    window.location.href.replace('#'+word);     alert(window.location.href); }} } } </script>             <base href=\"/base/"+dictIdx+"/\" /> <base target=\"_self\" /><script charset=\"utf-8\" type=\"text/javascript\" language=\"javascript\">function loadFragmentInToElement(fragment_url, element) { var xmlhttp = new XMLHttpRequest(\"\"); xmlhttp.open(\"POST\", fragment_url); xmlhttp.onreadystatechange = function() { if(xmlhttp.readyState == 4 && xmlhttp.status == 200) { var txtconent = xmlhttp.responseText; element.innerHTML = txtconent; } }; xmlhttp.send(null); };</script></head><body    onclick=\"cmy();\"  onload=\"var val=this.document.body.innerHTML;if(new RegExp('^@@@LINK=').test(val)) loadFragmentInToElement('\\@@@\\\\'+val.substring(8), this.document.body);\">"+record.replace("sound://", "sound/").replace("entry://", "entry/")+"</body></html>";
-		MdPageBuilder.append("<!DOCTYPE html><html><head> <style>mark {background: yellow; } mark.current { background: orange; } .highlight { background-color: yellow }</style>")
+		MdPageBuilder.append("<!DOCTYPE html><html><head> <style>mark {background: yellow; } mark.current { background: orange; } .highlight { background-color: yellow; } html, body {-moz-user-select:text;-webkit-user-select:text;-ms-user-select:text;-khtml-user-select:text;user-select:text; }</style>")
 				//.append("<script src=\"/MdbR/mark.js\"></script>")
 				.append("<script> ")
 				.append(" window.onclick=function(e){ parent.window.dismiss_menu(); }; ")
@@ -443,8 +436,8 @@ public class MdictServer extends NanoHTTPD {
 				;
 		return MdPageBuilder.toString();
 	}
-	MediaPlayer mediaPlayer;
-    Response emptyResponse = newChunkedResponse(Status.NO_CONTENT,"*/*", null);
+	AudioClip audioClip;
+    Response emptyResponse = newFixedLengthResponse(Status.NO_CONTENT,"*/*", "");
 
     interface OnMirrorRequestListener{
     	public Response onMirror(String uri);
@@ -456,19 +449,20 @@ public class MdictServer extends NanoHTTPD {
 
 	
 	
-	StringBuilder derivedHtmlBase;
+
 	int derBaseLen = -1;
-	String[] fragments;
+	String restFragments;
 	
 	public String constructDerivedHtml(String key,int pos,int dictionaryIndice,String iframes) {
+		StringBuilder derivedHtmlBase;
 		if(true || derBaseLen == -1) {//rrr
 			String insertsionPoint = "function postInit(){";
 			int idx1=baseHtml.indexOf(insertsionPoint);
-			int idx2=baseHtml.indexOf("onscroll='dismiss_menu();'>",idx1);
+			//int idx2=baseHtml.indexOf("onscroll='dismiss_menu();'>",idx1);
 			String f1 = baseHtml.substring(0,idx1+insertsionPoint.length()+1);
-			String f2 = baseHtml.substring(baseHtml.indexOf("}",idx1+insertsionPoint.length()),idx2);
-			String f3 = baseHtml.substring(baseHtml.indexOf("</div>",idx2));
-			fragments = new String[] {f2,f3};
+			//String f2 = baseHtml.substring(baseHtml.indexOf("}",idx1+insertsionPoint.length()),idx2);
+			//String f3 = baseHtml.substring(baseHtml.indexOf("</div>",idx2));
+			restFragments = baseHtml.substring(baseHtml.indexOf("}",idx1+insertsionPoint.length()));
 			derivedHtmlBase = new StringBuilder(f1);
 			//CMN.show("f1"+f1);
 			derBaseLen = f1.length();
@@ -477,21 +471,87 @@ public class MdictServer extends NanoHTTPD {
 		if(opt.GetCombinedSearching()){
 			derivedHtmlBase.append("document.getElementById('fileBtn').onclick();");
 		}
-		//derivedHtmlBase.append("iframes=document.getElementsByTagName('iframe');");
-		derivedHtmlBase.append("editText.value='"+key+"';");
+		/** win10 ie 去掉\t会发生量子波动Bug */
+		derivedHtmlBase.append("\teditText.value='").append(key).append("';");
 		derivedHtmlBase.append("loookup();");
 		if(iframes!=null){
 			derivedHtmlBase.append("handleMirror('"+iframes.replace("\r","\\r")+"');");
 		}
-		CMN.show("pengDingPos"+pos);
-		derivedHtmlBase.append(fragments[0]);
-
-		//for(String iI:iframes)
-		//	derivedHtmlBase.append(iI);
-
-		derivedHtmlBase.append(fragments[1]);
+		//CMN.show("pengDingPos"+pos);
+		derivedHtmlBase.append(restFragments);
+		//CMN.show(derivedHtmlBase.toString());
 		return derivedHtmlBase.toString();
 	}
-	
-	
+
+	static class VirtualHttpSession implements IHTTPSession {
+		String url;
+		public VirtualHttpSession(String _url){
+			url=_url;
+		}
+
+		@Override
+		public void execute() throws IOException {
+
+		}
+
+		@Override
+		public CookieHandler getCookies() {
+			return null;
+		}
+
+		@Override
+		public Map<String, String> getHeaders() {
+			HashMap<String, String> ret = new HashMap<>();
+			ret.put("user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/605.1 (KHTML, like Gecko) JavaFX/8.0 Safari/605.1");
+			ret.put("accept","");
+			return ret;
+		}
+
+		@Override
+		public InputStream getInputStream() {
+			return null;
+		}
+
+		@Override
+		public Method getMethod() {
+			return null;
+		}
+
+		@Override
+		public Map<String, String> getParms() {
+			return new HashMap<>();
+		}
+
+		//@Override
+		public Map<String, List<String>> getParameters() {
+			return null;
+		}
+
+		@Override
+		public String getQueryParameterString() {
+			return null;
+		}
+
+		@Override
+		public String getUri() {
+			int index = url.indexOf("/base/");
+			if(index!=-1) url=url.substring(index);
+			return url;
+		}
+
+		@Override
+		public void parseBody(Map<String, String> files) throws IOException, ResponseException {
+
+		}
+
+		//@Override
+		public String getRemoteIpAddress() {
+			return null;
+		}
+
+
+		public String getRemoteHostName() {
+			return null;
+		}
+	}
 }

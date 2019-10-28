@@ -267,7 +267,8 @@ public class ManagerFragment extends VBox {
 				case add:{
 					FileChooser fileChooser = new FileChooser();
 					fileChooser.getExtensionFilters().addAll(
-							new FileChooser.ExtensionFilter("mdict file", "*.mdx")
+							new FileChooser.ExtensionFilter("mdict file", "*.mdx"),
+							new FileChooser.ExtensionFilter("mdict resource file", "*.mdd")
 					);
 					File startPath=lastOpenDir!=null?lastOpenDir:new File(opt.GetLastMdlibPath());
 					if(!startPath.exists())

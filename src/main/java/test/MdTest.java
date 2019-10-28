@@ -285,7 +285,7 @@ public class MdTest {
 	        	}
 	        	cc++;
 	        }
-	        m.fetch_keyBlocksHeaderTextKeyID();
+	        //m.fetch_keyBlocksHeaderTextKeyID();
 	        CMN.show("prepareItemByKeyInfo时间"+(System.currentTimeMillis()-stst));
         
         }

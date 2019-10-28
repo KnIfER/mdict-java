@@ -308,8 +308,9 @@ public class Response implements Closeable {
             sendBodyWithCorrectEncoding(outputStream, pending);
         }
     }
-
+    //nnnxxx
     private void sendBodyWithCorrectEncoding(OutputStream outputStream, long pending) throws IOException {
+        if(this.requestMethod != Method.HEAD && this.data != null)//+++
         if (useGzipWhenAccepted()) {
             GZIPOutputStream gzipOutputStream = null;
             try {

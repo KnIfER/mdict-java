@@ -24,7 +24,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import org.nanohttpd.protocols.http.request.Method;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -126,7 +125,7 @@ public class DictPickerDialog extends Stage {
 			}
 			cc++;
 		}
-		tv2.getSelectionModel().select(adapter_idx=app.server.adapter_idx);
+		tv2.getSelectionModel().select(adapter_idx=app.adapter_idx);
 		if(adapter_idx<md.size())lastName=md.get(adapter_idx)._Dictionary_fName;
 	}
 
@@ -251,6 +250,4 @@ public class DictPickerDialog extends Stage {
 		public ObservableValue<String> apply(File m) {
 			return new SimpleStringProperty(m.getName().substring(0, m.getName().length()-4));
 		}};
-
-	private static Method columnToFitMethod;
 }

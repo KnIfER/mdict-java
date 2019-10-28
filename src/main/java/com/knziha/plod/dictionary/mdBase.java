@@ -18,6 +18,7 @@
 package com.knziha.plod.dictionary;
 
 import java.io.*;
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -30,7 +31,9 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
+import com.knziha.plod.dictionary.Utils.key_info_struct;
 import com.knziha.plod.dictionary.Utils.myCpr;
+import com.knziha.plod.dictionary.Utils.record_info_struct;
 import org.anarres.lzo.*;
 //import org.jvcompress.lzo.MiniLZO;
 //import org.jvcompress.util.MInt;
@@ -77,8 +80,10 @@ class mdBase {
 	long maxComRecSize;
 	long maxDecompressedSize;
 	//public long maxComKeyBlockSize;
+	/** Maximum size of one record block */
 	public long maxDecomKeyBlockSize;
-	byte[] record_block_;
+	/** data buffer that holds one record bock of maximum possible size for this dictionary */
+	private byte[] record_block_;
 
 	protected DataInputStream getStreamAt(long at) throws IOException {
 		DataInputStream data_in1 = new DataInputStream(mOpenInputStream());
@@ -415,23 +420,24 @@ class mdBase {
 		//int size_counter = 0;
 		long compressed_size_accumulator = 0;
 		long decompressed_size_accumulator = 0;
-		/*may be faster: batch read-in strategy*/
+		/* must be faster: batch read-in strategy */
 		byte[] numers = new byte[(int) record_block_info_size];
 		data_in1.read(numers);
 		data_in1.close();
+		long compressed_size, decompressed_size, _maxDecompressedSize=0;
 		for(int i=0;i<_num_record_blocks;i++){
-			long compressed_size = _version>=2?BU.toLong(numers, i*16):BU.toInt(numers, i*8);
-			long decompressed_size = _version>=2?BU.toLong(numers, i*16+8):BU.toInt(numers, i*8+4);
+			compressed_size = _version>=2?BU.toLong(numers, i*16):BU.toInt(numers, i*8);
+			decompressed_size = _version>=2?BU.toLong(numers, i*16+8):BU.toInt(numers, i*8+4);
 			maxComRecSize = Math.max(maxComRecSize, compressed_size);
 
-			maxDecompressedSize = Math.max(maxDecompressedSize, decompressed_size);
+			_maxDecompressedSize = Math.max(_maxDecompressedSize, decompressed_size);
 			_record_info_struct_list[i] = new record_info_struct(compressed_size, compressed_size_accumulator, decompressed_size, decompressed_size_accumulator);
 			compressed_size_accumulator+=compressed_size;
 			decompressed_size_accumulator+=decompressed_size;
 			//size_counter += _number_width * 2;
 		}
 		//assert(size_counter == record_block_info_size);
-		record_block_ = new byte[(int) maxDecompressedSize];
+		maxDecompressedSize=_maxDecompressedSize;
 	}
 
 	public static byte[] zlib_decompress(byte[] encdata,int offset,int size) {
@@ -498,7 +504,7 @@ class mdBase {
 	}
 
 	//存储一组RecordBlock
-	int prepared_RecordBlock_ID=-100;
+	volatile int prepared_RecordBlock_ID=-100;
 	byte[] prepareRecordBlock(record_info_struct RinfoI, int Rinfo_id) throws IOException {//异步
 		if(prepared_RecordBlock_ID==Rinfo_id)
 			return record_block_;
@@ -532,12 +538,7 @@ class mdBase {
 		}
 		// lzo compression
 		else if(compareByteArrayIsPara(_1zero3, record_block_compressed)){
-			//record_block = new byte[ decompressed_size];
-			//MInt len = new MInt(decompressed_size);
-			//System.arraycopy(record_block_compressed, 8, record_block, 0,(int) (compressed_size-8));
-			//MiniLZO.lzo1x_decompress(record_block,compressed_size,record_block,len);
 			new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block, 0,new lzo_uintp());
-
 		}
 		// zlib compression
 		else if(compareByteArrayIsPara(_2zero3, record_block_compressed)){
@@ -585,7 +586,7 @@ class mdBase {
 		String tailerKeyTextStr=null;
 		int blockID=-1;
 	}
-	protected cached_key_block infoI_cache_ = new cached_key_block();
+	private cached_key_block infoI_cache_ = new cached_key_block();
 
 	public cached_key_block prepareItemByKeyInfo(key_info_struct infoI,int blockId,cached_key_block infoI_cache){
 		if(_key_block_info_list==null) read_key_block_info();
@@ -619,7 +620,8 @@ class mdBase {
 			String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) 0],_key_block_compressed[(int) (+1)],_key_block_compressed[(int) (+2)],_key_block_compressed[(int) (3)]});
 			//int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
 
-			switch (_key_block_compressed[0]|_key_block_compressed[1]<<8|_key_block_compressed[2]<<16|_key_block_compressed[2]<<32){
+			//解压开始
+			switch (_key_block_compressed[0]|_key_block_compressed[1]<<8|_key_block_compressed[2]<<16|_key_block_compressed[3]<<32){
 				case 0://no compression
 					key_block = new byte[(int) (_key_block_compressed.length-start-8)];
 					System.arraycopy(_key_block_compressed, (+8), key_block, 0,key_block.length);

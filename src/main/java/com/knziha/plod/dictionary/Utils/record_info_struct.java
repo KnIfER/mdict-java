@@ -1,4 +1,4 @@
-package com.knziha.plod.dictionary;
+package com.knziha.plod.dictionary.Utils;
     public class record_info_struct{
     	public record_info_struct(long _compressed_size,long _compressed_size_accumulator,long _decompressed_size,long _decompressed_size_accumulator) {
     		 compressed_size=                  _compressed_size;

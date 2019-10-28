@@ -1,0 +1,1 @@
+CreateObject("WScript.Shell").Run "cmd /c debug_run.bat",0

@@ -16,9 +16,9 @@ import java.util.zip.Deflater;
 import org.anarres.lzo.LzoCompressor1x_1;
 import org.anarres.lzo.lzo_uintp;
 
-import com.knziha.plod.dictionary.key_info_struct;
+import com.knziha.plod.dictionary.Utils.key_info_struct;
 import com.knziha.plod.dictionary.mdictRes;
-import com.knziha.plod.dictionary.record_info_struct;
+import com.knziha.plod.dictionary.Utils.record_info_struct;
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.rbtree.RBTNode;
 import com.knziha.rbtree.RBTree;
