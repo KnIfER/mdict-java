@@ -1374,12 +1374,13 @@
 		}
 		function highlight(keyword){
 			for (var i=0; i<iframes.length; i++){
-				iframes[i].contentWindow.highlight(keyword);
+				var target=iframes[i].contentWindow;
+				if(target) target.highlight(keyword);
 			}
 		}
 		var HlightIdx=0;
 		function jumpHighlight(d){
-			console.log('jumpHighlight started...');
+			console.log('jumpHighlight started...'+iframes.length);
 			var max=iframes.length;
 			inlineJump=1;
 			if(max){
@@ -1391,7 +1392,8 @@
 					if(jumper) jumper.quenchLight();
 					if(HlightIdx>=max){
 						for (var i=0; i<iframes.length; i++){
-							iframes[i].contentWindow.currentIndex=0;
+							if(iframes[i].contentWindow)
+								iframes[i].contentWindow.currentIndex=0;
 						}
 						HlightIdx=0;
 					}
@@ -1399,8 +1401,8 @@
 					jumper=iframes[HlightIdx].contentWindow;
 					if(cc>0 || desiredOffset>0) jumper.resetLight(d);
 					if(cc>0)inlineJump=0;
-					console.log('jumpTo framePos='+HlightIdx+' index='+jumper.currentIndex+'/'+jumper.results.length);
-					d=jumper.jumpTo(d);
+					console.log('jumpTo framePos='+HlightIdx+' index='+(jumper?(jumper.currentIndex+'/'+jumper.results.length):'no way to find'));
+					d=jumper?jumper.jumpTo(d):d;
 					HlightIdx+=d;
 					cc++;
 				}

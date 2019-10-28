@@ -404,34 +404,44 @@ public class MdictServer extends NanoHTTPD {
 		return currentText;
 	}
 
+	int MdPageBaseLen=-1;
+	String MdPage_fragment1,MdPage_fragment2, MdPage_fragment3="</html>";
+	int MdPageLength=0;
 	private String constructMdPage(String dictIdx,String record) {
-		StringBuilder MdPageBuilder = new StringBuilder();
-
-		//return "<!DOCTYPE html><html><head>    <script>var cmy = function (ev) {var ev = ev || window.event; var target=ev.target || ev.srcElement; if(target.nodeName.toLocaleLowerCase() == 'a'){href=target.href;if (href) {/*处理页内跳转 alert(word); */idx = href.indexOf('entry/#');var word;if(idx!=-1){word = href.substring(idx+7);target.href='entry://#'+word;}else if(href.substring(0,9)=='entry://#')word=href.substring(9);if(word){console.log(word);alert(parent.document.getElementById('md_'+"+dictIdx+"));var toPos; var ele=document.getElementsByName(word); if(ele&&ele.length>0)toPos=ele[0].getBoundingClientRect().top;else {ele=document.getElementById(word); if(ele)toPos=ele.getBoundingClientRect().top; } alert(toPos); if(toPos)parent.document.getElementById('md_'+"+dictIdx+").scrollTop=0+'px';scrollBy(0,toPos);   }} } } </script>             <base href=\"/base/"+dictIdx+"/\" /> <base target=\"_self\" /><script charset=\"utf-8\" type=\"text/javascript\" language=\"javascript\">function loadFragmentInToElement(fragment_url, element) { var xmlhttp = new XMLHttpRequest(\"\"); xmlhttp.open(\"POST\", fragment_url); xmlhttp.onreadystatechange = function() { if(xmlhttp.readyState == 4 && xmlhttp.status == 200) { var txtconent = xmlhttp.responseText; element.innerHTML = txtconent; } }; xmlhttp.send(null); };</script></head><body    onclick=\"cmy();\"  onload=\"var val=this.document.body.innerHTML;if(new RegExp('^@@@LINK=').test(val)) loadFragmentInToElement('\\@@@\\\\'+val.substring(8), this.document.body);\">"+record.replace("sound://", "sound/").replace("entry://", "entry/")+"</body></html>";
-    	//return "<!DOCTYPE html><html><head>    <script>var cmy = function (ev) {var ev = ev || window.event; var target=ev.target || ev.srcElement; if(target.nodeName.toLocaleLowerCase() == 'a'){href=target.href;if (href) {/*处理页内跳转 alert(word); */idx = href.indexOf('entry/#');var word;if(idx!=-1){word = href.substring(idx+7);target.href='entry://#'+word;}else if(href.substring(0,9)=='entry://#')word=href.substring(9);if(word){console.log(word);    window.location.href.replace('#'+word);     alert(window.location.href); }} } } </script>             <base href=\"/base/"+dictIdx+"/\" /> <base target=\"_self\" /><script charset=\"utf-8\" type=\"text/javascript\" language=\"javascript\">function loadFragmentInToElement(fragment_url, element) { var xmlhttp = new XMLHttpRequest(\"\"); xmlhttp.open(\"POST\", fragment_url); xmlhttp.onreadystatechange = function() { if(xmlhttp.readyState == 4 && xmlhttp.status == 200) { var txtconent = xmlhttp.responseText; element.innerHTML = txtconent; } }; xmlhttp.send(null); };</script></head><body    onclick=\"cmy();\"  onload=\"var val=this.document.body.innerHTML;if(new RegExp('^@@@LINK=').test(val)) loadFragmentInToElement('\\@@@\\\\'+val.substring(8), this.document.body);\">"+record.replace("sound://", "sound/").replace("entry://", "entry/")+"</body></html>";
-		MdPageBuilder.append("<!DOCTYPE html><html><head> <style>mark {background: yellow; } mark.current { background: orange; } .highlight { background-color: yellow; } html, body {-moz-user-select:text;-webkit-user-select:text;-ms-user-select:text;-khtml-user-select:text;user-select:text; }</style>")
-				//.append("<script src=\"/MdbR/mark.js\"></script>")
-				.append("<script> ")
-				.append(" window.onclick=function(e){ parent.window.dismiss_menu(); }; ")
-		;
-		try {
-			BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\com\\knziha\\plod\\PlainDict\\privateTest\\子页面-高亮.js")));
-			String line; while ((line=in.readLine())!=null) MdPageBuilder.append(line).append("\r\n");
-		} catch (IOException e) {
-			e.printStackTrace();
+		StringBuilder MdPageBuilder = new StringBuilder(MdPageLength+record.length()+5);
+		String MdPage_fragment1=null,MdPage_fragment2=null, MdPage_fragment3="</html>";int MdPageBaseLen=-1; //rrr
+		if(MdPageBaseLen==-1){
+			try {
+				BufferedReader in = new BufferedReader(new InputStreamReader(SU.debug?new FileInputStream("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\com\\knziha\\plod\\PlainDict\\Mdict-browser\\MdbR\\subpage.html")
+						:MdictServer.class.getResourceAsStream("Mdict-browser/MdbR/subpage.html")));
+				String line;
+				while ((line=in.readLine())!=null) {
+					MdPageBuilder.append(line).append("\r\n");
+					if(MdPage_fragment1==null){
+						if(line.equals("<base href='/base//'/>")){
+							MdPageBuilder.setLength(MdPageBuilder.length()-6);
+							MdPage_fragment1=MdPageBuilder.toString();
+							MdPageBuilder.setLength(0);
+							MdPageBuilder.append("/'/>\r\n");
+						}
+					}
+				}
+				MdPage_fragment2=MdPageBuilder.toString();
+				MdPageBaseLen=MdPage_fragment1.length();
+				MdPageBuilder.setLength(0);
+				MdPageLength=MdPage_fragment1.length()+MdPage_fragment2.length()+MdPage_fragment3.length();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
-		MdPageBuilder.append("function wrappedOnLoadFunction(){console.log('mdpage loaded'+onpageload);  document.body.style.fontSize=35+'px';    highlight(null) ;  if(!parent.scrollExpandAll){parent.document.getElementById('md_").append(dictIdx).append("').contentWindow.scrollTo(0,0);}else{parent.document.getElementById('defP').scrollTo(0, parent.document.getElementById('md_").append(dictIdx).append("').scrollTop)}var val=this.document.body.innerHTML;if(new RegExp('^@@@LINK=').test(val)) loadFragmentInToElement('\\@@@\\\\'+val.substring(8), this.document.body);}");
+		MdPageBuilder.append(MdPage_fragment1);
 
 		MdPageBuilder
-				//.append("var bOnceHighlighted; var results=[], current,currentIndex = 0; var offsetTop = 50,currentClass = \"current\"; function jumpTo() {     if (results.length) {         if(current) removeClass(current, currentClass);         current = results[currentIndex];         if(current){ addClass(current, currentClass); var position = offset(current).top - offsetTop; window.scrollTo(0, position); if (currentIndex < 0) { currentIndex = results.length - 1; return -1; } if (currentIndex > results.length - 1) { currentIndex = 0; return 1; }         }     } return 0; } function offset(elem){     var obj={         left:elem.offsetLeft,         top:elem.offsetTop,         width:elem.offsetWidth,         height:elem.offsetHeight     };     while(elem != document.body){         elem = elem.offsetParent ;         obj.left += elem.offsetLeft ;         obj.top += elem.offsetTop ;     }     return obj; } function addClass(elem, className) {     if (!className) return;     const els = Array.isArray(elem) ? elem : [elem];         els.forEach((el) => {         el.className += ` ${className}`;     }); } function removeClass(elem, className) {     if (!className) return;     const els = Array.isArray(elem) ? elem : [elem];         els.forEach((el) => {         el.className = el.className.replace(className, '');     }); } function clearHighlights(){ if(bOnceHighlighted && MarkInst && MarkLoad) MarkInst.unmark({ done: function() { results=[]; bOnceHighlighted=false; } }); } function highlight(keyword){ var b1=keyword==null; if(b1 && parent.window.app) keyword=parent.window.app.getCurrentPageKey(); if(keyword==null||b1&&keyword.trim().length==0) return; if(!MarkLoad){ loadJs('/MdbR/mark.js', function(){ MarkLoad=true; do_highlight(keyword); }); }else do_highlight(keyword); } function do_highlight(keyword){ if(!MarkInst) MarkInst = new Mark(document); MarkInst.unmark({ done: function() { bOnceHighlighted=false; MarkInst.mark(keyword, { separateWordSearch: true, done: function() { bOnceHighlighted=true; results = document.getElementsByTagName(\"mark\"); currentIndex=0; jumpTo(); } }); } }); } function loadJs(url,callback){ var script=document.createElement('script'); script.type=\"text/javascript\"; if(typeof(callback)!=\"undefined\"){ if(script.readyState){ script.onreadystatechange=function(){ if(script.readyState == \"loaded\" || script.readyState == \"complete\"){ script.onreadystatechange=null; callback(); } } }else{ script.onload=function(){ callback(); } } } script.src=url; document.body.appendChild(script); }")//处理高亮
-				//.append("var cmy = function (ev) {var ev = ev || window.event; var target=ev.target || ev.srcElement; if(target.nodeName.toLocaleLowerCase() == 'a'){href=target.href;if (href) {/*处理页内跳转 alert(word); */idx = href.indexOf('entry/#');var word;if(idx!=-1){word = href.substring(idx+7);target.href='entry://#'+word;}else if(href.substring(0,9)=='entry://#')word=href.substring(9);if(word){console.log(\"wordword\"+word);     var toPos; var ele=document.getElementsByName(word); if(ele&&ele.length>0)toPos=ele[0].getBoundingClientRect().top;else {ele=document.getElementById(word); if(ele)toPos=ele.getBoundingClientRect().top; } if(toPos)if(!parent.scrollExpandAll){parent.document.getElementById('md_'+").append(dictIdx).append(").contentWindow.scrollTo(0,toPos);}else{/*自己转alert(123);*/parent.document.getElementById('defP').scrollTo(0, toPos+parent.document.getElementById('md_'+").append(dictIdx).append(").scrollTop)}            }} } } </script>")
-				.append("</script><base href=\"/base/").append(dictIdx)// "/base/0"
-				.append("/\" /> <base target=\"_self\" /><script charset=\"utf-8\" type=\"text/javascript\" language=\"javascript\">function loadFragmentInToElement(fragment_url, element) { var xmlhttp = new XMLHttpRequest(\"\"); xmlhttp.open(\"POST\", fragment_url); xmlhttp.onreadystatechange = function() { if(xmlhttp.readyState == 4 && xmlhttp.status == 200) { var txtconent = xmlhttp.responseText; element.innerHTML = txtconent; } }; xmlhttp.send(null); };</script></head>")
+				.append(dictIdx)// "/base/0"
+				.append(MdPage_fragment2)
 				.append(record)
-				//.replace("sound://", "sound/")
-				//						.replace("entry://", "entry/")
-				.append("</html>")
+				.append(MdPage_fragment3)
 				.toString()
 				;
 		return MdPageBuilder.toString();

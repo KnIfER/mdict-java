@@ -557,9 +557,10 @@ public class mdict extends mdBase{
 				switch (_key_block_compressed[0]|_key_block_compressed[1]<<8|_key_block_compressed[2]<<16|_key_block_compressed[3]<<32){
 					case 0://no compression
 						System.arraycopy(_key_block_compressed, 8, key_block, 0,(int) (compressedSize-8));
+					break;
 					case 1:
 						new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block, 0,new lzo_uintp());
-						break;
+					break;
 					case 2:
 						//key_block = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
 						Inflater inf = new Inflater();
@@ -666,6 +667,7 @@ public class mdict extends mdBase{
 								switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
 									case 0:
 										System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
+									break;
 									case 1:
 										new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
 									break;
@@ -745,7 +747,11 @@ public class mdict extends mdBase{
 							}
 							data_in.close();
 
-						} catch (Exception e) {e.printStackTrace();}
+						} catch (Exception e) {
+							//BU.printBytes(record_block_compressed,0,4);
+							//CMN.Log(record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32);
+							e.printStackTrace();
+						}
 						thread_number_count--;
 						if(split_recs_thread_number>thread_number) countDelta(-1);
 					}});
