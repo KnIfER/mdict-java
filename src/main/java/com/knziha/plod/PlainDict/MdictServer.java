@@ -16,34 +16,28 @@
 */
 package com.knziha.plod.PlainDict;
 
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.knziha.plod.PlainDict.utils.JAIConverter;
 import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.dictionarymodels.mdict;
 import com.knziha.rbtree.RBTree_additive;
 import com.knziha.rbtree.additiveMyCpr1;
-
 import javafx.scene.media.AudioClip;
-
-import org.nanohttpd.protocols.http.NanoHTTPD;
 import org.nanohttpd.protocols.http.IHTTPSession;
-import org.nanohttpd.protocols.http.content.CookieHandler;
-import org.nanohttpd.protocols.http.request.Method;
+import org.nanohttpd.protocols.http.NanoHTTPD;
 import org.nanohttpd.protocols.http.response.Response;
 import org.nanohttpd.protocols.http.response.Status;
-import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
-
-
-//import fi.iki.elonen.NanoHTTPD;
-//import fi.iki.elonen.NanoHTTPD.Response.Status;
-
 import org.xiph.speex.ByteArrayRandomOutputStream;
 import org.xiph.speex.manyclass.JSpeexDec;
 import test.CMN;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Map;
+
+import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
+
+//import fi.iki.elonen.NanoHTTPD;
+//import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 
 /**
@@ -62,29 +56,28 @@ public class MdictServer extends NanoHTTPD {
     int currentPage=0;
     RBTree_additive combining_search_tree = new RBTree_additive();
     StringBuilder sb = new StringBuilder();
-    
+	private JAIConverter tiffConverter;
+
 	public MdictServer(int port, PlainDictAppOptions _opt) {
 		super(port);
 		opt=_opt;
 	}
 	
     @Override
-    public Response serve(IHTTPSession session) {
+    public Response handle(IHTTPSession session) {
     	int adapter_idx_ = 0;
     	String uri = session.getUri();
-		//CMN.Log("serving with honor : ", uri);
+		CMN.Log("serving with honor : ", uri);
     	Map<String, String> headerTags = session.getHeaders();
     	String Acc = headerTags.get("accept");
     	String usr = headerTags.get("user-agent");
     	String key = uri.replace("/", SepWindows);
-    	//CMN.show("URI : "+uri+" usr:"+usr);
-    	//CMN.show(Acc);
-    	//CMN.show(session.getQueryParameterString());
+    	if(usr==null) return null;
+
     	if(uri.startsWith("/MdbR/")) {
     		//CMN.Log("[fetching internal res : ]", uri);
     		InputStream candi = MdictServer.class.getResourceAsStream("Mdict-browser"+uri);
 			if(candi!=null) {
-				//CMN.show(uri+" passed");
 	    		String mime="*/*";
 	    		if(uri.contains(".css")) mime = "text/css";
 	    		if(uri.contains(".js")) mime = "text/js";
@@ -97,7 +90,12 @@ public class MdictServer extends NanoHTTPD {
     	}
     	if(uri.startsWith("/MIRROR.jsp")) {
     		if(om!=null)
-    			return om.onMirror(session.getQueryParameterString());
+    			return om.onMirror(session.getQueryParameterString(), true);
+    		return newFixedLengthResponse(baseHtml);
+    	}
+    	if(uri.startsWith("/READ.jsp")) {
+    		if(om!=null)
+    			return om.onMirror(session.getQueryParameterString(), false);
     		return newFixedLengthResponse(baseHtml);
     	}
     	
@@ -105,9 +103,10 @@ public class MdictServer extends NanoHTTPD {
     		uri = uri.substring("/MdbRSingleQuery/".length());
 			//CMN.show("MdbRSingleQuery: "+uri);
     		String[] list = uri.split("/");
-    		adapter_idx_ = Integer.valueOf(list[0]);
+    		adapter_idx_ = Integer.parseInt(list[0]);
     		return newFixedLengthResponse(Integer.toString(md.get(adapter_idx_).lookUp(Reroute(uri.substring(list[0].length()+1)),false)));
-    	}else if(uri.startsWith("/MdbRJointQuery/")) {
+    	}
+    	else if(uri.startsWith("/MdbRJointQuery/")) {
     		uri = Reroute(uri.substring("/MdbRJointQuery/".length()));
     		//CMN.show("MdbRJointQuery: "+uri);
     		RBTree_additive combining_search_tree_ = new RBTree_additive();
@@ -142,10 +141,13 @@ public class MdictServer extends NanoHTTPD {
     		return newFixedLengthResponse(sb_.toString());
     	}
     	////////////////////////////////////////////////////////
-    	if(uri.startsWith("/base/")) {
+    	boolean ReceiveText=Acc.contains("text/html");
+    	boolean IsCustomer=!usr.contains("Java");
+		if(uri.startsWith("/base/")) {
+    		CMN.Log("requesting ifram", uri);
     		uri = uri.substring("/base/".length());
     		String[] list = uri.split("/");
-    		adapter_idx_ = Integer.valueOf(list[0]);
+    		adapter_idx_ = Integer.parseInt(list[0]);
     		uri = uri.substring(list[0].length());
     		key = uri.replace("/", SepWindows);
     		if(list[1].equals("@@@")) {//  /base/0/@@@/name
@@ -163,10 +165,9 @@ public class MdictServer extends NanoHTTPD {
     	if(uri.startsWith("/entry/")) {
 			try {
 	    		key=key.substring("/entry/".length());
-	    		String res = md.get(adapter_idx_).getRecordsAt(md.get(adapter_idx_).lookUp(key));
-	    		res = constructMdPage(Integer.toString(adapter_idx_), res);
-				if(res!=null)
-					return newFixedLengthResponse(res);
+				mdict mdTmp = md.get(adapter_idx_);
+	    		String res = mdTmp.getRecordsAt(mdTmp.lookUp(key));
+				return newFixedLengthResponse(constructMdPage(Integer.toString(adapter_idx_), res));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -183,11 +184,9 @@ public class MdictServer extends NanoHTTPD {
 					
 			}
         	else if(uri.toLowerCase().endsWith(".css")) {
-				//Log.e("candi",url);
+				//CMN.Log("candi",url);
 				File candi = new File(new File(md.get(adapter_idx_).getPath()).getParentFile(),new File(uri).getName());
-				//CMN.show("candi"+candi.getAbsolutePath());
 				if(candi.exists()) {
-					//CMN.show(uri+"```");
 					return newFixedLengthResponse(Status.OK,"text/css",  new FileInputStream(candi), candi.length());
 				}
 			}
@@ -227,75 +226,44 @@ public class MdictServer extends NanoHTTPD {
     			key = key.substring(16);
     			//CMN.show(key);
     			String[] l = key.split("\\\\");
-    			//CMN.show(l.length+"");
-    			String ret="";
+    			StringBuilder ret= new StringBuilder();
     			for(mdict mdx:md)
         			if(mdx._Dictionary_fName.equals(l[0])) {
         				StringBuilder sb = new StringBuilder();
         				//CMN.show("capacity "+l[2]);
-        				int capacity=Integer.valueOf(l[2]);
-        				int base = Integer.valueOf(l[1]);
+        				int capacity=Integer.parseInt(l[2]);
+        				int base = Integer.parseInt(l[1]);
         				for(int i=0;i<capacity;i++) {
-        					ret += mdx.getEntryAt(base+i);
+        					ret.append(mdx.getEntryAt(base + i));
         					if(i<capacity-1)
-        						ret+="\n";
+        						ret.append("\n");
         					//sb.append(mdx.getEntryAt(base+i)).append("\n");
         				}
         				//sb.setLength(sb.length()-1);
         				//ret = sb.toString();
         				break;
         			}
-        		return newFixedLengthResponse(ret) ;
+        		return newFixedLengthResponse(ret.toString()) ;
     		}
 			return emptyResponse;
     	}
 
-    	
-    	if(!usr.contains("Java")) {
-    		CMN.show("OUT OF HERE");
-    		
-    		//adapter_idx_ = 
-    	}
-
     	if(uri.startsWith("/sound/")) {
-			CMN.show("-sound requset format: "+Acc+" to "+uri);
-			if(false && usr.contains("Java")) {
-				uri=uri.substring("/sound".length());
-				CMN.Log("playing right on the java-client");
-				if(audioClip!=null)
-					audioClip.stop();
-				audioClip = new AudioClip("http://127.0.0.1:8080/JAVAUDIO"+uri);
-				audioClip.play();
-				return emptyResponse;
-			}
 			key=uri.substring(6).replace("/","\\");
     	}
-    	if(uri.startsWith("/JAVAUDIO/"))
-			key=uri.substring(9).replace("/","\\");
-    		
-    	//headerTags.get("accept").contains("text/html,application/xhtml+xml,application/xml;") && 
-    	if(uri.equals("/")){
-			CMN.show("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
-    		//new Audio('"+"\\sound\\asd.mp3"+"').play()
-            //return newFixedLengthResponse(msg + "<img src='\\wordsmyth2018.png'></img><a href='\\sound\\asd.mp3'>asdasd</a></body></html>\n");
-            //return newFixedLengthResponse("<img src='\\wordsmyth2018.png'></img>  <a onclick=\"function(){new Audio('\\sound\\123.mp3').play();}\" href='\\sound\\asd.mp3'>asdasd</a> ") ;
-            //return newFixedLengthResponse("<img src='\\wordsmyth2018.png'></img>  <a onclick=\"new Audio('https://www.collinsdictionary.com/sounds/6/669/66956/66956.mp3').play();\">asdasd</a> ");
-    		try {
-            	//CMN.show(md.getRecordAt(currentPage));
-            	if(true || baseHtml==null) {//rrr
-            		//InputStream fin = new FileInputStream("E:\\eclispe_wrkst3\\PLOD2\\mdict-java-master\\src\\com\\knziha\\plod\\PDPC\\Mdict-browser\\mdict_browser.html");
 
+    	if(uri.equals("/")){
+			CMN.Log("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
+    		try {
+            	if(true || baseHtml==null) {//rrr
 					InputStream fin = SU.debug?new FileInputStream("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\com\\knziha\\plod\\PlainDict\\Mdict-browser\\mdict_browser.html")
 							:MdictServer.class.getResourceAsStream("Mdict-browser/mdict_browser.html");
-
-					//CMN.show(""+this.getClass().getResource("Mdict-browser/mdict_browser.html").getFile());
-            		byte[] data = new byte[fin.available()];
+					byte[] data = new byte[fin.available()];
             		fin.read(data);
             		baseHtml = new String(data);
 					fin.close();
-            		//CMN.show(baseHtml);
             	}
-				return newFixedLengthResponse(baseHtml);//md.getRecordAt(currentPage)
+				return newFixedLengthResponse(baseHtml);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -306,7 +274,7 @@ public class MdictServer extends NanoHTTPD {
 			uri = uri.substring(7);
 			try {
 				mdict mdTmp = md.get(Integer.parseInt(uri));
-				return newFixedLengthResponse(mdTmp.getAboutString());
+				return newFixedLengthResponse(mdTmp.getAboutHtml());
 			} catch (Exception ignored) { }
 		}
 
@@ -316,74 +284,64 @@ public class MdictServer extends NanoHTTPD {
     		String[] list = uri.split("@");
     		if(!list[0].equals("")) {
 				try {
-					adapter_idx_ = Integer.valueOf(list[0]);
+					adapter_idx_ = Integer.parseInt(list[0]);
 					int[] list2 = new int[list.length-1];
 					for(int i=0;i<list.length-1;i++)
-						list2[i]=Integer.valueOf(list[i+1]);
+						list2[i]=Integer.parseInt(list[i+1]);
 					return newFixedLengthResponse(constructMdPage(list[0],md.get(adapter_idx_).getRecordsAt(list2)));
-					//CMN.show("<html><head><script src=\"/MdbR/iframeResizer.contentWindow.min.js\"></script>     </head><body  >"+md.get(adapter_idx_).getRecordAt(Integer.valueOf(list[1])).replace("sound://", "\\sound\\")+"</body></html>");
-					//return newFixedLengthResponse("<!DOCTYPE html><html><head><script src=\"/MdbR/iframeResizer.contentWindow.min.js\"></script><base href=\"/base/"+list[0]+"/\" /> <base target=\"_blank\" /><script charset=\"utf-8\" type=\"text/javascript\" language=\"javascript\">function loadFragmentInToElement(fragment_url, element) { var xmlhttp = new XMLHttpRequest(\"\"); xmlhttp.open(\"POST\", fragment_url); xmlhttp.onreadystatechange = function() { if(xmlhttp.readyState == 4 && xmlhttp.status == 200) { var txtconent = xmlhttp.responseText; element.innerHTML = txtconent; } }; xmlhttp.send(null); };          </script></head><body onload=\"var val=this.document.body.innerHTML;if(new RegExp('^@@@LINK=').test(val)) loadFragmentInToElement('\\@@@\\\\'+val.substring(8), this.document.body);\">"+md.get(adapter_idx_).getRecordAt(Integer.valueOf(list[1])).replace("sound://", "\\sound\\")+"</body></html>");
-					//return newFixedLengthResponse("<html><head><script src=\"/MdbR/iframeResizer.contentWindow.min.js\"></script>     </head><body  >"+md.get(adapter_idx_).getRecordAt(Integer.valueOf(list[1])).replace("sound://", "\\sound\\")+"</body></html>");
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
     		}
 			return newFixedLengthResponse(constructMdPage(0+"","<div>ERROR FETCHING CONTENT:"+uri+"</div>"));
     	}
-    	
-    	
 
-    	byte[] restmp = md.get(adapter_idx_).getResourceByKey(key);
+		mdict mdTmp = md.get(adapter_idx_);
+		ByteArrayInputStream restmp = mdTmp.getResourceByKey(key);
 
     	if(restmp==null){
 			return emptyResponse;
 		}
-    	
+
     	if(Acc.contains("javascript/") || uri.endsWith(".js")) {
-			return newFixedLengthResponse(Status.OK,"application/x-javascript", 
-					new ByteArrayInputStream(restmp),
-					restmp.length);
+			return newFixedLengthResponse(Status.OK,"application/x-javascript",restmp,restmp.available());
     	}
     	
     	if(Acc.contains("/css") || uri.endsWith(".css")) {
-			return newFixedLengthResponse(Status.OK,"text/css", 
-					new ByteArrayInputStream(restmp),
-					restmp.length);
+			return newFixedLengthResponse(Status.OK,"text/css", restmp, restmp.available());
     	}
     	
     	if(Acc.contains("/mp3") || uri.endsWith(".mp3")) {
-    		CMN.show("mp3 : "+uri);
-			return newFixedLengthResponse(Status.OK,"audio/mpeg",
-					new ByteArrayInputStream(restmp),
-					restmp.length);
+    		//CMN.show("mp3 : "+uri);
+			return newFixedLengthResponse(Status.OK,"audio/mpeg", restmp, restmp.available());
     	}
 
     	if(uri.endsWith(".spx")) {
-			CMN.show("spx : "+uri);
-			InputStream rawIn = new ByteArrayInputStream(restmp);
+			//CMN.show("spx : "+uri);
 			ByteArrayRandomOutputStream bos = new ByteArrayRandomOutputStream();
 			JSpeexDec decoder = new JSpeexDec();
 			try {
-				decoder.decode(new DataInputStream(new ByteArrayInputStream(restmp)) , bos, JSpeexDec.FILE_FORMAT_WAVE);
-				CMN.Log("success");
+				decoder.decode(new DataInputStream(restmp) , bos, JSpeexDec.FILE_FORMAT_WAVE);
 				return newFixedLengthResponse(Status.OK,"text/x-wav", new ByteArrayInputStream(bos.toByteArray()) , bos.size());
-				//return newFixedLengthResponse(Status.OK,"audio/x-wav", new FileInputStream("D:\\assets\\mdicts\\朗文精排版\\GB_ld5_happy_eater3.wav") , new File("D:\\assets\\mdicts\\朗文精排版\\GB_ld5_happy_eater3.wav").length());
-				//return newFixedLengthResponse(Status.OK,"audio/*", rawIn , restmp.length);
 			} catch (Exception e) { e.printStackTrace(); }
-			return newFixedLengthResponse(Status.OK,"audio/mpeg", rawIn , restmp.length);
+			return newFixedLengthResponse(Status.OK,"audio/mpeg", restmp, restmp.available());
     	}
 
-
-    	
     	if(Acc.contains("image/") ) {
-			return newFixedLengthResponse(Status.OK,"image/*", 
-					new ByteArrayInputStream(restmp),
-					restmp.length);
+    		CMN.Log("Image request : ",Acc,key,mdTmp._Dictionary_fName);
+    		if(key.endsWith(".tif")||key.endsWith(".tiff")){
+				try {
+					//CMN.Log("tif found!!!!!!!!!");
+					restmp=new ByteArrayInputStream(((tiffConverter==null?tiffConverter=new JAIConverter():tiffConverter).terminateTiff(restmp)));
+					//BU.printFile(bos.toByteArray(), "F:\\htmldownload\\tmp"+key);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			return newFixedLengthResponse(Status.OK,(IsCustomer&&ReceiveText)?"text/plain":"image/*", restmp, restmp.available());
     	}
     	
-    	return newFixedLengthResponse(Status.OK,"*/*", 
-				new ByteArrayInputStream(restmp),
-				restmp.length);
+    	return newFixedLengthResponse(Status.OK,"*/*", restmp, restmp.available());
     }
 
 	private String Reroute(String currentText) {
@@ -450,7 +408,7 @@ public class MdictServer extends NanoHTTPD {
     Response emptyResponse = newFixedLengthResponse(Status.NO_CONTENT,"*/*", "");
 
     interface OnMirrorRequestListener{
-    	public Response onMirror(String uri);
+    	public Response onMirror(String uri, boolean mirror);
     }OnMirrorRequestListener om;
     
 	public void setOnMirrorRequestListener(OnMirrorRequestListener om_) {
@@ -472,7 +430,7 @@ public class MdictServer extends NanoHTTPD {
 			String f1 = baseHtml.substring(0,idx1+insertsionPoint.length()+1);
 			//String f2 = baseHtml.substring(baseHtml.indexOf("}",idx1+insertsionPoint.length()),idx2);
 			//String f3 = baseHtml.substring(baseHtml.indexOf("</div>",idx2));
-			restFragments = baseHtml.substring(baseHtml.indexOf("}",idx1+insertsionPoint.length()));
+			restFragments = baseHtml.substring(baseHtml.indexOf("/**/}",idx1+insertsionPoint.length()));
 			derivedHtmlBase = new StringBuilder(f1);
 			//CMN.show("f1"+f1);
 			derBaseLen = f1.length();
@@ -491,77 +449,5 @@ public class MdictServer extends NanoHTTPD {
 		derivedHtmlBase.append(restFragments);
 		//CMN.show(derivedHtmlBase.toString());
 		return derivedHtmlBase.toString();
-	}
-
-	static class VirtualHttpSession implements IHTTPSession {
-		String url;
-		public VirtualHttpSession(String _url){
-			url=_url;
-		}
-
-		@Override
-		public void execute() throws IOException {
-
-		}
-
-		@Override
-		public CookieHandler getCookies() {
-			return null;
-		}
-
-		@Override
-		public Map<String, String> getHeaders() {
-			HashMap<String, String> ret = new HashMap<>();
-			ret.put("user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/605.1 (KHTML, like Gecko) JavaFX/8.0 Safari/605.1");
-			ret.put("accept","");
-			return ret;
-		}
-
-		@Override
-		public InputStream getInputStream() {
-			return null;
-		}
-
-		@Override
-		public Method getMethod() {
-			return null;
-		}
-
-		@Override
-		public Map<String, String> getParms() {
-			return new HashMap<>();
-		}
-
-		//@Override
-		public Map<String, List<String>> getParameters() {
-			return null;
-		}
-
-		@Override
-		public String getQueryParameterString() {
-			return null;
-		}
-
-		@Override
-		public String getUri() {
-			int index = url.indexOf("/base/");
-			if(index!=-1) url=url.substring(index);
-			return url;
-		}
-
-		@Override
-		public void parseBody(Map<String, String> files) throws IOException, ResponseException {
-
-		}
-
-		//@Override
-		public String getRemoteIpAddress() {
-			return null;
-		}
-
-
-		public String getRemoteHostName() {
-			return null;
-		}
 	}
 }

@@ -3,8 +3,10 @@ package com.knziha.plod.dictionaryBuilder;
 import java.util.ArrayList;
 
 import com.knziha.rbtree.RBTNode;
+import com.knziha.rbtree.RBTree;
+import com.knziha.rbtree.InOrderTodoAble;
 
-public class ArrayListTree<T extends Comparable<T>> {
+public class ArrayListTree<T extends Comparable<T>> implements InOrderTodoAble {
 	//wonderful!
 	
 	protected final ArrayList<T> data;
@@ -46,16 +48,24 @@ public class ArrayListTree<T extends Comparable<T>> {
           return start;
         }
     }
-	
+
+	@Override
+	public void SetInOrderDo(RBTree.inOrderDo inOrderDo) {
+		inOrderDo_=inOrderDo;
+	}
+
 	public void inOrderDo() {
 		for(T dataLet:data) {
 			inOrderDo_.dothis(new RBTNode<T>(dataLet,false,null,null,null));
 		}
 	}
-	com.knziha.rbtree.RBTree_duplicative.inOrderDo inOrderDo_;
-	public void SetInOrderDo(com.knziha.rbtree.RBTree_duplicative.inOrderDo inOrderDo) {
-		inOrderDo_=inOrderDo;
+
+	@Override
+	public void insertNode(Comparable node) {
+		insert((T) node);
 	}
+
+	RBTree.inOrderDo inOrderDo_;
 
 	public int getCountOf(T key) {
 		if(data.size()==0 || data.get(data.size()-1).compareTo(key)<0) {

@@ -10,6 +10,7 @@ import com.knziha.plod.dictionarymodels.mdict_preempter;
 import com.knziha.plod.widgets.DragSortTableView;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -131,8 +132,12 @@ public class ManagerFragment extends VBox {
 								boolean renamed=false;
 								if(mdTmp instanceof mdict_nonexist || !mdTmp.f().exists()){
 									if(new_file.exists()) {
-										tableView.getItems().set(index, new mdict_preempter(new_file.getAbsolutePath()));
-										renamed=true;
+										try {
+											tableView.getItems().set(index, new mdict_preempter(new_file.getAbsolutePath()));
+											renamed=true;
+										} catch (IOException e) {
+											e.printStackTrace();
+										}
 									}
 								}
 								if(!renamed)
@@ -187,7 +192,6 @@ public class ManagerFragment extends VBox {
         tableView.getColumns().add(createCol(bundle.getString("relpath"), propertyMapper_FilePath, -1, col.getCellFactory()));
         tableView.getColumns().add(createCol(bundle.getString("filesize"), mdict::getFileSizeProperty, -1, null));
         tableView.getColumns().add(createCol(bundle.getString("setasformation"), mdict::getFormationProperty, -1, null));
-
         mdict_cache = new HashMap<>(server.md.size());
         HashMap<String,mdict> filter_cache = new HashMap<>(server.currentFilter.size());
 
@@ -270,7 +274,12 @@ public class ManagerFragment extends VBox {
 							new FileChooser.ExtensionFilter("mdict file", "*.mdx"),
 							new FileChooser.ExtensionFilter("mdict resource file", "*.mdd")
 					);
-					File startPath=lastOpenDir!=null?lastOpenDir:new File(opt.GetLastMdlibPath());
+					File startPath=null;
+					mdict mdTmp = tableView.getSelectionModel().getSelectedItem();
+					if(mdTmp!=null)
+						startPath=mdTmp.f().getParentFile();
+					if(startPath==null || !startPath.exists())
+						startPath=lastOpenDir!=null?lastOpenDir:new File(opt.GetLastMdlibPath());
 					if(!startPath.exists())
 						startPath=new File(opt.projectPath);
 					fileChooser.setInitialDirectory(startPath);
@@ -281,7 +290,11 @@ public class ManagerFragment extends VBox {
 						for(File fI:files){
 							tableView.isDirty=true;
 							if(!mdict_cache.containsKey(fI.getAbsolutePath())){
-								mdModifying.add(new mdict_preempter(fI.getAbsolutePath()));
+								try {
+									mdModifying.add(new mdict_preempter(fI.getAbsolutePath()));
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
 							}
 						}
 					}
@@ -408,7 +421,7 @@ public class ManagerFragment extends VBox {
 		return btnTmp;
 	}
 
-	public static mdict new_mdict_prempter(String line, boolean isFilter) {
+	public static mdict new_mdict_prempter(String line, boolean isFilter) throws IOException {
 		mdict mdTmp;
 		if(!new File(line).exists())
 			mdTmp=new mdict_nonexist(line);

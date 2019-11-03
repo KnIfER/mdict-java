@@ -57,10 +57,13 @@ the valueOf method.
     }
     return negative ? result : -result;
 }
-    
-    
-    
-    public static int parsint(Object o)
+
+
+    public static int parsint(Object o){
+        return parsint(o,-1);
+    }
+
+    public static int parsint(Object o, int val)
 {
     /*
 WARNING: This method may be invoked early during VM initialization
@@ -69,7 +72,7 @@ the valueOf method.
      */
 	String s = String.valueOf(o);
     if (s == null) {
-    	return -1;
+    	return val;
     }
 
     int result = 0;
@@ -86,10 +89,10 @@ the valueOf method.
                 negative = true;
                 limit = Integer.MIN_VALUE;
             } else if (firstChar != '+')
-                return -1;
+                return val;
 
             if (len == 1) // Cannot have lone "+" or "-"
-            	 return -1;
+            	 return val;
             i++;
         }
         multmin = limit / 10;
@@ -97,19 +100,19 @@ the valueOf method.
             // Accumulating negatively avoids surprises near MAX_VALUE
             digit = Character.digit(s.charAt(i++),10);
             if (digit < 0) {
-            	 return -1;
+            	 return val;
             }
             if (result < multmin) {
-            	 return -1;
+            	 return val;
             }
             result *= 10;
             if (result < limit + digit) {
-            	 return -1;
+            	 return val;
             }
             result -= digit;
         }
     } else {
-        return -1;
+        return val;
     }
     return negative ? result : -result;
 }

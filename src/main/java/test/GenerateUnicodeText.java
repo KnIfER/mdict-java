@@ -13,6 +13,7 @@ import java.util.ArrayList;
  */
 public class GenerateUnicodeText {
     public static void main(String[] args){
+    	CMN.ConfigLogFile("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\UIText_zh.properties", false);
 		CMN.Log("view="+ StringEscapeUtils.escapeJava("视图"));
 		CMN.Log("open="+StringEscapeUtils.escapeJava("打开"));
 
@@ -57,9 +58,7 @@ public class GenerateUnicodeText {
 		CMN.Log("s_all="+StringEscapeUtils.escapeJava("全选"));
 		CMN.Log("s_none="+StringEscapeUtils.escapeJava("全不选"));
 		//CMN.Log("settings="+StringEscapeUtils.escapeJava("关键词"));
-		CMN.Log("wildwutsp="+StringEscapeUtils.escapeJava("通配搜索排除空格"));
-		CMN.Log("fullwutsp="+StringEscapeUtils.escapeJava("全文搜索排除空格"));
-		CMN.Log("pagewutsp="+StringEscapeUtils.escapeJava("页内搜索排除空格"));
+		CMN.Log("pagewutsp="+StringEscapeUtils.escapeJava("通配符排除空格"));
 		CMN.Log("tintwild="+StringEscapeUtils.escapeJava("为通配搜索结果染色"));
 		CMN.Log("remwsize="+StringEscapeUtils.escapeJava("记忆窗口大小"));
 		CMN.Log("remwpos="+StringEscapeUtils.escapeJava("记忆窗口位置"));
@@ -69,10 +68,30 @@ public class GenerateUnicodeText {
 		CMN.Log("dt_setting="+StringEscapeUtils.escapeJava("设置和主界面解耦"));
 		CMN.Log("dt_advsrch="+StringEscapeUtils.escapeJava("高级搜索和主界面解耦"));
 		CMN.Log("dt_dictpic="+StringEscapeUtils.escapeJava("切换词典和主界面解耦"));
-		CMN.Log("updateonpic="+StringEscapeUtils.escapeJava("切换词典立即更新网页"));
+		//CMN.Log("updateonpic="+StringEscapeUtils.escapeJava("切换词典立即更新网页"));
+		CMN.Log("tintfull="+StringEscapeUtils.escapeJava("为全文搜索结果染色"));
 		CMN.Log("autopaste="+StringEscapeUtils.escapeJava("激活界面时自动使用剪贴板"));
 		CMN.Log("filterpaste="+StringEscapeUtils.escapeJava("不粘贴路径和链接"));
-
+		CMN.Log("ow_search1="+StringEscapeUtils.escapeJava("浏览器搜索链接 (鼠标中键)： "));
+		CMN.Log("ow_search2="+StringEscapeUtils.escapeJava("浏览器搜索链接 (鼠标右键)： "));
+		CMN.Log("regex_enable="+StringEscapeUtils.escapeJava("启用正则搜索引擎"));
+		CMN.Log("regex_config="+StringEscapeUtils.escapeJava("配置正则搜索引擎"));
+		CMN.Log("ps_regex="+StringEscapeUtils.escapeJava("页内查找启用正则表达式"));
+		CMN.Log("ps_separate="+StringEscapeUtils.escapeJava("按空格分割关键词"));
+		CMN.Log("regex_head="+StringEscapeUtils.escapeJava("自动添加 .* 头"));
+		CMN.Log("regex_case="+StringEscapeUtils.escapeJava("区分大小写"));
+		CMN.Log("p_regex_case="+StringEscapeUtils.escapeJava("区分大小写"));
+		CMN.Log("todo="+StringEscapeUtils.escapeJava("待定"));
+		CMN.Log("onegine="+StringEscapeUtils.escapeJava("Oniguruma 正则引擎"));
+		CMN.Log("findpage="+StringEscapeUtils.escapeJava("Webview 页内搜索"));
+		CMN.Log("regex_fuzzy="+StringEscapeUtils.escapeJava("词条检索时启用"));
+		CMN.Log("regex_full="+StringEscapeUtils.escapeJava("全文检索时启用"));
+		//CMN.Log("ow_search2="+StringEscapeUtils.escapeJava("^和$在行间匹配(多行模式)"));
+		//CMN.Log("ow_search2="+StringEscapeUtils.escapeJava(".匹配任意字符(包括换行符)"));
+		CMN.Log("class_case="+StringEscapeUtils.escapeJava("旧版Mdict大小写转换"));
+		CMN.Log("sr_inter="+StringEscapeUtils.escapeJava("中断搜索"));
+		CMN.Log("sr_save="+StringEscapeUtils.escapeJava("保存搜索…"));
+		CMN.ConfigLogFile(null);
     }
 
     //生成生成代码

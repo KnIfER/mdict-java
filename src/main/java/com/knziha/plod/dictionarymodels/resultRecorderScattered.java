@@ -1,11 +1,11 @@
 package com.knziha.plod.dictionarymodels;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.web.WebEngine;
 
 public class resultRecorderScattered extends resultRecorderDiscrete {
-	
 	private List<mdict> md;
 	private WebEngine engine;
 	private int[] firstLookUpTable;
@@ -24,14 +24,16 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			//int baseCount=0;
 			//if(i!=0)
 			//	baseCount=firstLookUpTable[i-1];
-			if(mdtmp.combining_search_tree2==null) {
-			}
-			else
-    		for(int ti=0;ti<mdtmp.combining_search_tree2.length;ti++){//遍历搜索结果
-    			if(mdtmp.combining_search_tree2[ti]==null) {
+			ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+			if(_combining_search_tree==null)
+				_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+
+			if(_combining_search_tree!=null)
+    		for(int ti=0;ti<_combining_search_tree.length;ti++){//遍历搜索结果
+    			if(_combining_search_tree[ti]==null) {
     				continue;
     			}
-    			resCount+=mdtmp.combining_search_tree2[ti].size();
+    			resCount+=_combining_search_tree[ti].size();
     		}
 			firstLookUpTable[i]=resCount;
 			
@@ -48,14 +50,17 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 
 		int resCount=0;
 		mdict mdtmp = md.get(idx);
-		
-		if(mdtmp.combining_search_tree2==null) {
-		}else
-		for(int ti=0;ti<mdtmp.combining_search_tree2.length;ti++){//遍历搜索结果
-			if(mdtmp.combining_search_tree2[ti]==null) {
+
+		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+		if(_combining_search_tree==null)
+			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+
+		if(_combining_search_tree!=null)
+		for(int ti=0;ti<_combining_search_tree.length;ti++){//遍历搜索结果
+			if(_combining_search_tree[ti]==null) {
 				continue;
 			}
-			resCount+=mdtmp.combining_search_tree2[ti].size();
+			resCount+=_combining_search_tree[ti].size();
 		}
 		
 		//firstLookUpTable[idx]=resCount;
@@ -68,10 +73,11 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		size=resCount;
 	}
 	
-	public resultRecorderScattered(List<mdict> md_, WebEngine engine_){
+	public resultRecorderScattered(List<mdict> md_, WebEngine engine_, com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer _SearchLauncher){
 		md=md_;
 		engine=engine_;
 		firstLookUpTable = new int[md_.size()];
+		SearchLauncher=_SearchLauncher;
 	}
 	
 	
@@ -87,14 +93,20 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		if(Rgn!=0)
 			pos-=firstLookUpTable[Rgn-1];
 		int idxCount = 0;
-		for(int ti=0;ti<mdtmp.combining_search_tree2.length;ti++){
-			if(mdtmp.combining_search_tree2[ti]==null)
+
+		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+		if(_combining_search_tree==null)
+			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+
+		if(_combining_search_tree!=null)
+		for(int ti=0;ti<_combining_search_tree.length;ti++){
+			if(_combining_search_tree[ti]==null)
 				continue;
-			int max = mdtmp.combining_search_tree2[ti].size();
+			int max = _combining_search_tree[ti].size();
 			if(max==0)
 				continue;
 			if(pos-idxCount<max) {
-				return mdtmp.getEntryAt(mdtmp.combining_search_tree2[ti].get(pos-idxCount),mflag);
+				return mdtmp.getEntryAt(_combining_search_tree[ti].get(pos-idxCount),mflag);
 			}
 			idxCount+=max;
 		}
@@ -113,14 +125,20 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		if(Rgn!=0)
 			pos-=firstLookUpTable[Rgn-1];
 		int idxCount = 0;
-		for(int ti=0;ti<mdtmp.combining_search_tree2.length;ti++){
-			if(mdtmp.combining_search_tree2[ti]==null)
+
+		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+		if(_combining_search_tree==null)
+			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+
+		if(_combining_search_tree!=null)
+		for(int ti=0;ti<_combining_search_tree.length;ti++){
+			if(_combining_search_tree[ti]==null)
 				continue;
-			int max = mdtmp.combining_search_tree2[ti].size();
+			int max = _combining_search_tree[ti].size();
 			if(max==0)
 				continue;
 			if(pos-idxCount<max) {
-				int renderIdx = mdtmp.combining_search_tree2[ti].get(pos-idxCount);
+				int renderIdx = _combining_search_tree[ti].get(pos-idxCount);
 				engine.executeScript("setDictAndPos("+Rgn+","+renderIdx+");ClearAllPages();processContents('\\r"+Rgn+"@"+renderIdx+"');pendingHL='"+currentSearchTerm+"'");
 				return;
 			}

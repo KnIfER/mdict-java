@@ -26,7 +26,7 @@ public class Rebuild_formation {
 			}
     	}
 
-		mdxDB.setZLibCompress(true);
+		mdxDB.setCompressionType(2);
     	mdxDB.write("D:\\assets\\mdicts\\构词法\\精简白鸽英语构词法.mdx");
     }
 

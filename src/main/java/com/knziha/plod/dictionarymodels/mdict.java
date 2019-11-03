@@ -1,10 +1,15 @@
 package com.knziha.plod.dictionarymodels;
 
+import com.knziha.plod.PlainDict.PlainDictAppOptions;
 import javafx.beans.property.*;
 import org.apache.commons.text.StringEscapeUtils;
+import org.joni.Option;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 
 /*
@@ -17,16 +22,15 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 		System.setProperty("file.encoding", "UTF-8");
 	}
 	public boolean tmpIsFilter;
-	@Deprecated
-	public mdict(){
-	}
+	PlainDictAppOptions opt;
 	//构造
-	public mdict(String fn) throws IOException {
+	public mdict(String fn, PlainDictAppOptions _opt) throws IOException {
 		super(fn);
+		opt=_opt;
 	}
 
-	public String getAboutString() {
-		String pure=StringEscapeUtils.unescapeHtml3(_header_tag.get("Description"));
+	public String getAboutHtml() {
+		String pure=StringEscapeUtils.unescapeHtml3(getAboutString());
 		StringBuilder sb= new StringBuilder();
 		sb.append("<style>html,body{padding:25px;color:#fff;}body::-webkit-scrollbar{display:none;}</style><script>window.onclick=function(e){parent.window.dismiss_menu();}</script>");
 		sb.append(_Dictionary_fName).append(" - about:").append("<br/>").append("<br/>");
@@ -50,6 +54,24 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 	}
 
 	@Override
+	protected boolean getUseJoniRegex(){
+		return opt.GetRegexSearchEngineEnabled();
+	}
+
+	@Override
+	protected boolean getRegexAutoAddHead(){
+		return opt.GetRegexSearchEngineAutoAddHead();
+	}
+
+	@Override
+	protected int getRegexOption(){
+		int ret=Option.NONE;
+		if(!opt.GetRegexSearchEngineCaseSensitive())
+			ret|=Option.IGNORECASE;
+		return ret;
+	}
+
+	@Override
 	public boolean getIsDedicatedFilter() {
 		return tmpIsFilter;
 	}
@@ -67,5 +89,21 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 	}
 	public final BooleanProperty getFormationProperty() {
 		return new SimpleBooleanProperty(tmpIsFilter);
+	}
+
+	public void savePagesTo(File file, int...position) throws IOException {
+		if(isResourceFile){
+			RecordLogicLayer hey = new RecordLogicLayer();
+			for (int i = 0; i < position.length; i++) {
+				FileOutputStream out = new FileOutputStream(new File(file.getParentFile(), "TODO.aaa"));
+				getRecordData(position[i], hey);
+				out.write(hey.data, hey.ral, hey.val-hey.ral);
+				out.close();
+			}
+		}else {
+			FileOutputStream out = new FileOutputStream(file);
+			out.write(getRecordsAt(position).getBytes(StandardCharsets.UTF_8));
+			out.close();
+		}
 	}
 }

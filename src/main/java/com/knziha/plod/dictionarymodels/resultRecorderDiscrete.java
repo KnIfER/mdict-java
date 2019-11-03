@@ -2,12 +2,11 @@ package com.knziha.plod.dictionarymodels;
 
 import com.knziha.plod.dictionary.Utils.Flag;
 
-public class resultRecorderDiscrete {
+public abstract class resultRecorderDiscrete {
 
 	public String currentSearchTerm="";
-	
-	public resultRecorderDiscrete(){};
-	
+	public com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer SearchLauncher;
+
 	Flag mflag = new Flag();
 	
 	public String getResAt(int pos) {return "";}

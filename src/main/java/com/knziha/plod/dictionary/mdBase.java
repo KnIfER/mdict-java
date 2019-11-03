@@ -17,37 +17,32 @@
 
 package com.knziha.plod.dictionary;
 
+import com.knziha.plod.dictionary.Utils.*;
+import com.knziha.rbtree.RBTree;
+import org.anarres.lzo.LzoDecompressor1x;
+import org.anarres.lzo.lzo_uintp;
+import test.CMN;
+
 import java.io.*;
-import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
-import com.knziha.plod.dictionary.Utils.key_info_struct;
-import com.knziha.plod.dictionary.Utils.myCpr;
-import com.knziha.plod.dictionary.Utils.record_info_struct;
-import org.anarres.lzo.*;
+import static com.knziha.plod.dictionary.Utils.BU.calcChecksum;
+
 //import org.jvcompress.lzo.MiniLZO;
 //import org.jvcompress.util.MInt;
-
-import com.knziha.plod.dictionary.Utils.BU;
-import com.knziha.rbtree.RBTree;
 //import test.CMN;
 
 
-class mdBase {
+abstract class mdBase {
 	protected File f;
-	@Deprecated//dummy, don't call this.
-	mdBase(){};
-
 	final static byte[] _zero4 = new byte[]{0,0,0,0};
 	final static byte[] _1zero3 = new byte[]{1,0,0,0};
 	final static byte[] _2zero3 = new byte[]{2,0,0,0};
@@ -55,23 +50,28 @@ class mdBase {
 	public Boolean isCompact = true;
 	public Boolean isStripKey = true;
 	protected Boolean isKeyCaseSensitive = false;
-	int _encrypt=0;
+	/** encryption flag
+	   0x00 - no encryption
+	   0x01 - encrypt record block
+	   0x02 - encrypt key info block*/
+	int _encrypt;
 	Charset _charset;public Charset getCharset(){return _charset;}
+	String _encoding="UTF-16LE";public String getEncoding(){return _encoding;}
 	protected int delimiter_width = 1;
-	String _encoding="UTF-16LE";
 	String _passcode = "";
 
 	float _version;
-	protected int _number_width;
+	int _number_width;
 	long _num_entries;public long getNumberEntries(){return _num_entries;}
 	long _num_key_blocks;public long get_num_key_blocks(){return _num_key_blocks;}
-	long _num_record_blocks=0;public long get_num_record_blocks(){return _num_record_blocks;}
+	protected long _num_record_blocks;public long get_num_record_blocks(){return _num_record_blocks;}
 
-	RBTree<myCpr<Integer, Integer>> accumulation_blockId_tree = new RBTree<myCpr<Integer, Integer>>();
+	RBTree<myCpr<Integer, Integer>> accumulation_blockId_tree = new RBTree<>();
 	long _key_block_size,_key_block_info_size,_key_block_info_decomp_size,_record_block_size;
 
 	int _key_block_offset;
 	long _record_block_offset;
+	long _record_block_start;
 
 	key_info_struct[] _key_block_info_list;
 	record_info_struct[] _record_info_struct_list;
@@ -83,7 +83,6 @@ class mdBase {
 	/** Maximum size of one record block */
 	public long maxDecomKeyBlockSize;
 	/** data buffer that holds one record bock of maximum possible size for this dictionary */
-	private byte[] record_block_;
 
 	protected DataInputStream getStreamAt(long at) throws IOException {
 		DataInputStream data_in1 = new DataInputStream(mOpenInputStream());
@@ -103,16 +102,15 @@ class mdBase {
 	}
 
 
-	protected HashMap<String,String[]> _stylesheet = new HashMap<String,String[]>();
+	protected HashMap<String,String[]> _stylesheet = new HashMap<>();
 	public int lenSty=0;
 
 	//构造
 	mdBase(String fn) throws IOException  {
-		init(fn);
-	}
-
-	protected void init(String fn) throws IOException{
-
+		if(fn==null){
+			initLogically();
+			return;
+		}
 		//![0]File in
 		f = new File(fn);
 
@@ -131,15 +129,15 @@ class mdBase {
 		data_in.read(itemBuf, 0, 4);
 		int alder32 = getInt(itemBuf[3],itemBuf[2],itemBuf[1],itemBuf[0]);
 		//assert alder32 == (BU.calcChecksum(header_bytes)& 0xffffffff);
-		if((BU.calcChecksum(header_bytes)& 0xffffffff) != alder32) throw new IOException("unrecognized format");
+		if((calcChecksum(header_bytes)& 0xffffffff) != alder32) throw new IOException("unrecognized format");
 
 		//data_in.skipBytes(4);
 		//不必关闭文件流 data_in
 
 
-		Pattern re = Pattern.compile("(\\w+)=\"(.*?)\"",Pattern.DOTALL);
-		String headerString = new String(header_bytes,"UTF-16LE");
-		//if(f.getName().startsWith("Long")) CMN.show("headerString::"+headerString);
+		Pattern re = Pattern.compile("(\\w+)=[\"](.*?)[\"]",Pattern.DOTALL);
+		String headerString = new String(header_bytes, StandardCharsets.UTF_16LE);
+		//SU.Log("headerString::", headerString);
 		Matcher m = re.matcher(headerString);
 		_header_tag = new HashMap<>();
 		while(m.find()) {
@@ -177,21 +175,13 @@ class mdBase {
 			delimiter_width = 1;
 
 
-            /* encryption flag
-               0x00 - no encryption
-               0x01 - encrypt record block
-               0x02 - encrypt key info block*/
 		String EncryptedFlag = _header_tag.get("Encrypted");
-		if(EncryptedFlag==null || EncryptedFlag.equals("0") || EncryptedFlag.equals("No"))
-			_encrypt = 0;
-		else if(EncryptedFlag == "1")
-			_encrypt = 1;
-		else
-			try {
-				_encrypt = Integer.valueOf(EncryptedFlag);
-			} catch (NumberFormatException e) {
-				_encrypt=0;
+		if(EncryptedFlag!=null){
+			_encrypt=IU.parsint(EncryptedFlag, -1);
+			if(_encrypt<0){
+				_encrypt = EncryptedFlag.equals("Yes")?1:0;
 			}
+		}
 
 		// stylesheet attribute if present takes form of:
 		//   style_number # 1-255
@@ -208,27 +198,22 @@ class mdBase {
 			}
 		}
 
-		_version = Float.valueOf(_header_tag.get("GeneratedByEngineVersion"));
-		if(_version < 2.0)
-			_number_width = 4;
-		else
-			_number_width = 8;
+		_version = Float.parseFloat(_header_tag.get("GeneratedByEngineVersion"));
+
+		_number_width = _version < 2.0 ?4 : 8;
+
 		//![1]HEADER 分析完毕
 		//![2]_read_keys_info START
 		//stst = System.currentTimeMillis();
 		//size (in bytes) of previous 5 or 4 numbers (can be encrypted)
-		int num_bytes;
-		if(_version >= 2)
-			num_bytes = 8 * 5 + 4;
-		else
-			num_bytes = 4 * 4;
+		int num_bytes = _version >= 2 ?8 * 5 + 4 : 4 * 4;
 		itemBuf = new byte[num_bytes];
 		data_in.read(itemBuf, 0, num_bytes);
 		data_in.close();
 		ByteBuffer sf = ByteBuffer.wrap(itemBuf);
 
 		//TODO: pureSalsa20.py decryption
-		if(_encrypt==1){if(_passcode==emptyStr) throw new IllegalArgumentException("_passcode未输入");}
+		if(_encrypt==1){if(_passcode.equals(emptyStr)) throw new IllegalArgumentException("_passcode未输入");}
 		_num_key_blocks = _read_number(sf);                                           // 1
 		_num_entries = _read_number(sf);                                          // 2
 		if(_version >= 2.0){_key_block_info_decomp_size = _read_number(sf);}      //[3]
@@ -248,9 +233,15 @@ class mdBase {
 
 		_record_block_offset = _key_block_offset+_key_block_size;
 
+
 		read_key_block_info();
+	}
+
+
+	protected void initLogically() {
 
 	}
+
 
 	void read_key_block_info() {
 		// read key block info, which comprises each key_block's:
@@ -272,13 +263,14 @@ class mdBase {
 	void _decode_key_block_info(byte[] key_block_info_compressed) {
 		key_info_struct[] _key_block_info_list = new key_info_struct[(int) _num_key_blocks];
 		//block_blockId_search_list = new String[(int) _num_key_blocks];
-		byte[] key_block_info;
+		byte[] key_block_info=null;
 		if(_version >= 2)
-		{   //zlib压缩
+		{
+			//zlib压缩
 			//CMN.show("yes!");
 			//byte[] asd = new byte[]{key_block_info_compressed[0],key_block_info_compressed[1],key_block_info_compressed[2],key_block_info_compressed[3]};
 			//assert(new String(asd).equals(new String(new byte[]{2,0,0,0})));
-
+			//BU.printBytes(key_block_info_compressed,0,4);
 			//处理 Ripe128md 加密的 key_block_info
 			if(_encrypt==2){try{
 				key_block_info_compressed = BU._mdx_decrypt(key_block_info_compressed);
@@ -286,7 +278,20 @@ class mdBase {
 			//!!!getInt CAN BE NEGTIVE ,INCONGRUENT to python CODE
 			//!!!MAY HAVE BUG
 			//int adler32 = getInt(key_block_info_compressed[4],key_block_info_compressed[5],key_block_info_compressed[6],key_block_info_compressed[7]);
-			key_block_info = zlib_decompress(key_block_info_compressed,8);
+
+			//解压开始
+			switch (key_block_info_compressed[0]|key_block_info_compressed[1]<<8|key_block_info_compressed[2]<<16|key_block_info_compressed[3]<<32){
+				case 0://no compression
+					key_block_info=new byte[key_block_info_compressed.length-8];
+					System.arraycopy(key_block_info_compressed, 8, key_block_info, 0,key_block_info.length);
+				break;
+				case 1:
+					//new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block, 0,new lzo_uintp());
+				break;
+				case 2:
+					key_block_info = zlib_decompress(key_block_info_compressed,8);
+				break;
+			}
 			//assert(adler32 == (BU.calcChecksum(key_block_info) ));
 			//ripemd128.printBytes(key_block_info,0, key_block_info.length);
 		}
@@ -300,7 +305,7 @@ class mdBase {
 		int bytePointer =0 ;
 		for(int i=0;i<_key_block_info_list.length;i++){
 			int textbufferST,textbufferLn;
-			accumulation_blockId_tree.insert(new myCpr<Integer, Integer>(accumulation_,i));
+			accumulation_blockId_tree.insert(new myCpr<>(accumulation_, i));
 			//read in number of entries in current key block
 			if(_version<2) {
 				_key_block_info_list[i] = new key_info_struct(BU.toInt(key_block_info,bytePointer),accumulation_);
@@ -503,24 +508,28 @@ class mdBase {
 		}
 	}
 
+
+	static class cached_rec_block{
+		byte[] record_block_;
+		int blockOff;
+		int blockID=-100;
+	}
+	private volatile cached_rec_block RinfoI_cache_ = new cached_rec_block();
+
 	//存储一组RecordBlock
-	volatile int prepared_RecordBlock_ID=-100;
-	byte[] prepareRecordBlock(record_info_struct RinfoI, int Rinfo_id) throws IOException {//异步
-		if(prepared_RecordBlock_ID==Rinfo_id)
-			return record_block_;
+	cached_rec_block prepareRecordBlock(record_info_struct RinfoI, int Rinfo_id) throws IOException {
+		if(RinfoI_cache_.blockID==Rinfo_id)
+			return RinfoI_cache_;
 
 		if(RinfoI==null)
 			RinfoI = _record_info_struct_list[Rinfo_id];
 		DataInputStream data_in = getStreamAt(_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width+
 				RinfoI.compressed_size_accumulator);
-		// record block info section
 
 
-		//whole section of record_blocks;
-		// for(int i123=0; i123<record_block_info_list.size(); i123++){
 		int compressed_size = (int) RinfoI.compressed_size;
 		int decompressed_size = rec_decompressed_size = (int) RinfoI.decompressed_size;//用于验证
-		byte[] record_block = new byte[decompressed_size];
+
 		byte[] record_block_compressed = new byte[compressed_size];
 		//System.out.println(compressed_size) ;
 		//System.out.println(decompressed_size) ;
@@ -533,26 +542,33 @@ class mdBase {
 		//ByteBuffer sf1 = ByteBuffer.wrap(record_block_compressed);
 		//int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
 
-		if(compareByteArrayIsPara(_zero4, record_block_compressed)){
-			System.arraycopy(record_block_compressed, 8, record_block, 0, decompressed_size-8);
+		cached_rec_block RinfoI_cache = new cached_rec_block();
+		RinfoI_cache.blockOff=0;
+		int BlockLen=decompressed_size;
+		//解压开始
+		switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
+			default:
+			case 0://no compression
+				RinfoI_cache.record_block_=record_block_compressed;
+				RinfoI_cache.blockOff=8;
+				//CMN.Log(_key_block_compressed.length,start,8);
+				//System.arraycopy(_key_block_compressed, (+8), key_block, 0,key_block.length);
+			break;
+			case 1:
+				RinfoI_cache.record_block_ = new byte[BlockLen];
+				new LzoDecompressor1x().decompress(record_block_compressed, 8, (int)(compressed_size-8), RinfoI_cache.record_block_, 0,new lzo_uintp());
+			break;
+			case 2:
+				RinfoI_cache.record_block_ = new byte[BlockLen];
+				//key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
+				Inflater inf = new Inflater();
+				inf.setInput(record_block_compressed, +8, compressed_size-8);
+				try {
+					int ret = inf.inflate(RinfoI_cache.record_block_,0,BlockLen);
+				} catch (DataFormatException e) {e.printStackTrace();}
+			break;
 		}
-		// lzo compression
-		else if(compareByteArrayIsPara(_1zero3, record_block_compressed)){
-			new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block, 0,new lzo_uintp());
-		}
-		// zlib compression
-		else if(compareByteArrayIsPara(_2zero3, record_block_compressed)){
-			//long stst = System.currentTimeMillis();
-			//record_block = zlib_decompress(record_block_compressed,8);
-			Inflater inf = new Inflater();
-			inf.setInput(record_block_compressed,8,compressed_size-8);
-			try {
-				int ret = inf.inflate(record_block,0,decompressed_size);
-			} catch (DataFormatException e) {
-				e.printStackTrace();
-			}
-			//Log.e("asdsad",(System.currentTimeMillis()-stst)+" "+Rinfo_id);
-		}
+
 
 		//CMN.show(record_block.length+"ss"+decompressed_size);
 		// notice not that adler32 return signed value
@@ -560,9 +576,8 @@ class mdBase {
 		//assert(adler32 == (BU.calcChecksum(record_block,0,decompressed_size) ));
 		//assert(record_block.length == decompressed_size );
 		//当前内容块解压完毕
-		record_block_=record_block;
-		prepared_RecordBlock_ID=Rinfo_id;
-		return record_block;
+		RinfoI_cache_=RinfoI_cache;
+		return RinfoI_cache;
 	}
 
 
@@ -572,21 +587,79 @@ class mdBase {
 		if(_key_block_info_list==null) read_key_block_info();
 		int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
 		key_info_struct infoI = _key_block_info_list[blockId];
-		prepareItemByKeyInfo(infoI,blockId,null);
-		return new String(infoI_cache_.keys[(int) (position-infoI.num_entries_accumulator)],_charset);
+		return new String(prepareItemByKeyInfo(infoI, blockId, null).keys[(int) (position-infoI.num_entries_accumulator)],_charset);
 	}
 
 
-	class cached_key_block{
+	public static class RecordLogicLayer extends F1ag{
+		public int ral;
+		public byte[] data;
+	}
+
+	protected void getRecordData(int position, RecordLogicLayer retriever) throws IOException{
+		if(position<0||position>=_num_entries) return;
+		if(maxDecompressedSize==0)
+			decode_record_block_header();
+		int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
+		key_info_struct infoI = _key_block_info_list[blockId];
+		cached_key_block infoI_cache = prepareItemByKeyInfo(infoI, blockId, null);
+
+		int i = (int) (position-infoI.num_entries_accumulator);
+		Integer Rinfo_id = reduce(infoI_cache.key_offsets[i],0,_record_info_struct_list.length);//accumulation_RecordB_tree.xxing(new mdictRes.myCpr(,1)).getKey().value;//null 过 key前
+		record_info_struct RinfoI = _record_info_struct_list[Rinfo_id];
+
+		cached_rec_block RinfoI_cache = prepareRecordBlock(RinfoI,Rinfo_id);
+
+		// split record block according to the offset info from key block
+		long record_start = infoI_cache.key_offsets[i]-RinfoI.decompressed_size_accumulator;
+		long record_end;
+		if (i < infoI.num_entries-1){
+			record_end = infoI_cache.key_offsets[i+1]-RinfoI.decompressed_size_accumulator;
+		}
+		else {
+			if (blockId + 1 < _key_block_info_list.length) {
+				//TODO construct a margin checker
+				record_end = prepareItemByKeyInfo(null, blockId + 1, null).key_offsets[0] - RinfoI.decompressed_size_accumulator;
+			} else
+				record_end = rec_decompressed_size;
+		}
+		retriever.ral=(int)record_start+RinfoI_cache.blockOff;
+		retriever.val=(int)record_end;
+		retriever.data=RinfoI_cache.record_block_;
+	}
+
+	public byte[] getRecordData(int position) throws IOException{
+		RecordLogicLayer va1=new RecordLogicLayer();
+		getRecordData(position, va1);
+		byte[] data = va1.data;
+		int record_start=va1.ral;
+		int record_end=va1.val;
+
+		byte[] record = new byte[(record_end-record_start)];
+		int recordLen = record.length;
+		if(recordLen+record_start>data.length)
+			recordLen = data.length-record_start;
+
+		System.arraycopy(data, record_start, record, 0, recordLen);
+		return record;
+	}
+
+	protected ByteArrayInputStream getResourseAt(int position) throws IOException {//异步
+		RecordLogicLayer va1=new RecordLogicLayer();
+		getRecordData(position, va1);
+		return new BSI(va1.data, va1.ral, va1.val);
+	}
+
+	static class cached_key_block{
 		byte[][] keys;
 		long[] key_offsets;
 		byte[] hearderText=null;
 		byte[] tailerKeyText=null;
 		String hearderTextStr=null;
 		String tailerKeyTextStr=null;
-		int blockID=-1;
+		int blockID=-100;
 	}
-	private cached_key_block infoI_cache_ = new cached_key_block();
+	private volatile cached_key_block infoI_cache_ = new cached_key_block();
 
 	public cached_key_block prepareItemByKeyInfo(key_info_struct infoI,int blockId,cached_key_block infoI_cache){
 		if(_key_block_info_list==null) read_key_block_info();
@@ -603,38 +676,41 @@ class mdBase {
 			infoI_cache.tailerKeyText = infoI.tailerKeyText;
 			long start = infoI.key_block_compressed_size_accumulator;
 			long compressedSize;
-			byte[] key_block = new byte[1];
+
 			if(blockId==_key_block_info_list.length-1)
 				compressedSize = _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
 			else
 				compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
 
-
 			DataInputStream data_in = getStreamAt(_key_block_offset+start);
 
 			byte[]  _key_block_compressed = new byte[(int) compressedSize];
-			data_in.read(_key_block_compressed, (int)(0), _key_block_compressed.length);
+			data_in.read(_key_block_compressed, 0, _key_block_compressed.length);
 			data_in.close();
 
+			//int adler32 = getInt(_key_block_compressed[+4],_key_block_compressed[+5],_key_block_compressed[+6],_key_block_compressed[+7]);
 
-			String key_block_compression_type = new String(new byte[]{_key_block_compressed[(int) 0],_key_block_compressed[(int) (+1)],_key_block_compressed[(int) (+2)],_key_block_compressed[(int) (3)]});
-			//int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
-
+			byte[] key_block;
+			int keyBlockOff=0;
+			int keyBlockLen=(int) infoI.key_block_decompressed_size;
 			//解压开始
 			switch (_key_block_compressed[0]|_key_block_compressed[1]<<8|_key_block_compressed[2]<<16|_key_block_compressed[3]<<32){
+				default:
 				case 0://no compression
-					key_block = new byte[(int) (_key_block_compressed.length-start-8)];
-					System.arraycopy(_key_block_compressed, (+8), key_block, 0,key_block.length);
+					key_block=_key_block_compressed;
+					keyBlockOff=8;
+					CMN.Log(_key_block_compressed.length,start,8);
+					//System.arraycopy(_key_block_compressed, (+8), key_block, 0,key_block.length);
 				break;
 				case 1:
-					key_block = new byte[(int) infoI.key_block_decompressed_size];
+					key_block = new byte[keyBlockLen];
 					new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block, 0,new lzo_uintp());
 				break;
 				case 2:
+					key_block = new byte[keyBlockLen];
 					//key_block = zlib_decompress(_key_block_compressed,(int) (start+8),(int)(compressedSize-8));
 					Inflater inf = new Inflater();
-					inf.setInput(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
-					key_block = new byte[(int) infoI.key_block_decompressed_size];
+					inf.setInput(_key_block_compressed, +8,(int)(compressedSize-8));
 					try {
 						int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
 					} catch (DataFormatException e) {e.printStackTrace();}
@@ -642,22 +718,22 @@ class mdBase {
 			}
 			/*spliting current Key block*/
 			int key_start_index=0,
-					key_end_index=0,
+					key_end_index,
 					keyCounter = 0;
 
-			while(key_start_index < key_block.length){
+			while(key_start_index < keyBlockLen){
 				long key_id;
 				if(_version<2)
-					key_id = BU.toInt(key_block, key_start_index);
+					key_id = BU.toInt(key_block, keyBlockOff+key_start_index);
 				else
-					key_id = BU.toLong(key_block, key_start_index);
+					key_id = BU.toLong(key_block, keyBlockOff+key_start_index);
 
 
 				key_end_index = key_start_index + _number_width;
 				SK_DELI:
-				while(key_end_index+delimiter_width<key_block.length){
+				while(key_end_index+delimiter_width<keyBlockLen){
 					for(int sker=0;sker<delimiter_width;sker++) {
-						if(key_block[key_end_index+sker]!=0) {
+						if(key_block[keyBlockOff+key_end_index+sker]!=0) {
 							key_end_index+=delimiter_width;
 							continue SK_DELI;
 						}
@@ -667,12 +743,12 @@ class mdBase {
 
 				//show("key_start_index"+key_start_index);
 				byte[] arraytmp = new byte[key_end_index-(key_start_index+_number_width)];
-				System.arraycopy(key_block,key_start_index+_number_width, arraytmp, 0,arraytmp.length);
+				System.arraycopy(key_block,keyBlockOff+key_start_index+_number_width, arraytmp, 0,arraytmp.length);
 
 
 				//CMN.show(keyCounter+":::"+key_text);
 				key_start_index = key_end_index + delimiter_width;
-				//CMN.show(infoI_cache.keys.length+"~~~"+keyCounter+"~~~"+infoI.num_entries);
+				//SU.Log(infoI_cache.keys.length+"~~~"+keyCounter+"~~~"+infoI.num_entries);
 				infoI_cache.keys[keyCounter]=arraytmp;
 
 				infoI_cache.key_offsets[keyCounter]=key_id;
@@ -690,108 +766,6 @@ class mdBase {
 
 	}
 
-
-
-
-
-
-
-
-
-	@Deprecated
-	public void printRecordInfo() throws IOException{
-		for(int i=0; i<_record_info_struct_list.length; i++){
-			record_info_struct RinfoI = _record_info_struct_list[i];
-			show("RinfoI_compressed_size="+RinfoI.compressed_size);
-
-		}
-	}
-
-	@Deprecated
-	public void printAllContents() throws IOException{
-		OutputStreamWriter fOut = new OutputStreamWriter(new FileOutputStream(f.getAbsolutePath()+".txt"),_encoding);
-
-		DataInputStream data_in = getStreamAt(_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width);
-		// record block info section
-
-		// actual record block data
-		//int i = (int) (position-infoI.num_entries_accumulator);//处于当前record块的第几个
-		//record_info_struct RinfoI = _record_info_struct_list[accumulation_RecordB_tree.xxing(new myCpr(infoI.key_offsets[i],1)).getKey().value];
-
-
-		//whole section of record_blocks;
-		for(int i=0; i<_record_info_struct_list.length; i++){
-			record_info_struct RinfoI = _record_info_struct_list[i];
-			//data_in.skipBytes((int) RinfoI.compressed_size_accumulator);
-			long compressed_size = RinfoI.compressed_size;
-			long decompressed_size = RinfoI.decompressed_size;//用于验证
-			byte[] record_block_compressed = new byte[(int) compressed_size];
-			data_in.read(record_block_compressed);//+8 TODO optimize
-			// 4 bytes indicates block compression type
-			byte[] record_block_type = new byte[4];
-			System.arraycopy(record_block_compressed, 0, record_block_type, 0, 4);
-			String record_block_type_str = new String(record_block_type);
-			// 4 bytes adler checksum of uncompressed content
-			ByteBuffer sf1 = ByteBuffer.wrap(record_block_compressed);
-			int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
-			byte[] record_block_ = new byte[1];
-			// no compression
-			if(compareByteArrayIsPara(_zero4, record_block_type)){
-				record_block_ = new byte[(int) (compressed_size-8)];
-				System.arraycopy(record_block_compressed, 8, record_block_, 0, record_block_.length-8);
-			}
-			// lzo compression
-			else if(compareByteArrayIsPara(_1zero3, record_block_type)){
-				//stst=System.currentTimeMillis(); //获取开始时间
-				//record_block_ = new byte[(int) decompressed_size];
-				//MInt len = new MInt((int) decompressed_size);
-				//byte[] arraytmp = new byte[(int) compressed_size];
-				//System.arraycopy(record_block_compressed, 8, arraytmp, 0,(int) (compressed_size-8));
-				//MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block_,len);
-				record_block_ = new byte[(int) (compressed_size-8)];
-				new LzoDecompressor1x().decompress(record_block_compressed, +8, (int)(compressed_size-8), record_block_, 0,new lzo_uintp());
-
-				//System.out.println("get Record LZO decompressing key blocks done!") ;
-				//System.out.println("解压Record耗时："+(System.currentTimeMillis()-st));
-			}
-			// zlib compression
-			else if(compareByteArrayIsPara(_2zero3, record_block_type)){
-				record_block_ = zlib_decompress(record_block_compressed,8);
-			}
-			// notice not that adler32 return signed value
-			//CMN.show(adler32+"!:"+BU.calcChecksum(record_block_) );
-			assert(adler32 == (BU.calcChecksum(record_block_) ));
-			assert(record_block_.length == decompressed_size );
-			//当前内容块解压完毕
-
-
-			String record_str = new String(record_block_,_charset);
-			// substitute styles
-			//if self._substyle and self._stylesheet:
-			//    record = self._substitute_stylesheet(record);
-			show(record_str);
-
-			fOut.append(record_str).append("\n");
-
-		}
-		data_in.close();
-		fOut.close();
-	}
-
-	@Deprecated
-	public void printAllKeys(){
-		if(_key_block_info_list==null) read_key_block_info();
-		int blockCounter = 0;
-		for(key_info_struct infoI:_key_block_info_list){
-			prepareItemByKeyInfo(infoI,blockCounter,null);
-			for(byte[] entry:infoI_cache_.keys){
-				String kk = new String(entry);
-				show(kk);
-			}
-			show("block no."+(blockCounter++)+"printed");
-		}
-	}
-
 	@Deprecated
 	public void findAllKeys(String keyword){
 		keyword = mdict.processText(keyword);
@@ -801,7 +775,7 @@ class mdBase {
 			for(byte[] entry:infoI_cache_.keys){
 				String kk = new String(entry);
 				if(kk.contains(keyword))
-					show(kk);
+					SU.Log(kk);
 			}
 			blockCounter++;
 		}
@@ -809,72 +783,8 @@ class mdBase {
 
 
 
-
-
-
-
-
-
-
-
-
 	protected HashMap<String,String> _header_tag;
-	@Deprecated
-	public void printDictInfo(){
-		show("\r\n——————————————————————Dict Info——————————————————————");
-		if(_header_tag!=null) {
-			Iterator iter = _header_tag.entrySet().iterator();
-			while (iter.hasNext()) {
-				Map.Entry entry = (Map.Entry) iter.next();
-				Object key = entry.getKey();
-				Object value = entry.getValue();
-				System.out.println("|"+key + ":" + value);
-			}
-		}
-		show("|编码: "+this._encoding);
-		show("|_num_entries: "+this._num_entries);
-		show("|_num_key_blocks: "+this._num_key_blocks);
-		show("|_num_record_blocks: "+this._num_record_blocks);
-		show("|maxComRecSize: "+this.maxComRecSize);
-		show("|maxDecompressedSize: "+this.maxDecompressedSize);
-		if(true) {
-			int counter=0;
-			for(key_info_struct infoI:_key_block_info_list) {
-				show("|"+infoI.num_entries+"@No."+counter+"||header~"+new String(infoI.headerKeyText,_charset)+"||tailer~"+new String(infoI.tailerKeyText,_charset));
-				counter++;
-			}
-		}
-		show("——————————————————————Info of Dict ——————————————————————\r\n");
-	}
 
-	//解压等utils
-	@Deprecated
-	public static byte[] zlib_decompressRAW_METHON(byte[] encdata,int offset,int len) {
-		try {
-			Inflater inf = new Inflater();
-			inf.setInput(encdata,offset,encdata.length-8);
-			byte[] res = new byte[len];
-			int ret = inf.inflate(res,0,len);
-			//show("zlib_decompressRAW"+ret);
-			return res;
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			return "ERR".getBytes();
-		}
-	}
-	@Deprecated
-	public static String zlib_decompress_to_str(byte[] encdata,int offset) {
-		try {
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			InflaterOutputStream inf = new InflaterOutputStream(out);
-			inf.write(encdata,offset, encdata.length-offset);
-			inf.close();
-			return out.toString("ASCII");
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			return "ERR";
-		}
-	}
 	public static int getInt(byte buf1, byte buf2, byte buf3, byte buf4)
 	{
 		int r = 0;
@@ -918,10 +828,6 @@ class mdBase {
 		return true;
 	}
 
-
-	void show(String str){
-		System.out.println(str);
-	}
 	public String getPath() {
 		return f.getAbsolutePath();
 	}

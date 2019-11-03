@@ -12,7 +12,7 @@ import java.util.ArrayList;
  * @date 2017/11/18
  */
 
-public class RBTree<T extends Comparable<T>> {
+public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
 
     protected RBTNode<T> mRoot;public RBTNode<T> getRoot() {return mRoot;} // 根结点
 
@@ -94,6 +94,12 @@ public class RBTree<T extends Comparable<T>> {
         inorderCounter3 = 0;//important
         inOrderDo(mRoot);
     }
+
+    @Override
+    public void insertNode(Comparable node) {
+         insert((T) node);
+    }
+
     //![1]设置接口
     public void SetInOrderDo(inOrderDo ido){
         mInOrderDo = ido;

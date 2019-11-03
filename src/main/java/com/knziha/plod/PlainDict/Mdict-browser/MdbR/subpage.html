@@ -2,7 +2,11 @@
 <html>
 <head>
 <style>
-mark {background: yellow; } mark.current { background: orange; }
+mark {background: yellow; }
+mark.current {
+	background: orange;
+	border:1px solid #FF0000
+}
 .highlight { background-color: yellow; }
 	html, body {
 	-moz-user-select:text;
@@ -49,7 +53,7 @@ var regSound=new RegExp("^sound://");
 
 function hiPlaySound(e){
 	var cur=e.ur1?e:e.srcElement;
-	console.log("hijacked sound playing : "+cur.ur1);
+	//console.log("hijacked sound playing : "+cur.ur1);
 	if(audio)
 		audio.pause();
 	else
@@ -63,14 +67,14 @@ function wrappedClickFunc(e){
 	var cur=e.srcElement;
 	parent.dismiss_menu();
 	if(cur.href){
-		console.log("1! found link : "+cur.href+" : "+regSound.test(cur.href));
+		//console.log("1! found link : "+cur.href+" : "+regSound.test(cur.href));
 		if(regEntry.test(cur.href))
 			cur.href="entry/"+cur.href.substring(8);
 		else if(regSound.test(cur.href)){/*拦截 sound 连接*/
 			var link="sound/"+cur.href.substring(8);
 			cur.href=link;
 			if(cur.onclick==undefined){
-				console.log("1! found internal sound link : "+cur.href);
+				//console.log("1! found internal sound link : "+cur.href);
 				cur.ur1=cur.href;
 				cur.removeAttribute("href");
 				cur.onclick=hiPlaySound;
@@ -107,10 +111,9 @@ function jumpTo(d) {
 		var np=currentIndex+d;
 		var max=results.length - 1;
 		if (currentIndex > max) currentIndex=0;
-		if (np < 0) return -1;
-		if (np > max) return 1;
 		var pw=parent.window;
-		if(pw.desiredOffset>0){
+		if(pw.desiredOffset>=0){
+			np=0;
 			if(frameAt<pw.HlightIdx) return d;
 			var baseOffset=pw.topOffset(frameAt);
 			for(;np>=0&&np<=max;np+=d){
@@ -139,8 +142,12 @@ function topOffset(elem){
     var top=0;
     var add=1;
     while(elem && elem!=document.body){
+    console.log(""+(elem.style.display==""))
         if(elem.style.display=='none'){
         	elem.style.display='block';
+		}
+		else if(elem.style.display==''){
+        	elem.style.display='inline';
 		}
         if(add){
 			top+=elem.offsetTop;
@@ -160,6 +167,15 @@ function quenchLight(){
 function resetLight(d){
 	if(d==1) currentIndex=-1;
 	else if(d==-1) currentIndex=results.length;
+	quenchLight();
+}
+
+function setAsEndLight(){
+	currentIndex=results.length-1;
+}
+
+function setAsStartLight(){
+	currentIndex=0;
 }
 
 function addClass(elem, className) {
@@ -190,37 +206,57 @@ function clearHighlights(){
 
 function highlight(keyword){
 	var b1=keyword==null;
-	if(b1 && parent.window.app)
-		keyword=parent.window.app.getCurrentPageKey();
-	if(keyword==null||b1&&keyword.trim().length==0)
+	var rcsp;
+	if(b1 && parent.window.app){
+		keyword=parent.window.app.getCurrentPageKey(true);
+	}
+	if(keyword==null)
+		return;
+	var index=keyword.indexOf('x');
+	if(index>=0){
+		rcsp=parseInt(keyword.substring(0, index));
+		keyword=keyword.substring(index+1);
+	}
+	if(b1&&keyword.trim().length==0)
 		return;
 	if(!MarkLoad){
 		loadJs('/MdbR/mark.js', function(){
 			MarkLoad=true;
-			do_highlight(keyword);
+			do_highlight(keyword,rcsp);
 		});
 	}else
-		do_highlight(keyword);
+		do_highlight(keyword,rcsp);
 }
 
-function do_highlight(keyword){
+function do_highlight(keyword,rcsp){
 	if(!MarkInst)
 		MarkInst = new Mark(document);
 	MarkInst.unmark({
 		done: function() {
 			bOnceHighlighted=false;
-			MarkInst.mark(keyword, {
-			separateWordSearch: true,'wildcards':'withSpaces',
-				done: function() {
-					bOnceHighlighted=true;
-					results = document.getElementsByTagName("mark");
-					currentIndex=-1;
-					if(frameAt==0&&parent.window.desiredOffset<=0)
-						jumpTo(1);
-				}
-			});
+			if(keyword){
+				keyword=decodeURIComponent(keyword);
+				console.log('keyword='+keyword+', rcsp='+rcsp);
+				if(rcsp&0x1)
+				MarkInst.markRegExp(new RegExp(keyword, (rcsp&0x2)?'m':'im'), {
+					done: done_highlight
+				});
+				else
+				MarkInst.mark(keyword, {
+					separateWordSearch:(rcsp&0x4)!=0,wildcards:(rcsp&0x8)?'enabled':'withSpaces',done: done_highlight,
+					caseSensitive:(rcsp&0x2)!=0
+				});
+			}
 		}
 	});
+}
+
+function done_highlight(){
+	bOnceHighlighted=true;
+	results = document.getElementsByTagName("mark");
+	currentIndex=-1;
+	if(frameAt==0&&parent.window.desiredOffset<=0)
+		jumpTo(1);
 }
 
 function loadJs(url,callback){

@@ -35,6 +35,7 @@ import java.util.ResourceBundle;
 import java.util.function.Function;
 
 import static com.knziha.plod.PlainDict.PlainDictionaryPcJFX.EscComb;
+import static com.knziha.plod.PlainDict.PlainDictionaryPcJFX.AltDComb;
 
 /** dictionary & dictionary set picker ui*/
 public class DictPickerDialog extends Stage {
@@ -60,12 +61,10 @@ public class DictPickerDialog extends Stage {
 		dv = new DragResizeView(defaultPercent);
 		GridPane mainGrid=dv.gl_to_guard=new GridPane();
 		mainGrid.setHgap(0);
-		addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-			public void handle(KeyEvent e) {
-				if (EscComb.match(e)) {
-					hide();
-					e.consume();
-				}
+		addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+			if (EscComb.match(e)|| AltDComb.match(e)) {
+				hide();
+				e.consume();
 			}
 		});
 		tv1 = new TableView<>();
@@ -99,11 +98,11 @@ public class DictPickerDialog extends Stage {
 
 		VBox vb = new VBox(mainGrid, statusBar = new Text());
 		VBox.setVgrow(mainGrid, Priority.ALWAYS);
-		Scene Scene = new Scene(vb, 800, 600);
+		Scene scene = new Scene(vb, 800, 600);
 		statusBar.setText("ready.");
 		statusBar.setUnderline(true);
 		vb.setPadding(new Insets(10,10,10,10));
-		setScene(Scene);
+		setScene(scene);
 		update(app, _sets, opt, false);
 	}
 
@@ -158,7 +157,7 @@ public class DictPickerDialog extends Stage {
 											getOnCloseRequest().handle(null);
 											return;
 										}
-										if(tv==tv2&&opt.GetUpdateWebDictsDirect()){
+										if(tv==tv2){//&&opt.GetUpdateWebDictsDirect()
 											getOnCloseRequest().handle(new VirtualWindowEvent(null));
 										}
 										event.consume();
@@ -222,7 +221,7 @@ public class DictPickerDialog extends Stage {
 					if(!disabled){
 						mdict mdTmp = mdict_cache.get(line);
 						if(mdTmp==null)
-							mdTmp=new mdict(line);
+							mdTmp=new mdict(line, opt);
 						((mdTmp.tmpIsFilter=isFilter)?currentFilter:md).add(mdTmp);
 					}
 					idx++;

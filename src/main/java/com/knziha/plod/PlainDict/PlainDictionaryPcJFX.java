@@ -22,7 +22,6 @@ import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -79,15 +78,10 @@ public class PlainDictionaryPcJFX extends Application {
 	public int adapter_idx;
 	public static Pattern windowPath=Pattern.compile("^[a-zA-Z]:\\\\.*");
 	public final static KeyCombination EscComb = KeyCombination.valueOf("ESC");
+	public final static KeyCombination AltDComb = KeyCombination.valueOf("ALT+D");
 
-	public volatile static boolean fuzzyIsInterrupted;
-	public volatile int fuzzyIdx;
-	Thread fuzzyThread;
-	Timer fuzzyTicker;
-	public volatile static boolean fullIsInterrupted;
-	public volatile int fullIdx;
-	Thread fullThread;
-	Timer fullTicker;
+	AdvancedSearchLogicLayer fuzzySearchLayer;
+	AdvancedSearchLogicLayer fullSearchLayer;
 	public static int ThirdFlag;
 
 	private final JTextField txtURL = new JTextField();
@@ -109,7 +103,13 @@ public class PlainDictionaryPcJFX extends Application {
 	private String record_for_mirror;
 
 	public class AppHandle {
-
+		int flag;
+		public void setFlag(int val) {
+			flag=val;
+		}
+		public int getFlag() {
+			return flag;
+		}
 		public void setPos(String pos) {
 			currentDisplaying=Integer.parseInt(pos);
 			CMN.Log("currentDisplaying" +pos);
@@ -127,9 +127,22 @@ public class PlainDictionaryPcJFX extends Application {
 			} catch (Exception e) { }
 		}
 
-		public String getCurrentPageKey() {
-			if(searchInPageBox!=null && searchInPageBox.getParent()!=null)
-				return searchInPageBox.textBox.getText();
+		public String getCurrentPageKey(boolean bAppendFlag){
+			try {
+				if(searchInPageBox!=null && searchInPageBox.getParent()!=null){
+					String ret = searchInPageBox.textBox.getText();
+					ret=ret.replace("\\","\\\\");
+					if(bAppendFlag){
+						ret=new StringBuilder(ret.length()+4)
+								.append(MakeRCSP())
+								.append("x")
+								.append(ret).toString();
+					}
+					//ret = URLEncoder.encode(ret, "UTF-8");
+					CMN.Log("sending...", ret);
+					return ret;
+				}
+			} catch (Exception ignored) { }
 			return null;
 		}
 
@@ -164,9 +177,7 @@ public class PlainDictionaryPcJFX extends Application {
 					fileChooser.setInitialFileName(mdTmp._Dictionary_fName+" - "+mdTmp.getEntryAt(arr2[0])+"."+arr2[0]);
 					File file = fileChooser.showSaveDialog(stage);
 					if(file!=null){
-						FileOutputStream out = new FileOutputStream(file);
-						out.write(mdTmp.getRecordsAt(arr2).getBytes(StandardCharsets.UTF_8));
-						out.close();
+						mdTmp.savePagesTo(file, arr2);
 					}
 				} catch (IOException e) { CMN.Log(""+e); }
 			}
@@ -211,8 +222,13 @@ public class PlainDictionaryPcJFX extends Application {
 			}
 		}
 
-		public void handleWebSearch(String url){
-			handleWebLink((opt.GetSearchUrlOverwriteEnabled()?opt.GetSearchUrlOverwrite():opt.SearchUrlDefault).replace("%s",url));
+		public void handleWebSearch(String url, int slot){
+			String urlbase = (opt.GetSearchUrlOverwriteEnabled()?opt.GetSearchUrlOverwrite():opt.SearchUrlDefault);
+			if(slot==1)
+				urlbase=opt.GetSearchUrlMiddle(urlbase);
+			else if(slot==2)
+				urlbase=opt.GetSearchUrlRight(urlbase);
+			handleWebLink(urlbase.replace("%s",url));
 		}
 
 		public void handlePdfLink(String url){
@@ -258,7 +274,7 @@ public class PlainDictionaryPcJFX extends Application {
 		public void reloadDict(int idx){
 			mdict mdTmp = md.get(idx);
 			try {
-				mdict mdNew = new mdict(mdTmp.f().getAbsolutePath());
+				mdict mdNew = new mdict(mdTmp.f().getAbsolutePath(), opt);
 				md.set(idx, mdNew);
 				if(currentDictionary==mdTmp)
 					currentDictionary=mdNew;
@@ -266,10 +282,6 @@ public class PlainDictionaryPcJFX extends Application {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		}
-
-		public void playSound(String url){
-			server.serve(new MdictServer.VirtualHttpSession(url));
 		}
 
 		public void openFolder(int idx){
@@ -404,6 +416,8 @@ public class PlainDictionaryPcJFX extends Application {
 		public final static String mainfolder="mainfolder";
 		public final static String overwrite_browser="ow_browser";
 		public final static String overwrite_browser_search ="ow_search";
+		public final static String overwrite_browser_search1 ="ow_search1";
+		public final static String overwrite_browser_search2 ="ow_search2";
 		public final static String ow_bsrarg="ow_bsrarg";
 		public final static String overwrite_pdf_reader="ow_pdf";
 		public final static String overwrite_pdf_reader_args="ow_pdfarg";
@@ -412,6 +426,10 @@ public class PlainDictionaryPcJFX extends Application {
 		public final static String switchdict="switchdict";
 		public final static String settings="settings";
 		public final static String pastebin_fw="pastebin_fw";
+		public final static String sr_inter="sr_inter";
+		public final static String sr_save="sr_save";
+		public static String wildmatch;
+		public static String fulltext;
 	}
 
 	final Runnable maximizeRunner = () -> SyncPaneToMain(contextDialog);
@@ -543,7 +561,7 @@ public class PlainDictionaryPcJFX extends Application {
 							String fileNameKey=fI.getAbsolutePath();
 							if(!mdict_cache.contains(fileNameKey))
 								try {
-									server.md.add(new mdict(fileNameKey));
+									server.md.add(new mdict(fileNameKey, opt));
 									mdict_cache.add(fileNameKey);
 								} catch (Exception e) { e.printStackTrace(); }
 						}
@@ -586,7 +604,7 @@ public class PlainDictionaryPcJFX extends Application {
 										continue;
 									if(mdTmp instanceof mdict_preempter){
 										try {
-											mdTmp=new mdict(mdTmp.getPath());
+											mdTmp=new mdict(mdTmp.getPath(), opt);
 											mdTmp.tmpIsFilter=isFiler;
 										} catch (IOException ignored) { CMN.Log(e); continue; }
 									}
@@ -647,7 +665,7 @@ public class PlainDictionaryPcJFX extends Application {
 						advancedSearchDialog.hide();
 					}
 				} break;
-				case UI.switchdict:{
+				case UI.switchdict:{//切换词典
 					if(!DismissSyncedPane(DictPickerDialog.class)){
 						if(pickDictDialog==null)
 							pickDictDialog = new DictPickerDialog(this, ScanSets(), opt, bundle);
@@ -830,22 +848,25 @@ public class PlainDictionaryPcJFX extends Application {
 					e.consume();
 				} else if (EscComb.match(e)) {
 
+				} else if (AltDComb.match(e)) {
+					clicker1.handle(new ActionEvent(qiehuanLabel,null));
 				}
 			}
 		});
 
 
 		if(opt.GetShowAdvanced())
-			Platform.runLater(() -> clicker1.handle(new VirtualEvent(advancedSearchLabel)));
+			Platform.runLater(() -> clicker1.handle(new ActionEvent(advancedSearchLabel,null)));
 
 		if(SU.debug){
 			//tg
-			//Platform.runLater(() -> clicker1.handle(new VirtualEvent(settings)));
+			//Platform.runLater(() -> clicker1.handle(new ActionEvent(settings,null)));
 			new Timer().schedule(new TimerTask() {
 				@Override
 				public void run() {
 					Platform.runLater(() -> {
 						if(searchInPageBox!=null)searchInPageBox.textBox.setText("happy");
+						if(advancedSearchDialog!=null) advancedSearchDialog.etSearch.setText("happy");
 						etSearch.setText("happiness");
 						try {
 							final Socket socket = new Socket("localhost", 8080);
@@ -861,30 +882,38 @@ public class PlainDictionaryPcJFX extends Application {
 		}
 
 
-		server.setOnMirrorRequestListener(uri -> {
+		server.setOnMirrorRequestListener((uri, mirror) -> {
 			if(uri==null)uri="";
-			String[] args = uri.split("&");
-			int pos=currentDisplaying; pos=IU.parsint(args[1].split("=")[1]);
-			int dx=adapter_idx; dx=IU.parsint(args[0].split("=")[1]);
-			String key=etSearch.getText();try {key=URLDecoder.decode(args[2].split("=")[1],"UTF-8");}catch(Exception e) {}
-			//CMN.show("currentDisplaying"+currentDisplaying);
-			//StringBuilder sb=new StringBuilder();
-			//NodeList clientIframes = engine.getDocument().getElementsByTagName("iframe");// 会 crash
-			////CMN.Log("clientIframes", clientIframes.getLength(), clientIframes);
-			//for(int i=0;i<clientIframes.getLength();i++) {
-			//	String content = clientIframes.item(i).getTextContent();
-			//	CMN.Log("[content mirror : ] ", content);
-			//	int split=content.indexOf("@");
-			//	if(split==-1) continue; //TODO
-			//	int DX=Integer.parseInt(content.substring(0, split));
-			//	sb.append("<div class='cp3' onclick='p3(this.nextSibling)'>")
-			//			.append(md.get(DX)._Dictionary_fName).append("</div>")
-			//			.append("<iframe id='md_").append(DX)
-			//			.append("' src='").append("\\content\\").append(content)
-			//			.append("' width=\"100%\" frameborder=\"0\" height=\"171\">").append(content).append("</iframe>");
-			//}
-
-			return newFixedLengthResponse(server.constructDerivedHtml(key, pos, dx,record_for_mirror));
+			String[] arr = uri.split("&");
+			HashMap<String, String> args = new HashMap<>(arr.length);
+			for (int i = 0; i < arr.length; i++) {
+				try {
+					String[] lst = arr[i].split("=");
+					args.put(lst[0], lst[1]);
+				} catch (Exception ignored) { }
+			}
+			int pos=IU.parsint(args.get("POS"), currentDisplaying);
+			int dx=IU.parsint(args.get("DX"), adapter_idx);
+			String key=etSearch.getText();
+			try {
+				key=URLDecoder.decode(args.get("KEY"),"UTF-8");
+			}catch(Exception ignored) {}
+			String records=null;
+			if(!mirror)
+				records=args.get("CT");
+			if(mirror||records==null)
+				records=record_for_mirror;
+			CMN.Log("sending1..."+records);
+			 {
+				try {
+					records=URLDecoder.decode(records, "UTF-8");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			CMN.Log("sending2...");
+			CMN.Log("sending2..."+records);
+			return newFixedLengthResponse(server.constructDerivedHtml(key, pos, dx,records));
 		});
 	}
 
@@ -985,6 +1014,15 @@ public class PlainDictionaryPcJFX extends Application {
 		return false;
 	}
 
+
+	private int MakeRCSP() {
+		return opt.FetPageSearchUseRegex()|
+				opt.FetPageSearchCaseSensitive()<<1|
+				opt.FetPageSearchSeparateWord()<<2|
+				opt.FetPageWithoutSpace()<<3
+				;
+	}
+
 	private void AttachSearchInPage(boolean focus, String text) {
 		if(col1==null){
 			dv = new DragResizeView(opt.getSearchBoxPercent());
@@ -992,7 +1030,10 @@ public class PlainDictionaryPcJFX extends Application {
 			topGrid.getColumnConstraints().add(dv.col1=col1=new ColumnConstraints());
 			GridPane.setHgrow(searchInPageBox=new SearchBox3rd(), Priority.ALWAYS);
 			searchInPageBox.textBox.textProperty().addListener((observable, oldValue, newValue) -> {
-				executeJavaScript("highlight('"+newValue+"');");
+				executeJavaScript(new StringBuilder()
+						.append("highlight('").append(MakeRCSP()).append("x")
+						.append(AppMessenger.getCurrentPageKey(false))
+						.append("',").append(");").toString());
 			});
 			searchInPageBox.downButton.setOnAction(event -> executeJavaScript("jumpHighlight(1)"));
 			searchInPageBox.upButton.setOnAction(event -> executeJavaScript("jumpHighlight(-1)"));
@@ -1098,11 +1139,11 @@ public class PlainDictionaryPcJFX extends Application {
 						if(nextbrace!=-1)
 							line = line.substring(nextbrace+1);
 					}
-					CMN.Log("?",opt.GetLastMdlibPath(), line, !windowPath.matcher(line).matches() , !line.startsWith("/"));
+					//CMN.Log("?",opt.GetLastMdlibPath(), line, !windowPath.matcher(line).matches() , !line.startsWith("/"));
 					if(!windowPath.matcher(line).matches() && !line.startsWith("/"))
 					line=opt.GetLastMdlibPath()+File.separator+line;
 					try {
-						mdict mdtmp = new mdict(line);
+						mdict mdtmp = new mdict(line, opt);
 						if(isFilter){
 							mdtmp.tmpIsFilter=true;
 							server.currentFilter.add(mdtmp);
@@ -1135,20 +1176,135 @@ public class PlainDictionaryPcJFX extends Application {
 
 
 	public MdictServer server;
+	static class AdvancedSearchLogicLayer extends com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer {
+		final Tab chiefAmbassador;
+		final Text statusBar;
+		final ArrayList<mdict> md;
+		final String Tag;
+		final PlainDictAppOptions opt;
+		Thread workerThread;
+		Timer Ticker;
+		private String msg;
+		Pattern currentPattern;
 
+		AdvancedSearchLogicLayer(PlainDictAppOptions opt, ArrayList<mdict> md, Tab chiefAmbassador, Text statusBar, int type) {
+			this.opt = opt;
+			this.chiefAmbassador = chiefAmbassador;
+			this.statusBar = statusBar;
+			this.md = md;
+			this.type = type;
+			Tag=(type==1||type==-1)?UI.wildmatch:UI.fulltext;
+		}
+
+		public ArrayList<Integer>[] getInternalTree(com.knziha.plod.dictionary.mdict md){
+			return type==-1?md.combining_search_tree2:(type==-2?md.combining_search_tree_4:null);
+		}
+		ObservableListmy adapter;
+		ListView<Integer> listView;
+
+		public void Terminate(boolean Join) {
+			IsInterrupted=true;
+			if(Ticker!=null) {
+				Ticker.cancel();
+				Ticker=null;
+				((Text)chiefAmbassador.getGraphic()).setText("");
+			}
+			if(Join)
+			try {
+				workerThread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			else{
+				adapter.rec.invalidate();
+				refreshList(false);
+			}
+			workerThread=null;
+		}
+
+		public void bakeMessage() {
+			msg = String.format(" %s \"%s\" %ss -> %d项", Tag, key, (System.currentTimeMillis() - st) * 1.f / 1000, adapter.rec.size());
+		}
+
+		public void refreshList(boolean bakePattern) {
+			((Text)chiefAmbassador.getGraphic()).setText("");
+
+			listView.setItems(null);
+			listView.setItems(adapter);
+			listView.scrollTo(0);
+			statusBar.setText(msg);
+			if(bakePattern){
+				currentPattern=null;
+				if(getTint())
+				try {currentPattern=Pattern.compile(opt.GetRegexSearchEngineEnabled()?key:key.replace("*", ".*"), Pattern.CASE_INSENSITIVE);
+				} catch (Exception ignored) { }
+			}
+		}
+
+		boolean getTint() {
+			return (type==-1||type==1)?opt.GetTintWildResult():opt.GetTintFullResult();
+		}
+	}
+
+//	static class AdvancedSearchScopedLogicLayer extends AdvancedSearchLogicLayer{
+//		AdvancedSearchScopedLogicLayer(Tab chiefAmbassador, ArrayList<mdict> md) {
+//			super(chiefAmbassador, statusBar, md);
+//		}
+//	}
+
+	ArrayList<AdvancedSearchLogicLayer> AdvancedSearchLogicalSet = new ArrayList<>(2);
 
 	//高级搜索
 	class AdvancedSearchDialog extends javafx.stage.Stage {
-		TextField etSearch2;
+		TextField etSearch;
 		Button btnSearch2;
 		Text statusBar;
 		TabPane tabPane;
 		SearchBox2nd box2;
-		ObservableListmy adapter2;
-		ObservableListmy adapter3;
-		ListView<Integer> listView;
-		ListView<Integer> listView2;
-		Pattern currentPattern;
+
+		class SearchRunnable implements Runnable{
+			final AdvancedSearchLogicLayer layer;
+			final boolean isCombinedSearch;
+			SearchRunnable(AdvancedSearchLogicLayer _SearchLauncher, boolean _isCombinedSearch){
+				layer=_SearchLauncher;
+				isCombinedSearch=_isCombinedSearch;
+			}
+			@Override
+			public void run() {
+				String key = layer.key = etSearch.getText();
+				statusBar.setText(" 🔍 "+key+" ...");
+				layer.st = System.currentTimeMillis();
+				ArrayList<mdict> _md = layer.md;
+				if(_md==null) _md=md;
+				if(isCombinedSearch){
+					for(int i=0;i<_md.size();i++){
+						try {
+							if(layer.IsInterrupted) return;
+							_md.get(layer.Idx=i).executeAdvancedSearch(key,i,layer);//do actual search
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}else {
+					try {
+						if(layer.IsInterrupted) return;
+						_md.get(layer.Idx).executeAdvancedSearch(key,layer.Idx,layer);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}
+				ObservableListmy adapter = layer.adapter;
+				adapter.rec.invalidate();
+				layer.Ticker.cancel();
+				layer.bakeMessage();
+				System.gc();
+				Platform.runLater(() -> {
+					if(layer.IsInterrupted) return;
+					layer.refreshList(true);
+				});
+			}
+		}
+
 		AdvancedSearchDialog()
 		{
 			super();
@@ -1184,9 +1340,9 @@ public class PlainDictionaryPcJFX extends Application {
 
 			tabPane = new TabPane();
 			statusBar = new Text();
-
 			tabPane.setPadding(new Insets(4,0,0,0));
-			etSearch2 = box.textBox;
+
+			etSearch = box.textBox;
 			btnSearch2 = box.searchButton;
 
 			VBox content = new VBox();
@@ -1197,7 +1353,7 @@ public class PlainDictionaryPcJFX extends Application {
 			tabPane.getStylesheets().add(tabCss);
 			tabPane.styleProperty().set("-fx-content-display:right;");
 			Tab tab1 = new Tab();
-			tab1.setText(bundle.getString("wildmatch"));
+			tab1.setText(UI.wildmatch = bundle.getString("wildmatch"));
 			tab1.setTooltip(new Tooltip(bundle.getString("hintwm")));
 			tab1.setClosable(false);
 			Text lable = new Text("");
@@ -1205,12 +1361,13 @@ public class PlainDictionaryPcJFX extends Application {
 			tab1.setGraphic(lable);
 
 			Tab tab2 = new Tab();
-			tab2.setText(bundle.getString("fulltext"));
+			tab2.setText(UI.fulltext = bundle.getString("fulltext"));
 			tab2.setTooltip(new Tooltip(bundle.getString("hintwm")));
 			tab2.setClosable(false);
 			Text lable1 = new Text("");
 			lable1.setStyle("-fx-fill: #ff0000;");
 			tab2.setGraphic(lable1);
+
 
 			tabPane.setRotateGraphic(false);
 			tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.SELECTED_TAB);
@@ -1219,256 +1376,119 @@ public class PlainDictionaryPcJFX extends Application {
 			tabPane.getStyleClass().add(TabPane.STYLE_CLASS_FLOATING);
 			final String lvCss = HiddenSplitPaneApp.class.getResource("lvCss.css").toExternalForm();
 			tabPane.getStylesheets().add(lvCss);
+			ContextMenu contextMenu = new ContextMenu();
+			String[] allItems = new String[]{
+					UI.sr_inter,
+					UI.sr_save
+			};
+			ObservableList<MenuItem> items = contextMenu.getItems();
+			for(String mI:allItems){
+				MenuItem item = new MenuItem(bundle.getString(mI));
+				item.setId(mI);
+				items.add(item);
+			}
+
+			contextMenu.setOnAction(event -> {
+				String id = event.getTarget().toString();
+				int idx = id.indexOf("id=");
+				id = id.substring(idx + 3, id.indexOf(",", idx));
+				switch (id) {
+					case UI.sr_inter:
+						AdvancedSearchLogicLayer layer = AdvancedSearchLogicalSet.get(tabPane.getSelectionModel().getSelectedIndex());
+						if(layer.workerThread!=null) {
+							layer.Terminate(false);
+						}
+					break;
+				}
+			});
+
+			tabPane.setContextMenu(contextMenu);
 
 			VBox.setVgrow(tabPane, Priority.ALWAYS);
 
-			adapter2 = new ObservableListmy();
-			adapter2.rec = new resultRecorderScattered(md, engine);
-			listView = new ListView<>(adapter2);
+			AdvancedSearchLogicalSet.add(fuzzySearchLayer= new AdvancedSearchLogicLayer(opt, md, tab1, statusBar, -1));
+			AdvancedSearchLogicalSet.add(fullSearchLayer= new AdvancedSearchLogicLayer(opt, md, tab2, statusBar, -2));
+
+			ObservableListmy adapter = fuzzySearchLayer.adapter = new ObservableListmy(new resultRecorderScattered(md, engine, fuzzySearchLayer));
+			ListView<Integer> listView = fuzzySearchLayer.listView = new ListView<>(adapter);
 			listView.getSelectionModel().selectedIndexProperty().addListener((ov, oldV, newV) -> {//this is Number ChangeListener
 				if(newV != null){
-					adapter2.rec.renderContentAt(newV.intValue());
+					fuzzySearchLayer.adapter.rec.renderContentAt(newV.intValue());
 				}
 			});
-			listView.setCellFactory((ListView<Integer> l) -> new ColorCell(adapter2));//setCellFactory((ListView<String> l) -> new ColorCell());
+			listView.setCellFactory((ListView<Integer> l) -> new ColoredEntryCell(fuzzySearchLayer.adapter));//setCellFactory((ListView<String> l) -> new ColorCell());
 			tab1.setContent(listView);
 
-			adapter3 = new ObservableListmy();
-			adapter3.rec = new resultRecorderScattered2(md, engine);
-			listView2 = new ListView<>(adapter3);
-			listView2.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>(){
-				@Override
-				public void changed(ObservableValue<? extends Number> ov, Number oldV, Number newV){
-					if(newV != null){
-						adapter3.rec.renderContentAt(newV.intValue());
-					}
+			adapter = fullSearchLayer.adapter = new ObservableListmy(new resultRecorderScattered(md, engine, fullSearchLayer));
+			listView = fullSearchLayer.listView = new ListView<>(adapter);
+			listView.getSelectionModel().selectedIndexProperty().addListener((ov, oldV, newV) -> {
+				if(newV != null){
+					fullSearchLayer.adapter.rec.renderContentAt(newV.intValue());
 				}
 			});
-			listView2.setCellFactory((ListView<Integer> l) -> new ColorCell(adapter3));//setCellFactory((ListView<String> l) -> new ColorCell());
-			tab2.setContent(listView2);
+			listView.setCellFactory((ListView<Integer> l) -> new ColoredEntryCell(fullSearchLayer.adapter));//setCellFactory((ListView<String> l) -> new ColorCell());
+			tab2.setContent(listView);
 
 
-			btnSearch2.setOnMouseClicked(e -> {etSearch2.getOnKeyPressed().handle(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.ENTER, false, false, false, false));});
-			etSearch2.setOnKeyPressed(event -> {
+			btnSearch2.setOnMouseClicked(e -> {etSearch.getOnKeyPressed().handle(new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.ENTER, false, false, false, false));});
+			etSearch.setOnKeyPressed(event -> {
 				if(event.getCode()==KeyCode.ENTER) {
-					switch(tabPane.getSelectionModel().getSelectedIndex()) {
-						case 0:{//模糊搜索
-							if(etSearch2.getText().equals("")) break;
-							if(fuzzyThread!=null) {
-								fuzzyIsInterrupted=true;
-								if(fuzzyTicker!=null) {
-									fuzzyTicker.cancel();
-									((Text)tab1.getGraphic()).setText("");
-								}
-								for(int i=0;i<md.size();i++){//遍历所有词典
-									md.get(i).fuzzyCancled=true;
-								}
-								//fuzzyThread.interrupt();
-								try {
-									fuzzyThread.join();
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-							}
-							//!!this's being here is very important, put it in the worker-thread will cause lag
-							int GETNUMBERENTRIES=0;
-							fuzzyIsInterrupted=false;
-							for(int i=0;i<md.size();i++){//遍历所有词典
-								mdict mdtmp = md.get(i);
-								GETNUMBERENTRIES+=mdtmp.getNumberEntries();
-								mdtmp.fuzzyCancled=false;
-								if(mdtmp.combining_search_tree2==null) {
-								}
-								else
-									for(int ti=0;ti<mdtmp.combining_search_tree2.length;ti++){//遍历搜索结果
-										if(mdtmp.combining_search_tree2[ti]==null) {
-											continue;
-										}
-										mdtmp.combining_search_tree2[ti].clear();
-									}
-							}
-							System.gc();
-							final int GETNUMBERENTRIES_=GETNUMBERENTRIES;
-							CMN.show(GETNUMBERENTRIES_+":");
-							if(fuzzyTicker!=null) {
-								fuzzyTicker.cancel();
-								((Text)tab1.getGraphic()).setText("");
-							}
-							fuzzyTicker=new Timer();
-							final Timer mTicker=fuzzyTicker;
-							fuzzyThread = new Thread(new Runnable() {
-								@Override
-								public void run() {
-									String key = etSearch2.getText();
-									statusBar.setText(" 🔍 "+key+" ...");
-									long st = System.currentTimeMillis();
-									if(box2.isCombinedSearching.get()){
-										for(int i=0;i<md.size();i++){
-											try {
-												if(fuzzyIsInterrupted) return;
-												fuzzyIdx = i;
-												md.get(i).flowerFindAllKeys(key,i,30);//do actual search
-												//System.gc();
-											} catch (Exception e) {
-												e.printStackTrace();
-											}
-										}
-									}else {
-										try {
-											if(fuzzyIsInterrupted) return;
-											currentDictionary.flowerFindAllKeys(key,adapter_idx,30);
-										} catch (Exception e) {
-											e.printStackTrace();
-										}
-									}
-									//for(int i=0;i<md.size();i++){
-									//	int tmp=md.get(i).dirtyfzPrgCounter;
-									//	if(md.get(i).dirtyfzPrgCounter!=md.get(i).getNumberEntries())
-									//	CMN.show(md.get(i)._Dictionary_fName+": "+md.get(i).dirtyfzPrgCounter+"!="+md.get(i).getNumberEntries());
-									//}
-									adapter2.rec.invalidate();
-									mTicker.cancel();
-									String msg = " 模糊搜索 \"" + key + "\" " + (System.currentTimeMillis() - st) * 1.f / 1000 + "s -> " + adapter2.rec.size() + "项";
-									System.gc();
-									Platform.runLater(new Runnable() {
-										@Override
-										public void run() {
-											if(fuzzyIsInterrupted) return;
-											currentPattern=null;
-											try { currentPattern=Pattern.compile(key.replace("*", ".*"), Pattern.CASE_INSENSITIVE);
-											} catch (Exception ignored) { }
-											listView.setItems(null);
-											listView.setItems(adapter2);
-											listView.scrollTo(0);
-											((Text)tab1.getGraphic()).setText("");
-											statusBar.setText(msg);
-										}
-									});
-								}});
-							fuzzyThread.start();
-							//fuzzyThread.run();
-							//if(false)
-							mTicker.schedule(new TimerTask() {
-								@Override
-								public void run() {
-									int GETDIRTYKEYCOUNTER=0;
-									for(int i=0;i<fuzzyIdx;i++){
-										GETDIRTYKEYCOUNTER+=md.get(i).getNumberEntries();
-									}
-									GETDIRTYKEYCOUNTER+=md.get(fuzzyIdx).dirtyfzPrgCounter;
-									final int progress = (int) Math.ceil(100.f*GETDIRTYKEYCOUNTER/GETNUMBERENTRIES_);
-									Platform.runLater(new Runnable() {
-										@Override
-										public void run() {
-											//CMN.show(""+progress);
-											((Text)tab1.getGraphic()).setText(progress+"%");
-										}
-									});
-								}
-							},0,100);
-						} break;
-						case 1:{//全文搜索
-							if(etSearch2.getText().equals("")) break;
-							if(fullThread!=null) {
-								fullIsInterrupted=true;
-								if(fullTicker!=null) {
-									fullTicker.cancel();
-									((Text)tab1.getGraphic()).setText("");
-								}
-								for(int i=0;i<md.size();i++){//遍历所有词典
-									md.get(i).fuzzyCancled=true;
-								}
-								//fuzzyThread.interrupt();
-								try {
-									fullThread.join();
-								} catch (InterruptedException e) {
-									e.printStackTrace();
-								}
-							}
-							//!!this's being here is very important, put it in the worker-thread will cause lag
-							int GETNUMBERENTRIES1=0;
-							fullIsInterrupted=false;
-							for(int i=0;i<md.size();i++){//遍历所有词典
-								mdict mdtmp = md.get(i);
-								GETNUMBERENTRIES1+=mdtmp.getNumberEntries();
-								mdtmp.searchCancled=false;
-								if(mdtmp.combining_search_tree_4==null) {
-								}
-								else
-									for(int ti=0;ti<mdtmp.combining_search_tree_4.length;ti++){//遍历搜索结果
-										if(mdtmp.combining_search_tree_4[ti]==null) {
-											continue;
-										}
-										mdtmp.combining_search_tree_4[ti].clear();
-									}
-							}
-							System.gc();
-							final int GETNUMBERENTRIES_1=GETNUMBERENTRIES1;
-							CMN.show(GETNUMBERENTRIES_1+":");
-							if(fullTicker!=null) {
-								fullTicker.cancel();
-								((Text)tab1.getGraphic()).setText("");
-							}
-							fullTicker=new Timer();
-							final Timer mTicker1=fullTicker;
-							fullThread = new Thread(new Runnable() {
-								@Override
-								public void run() {
-									String key = etSearch2.getText().toString();
-									statusBar.setText(" 🔍 "+key+" ...");
-									long st = System.currentTimeMillis();
-									if(box2.isCombinedSearching.get()){
-										for(int i=0;i<md.size();i++){
-											try {
-												if(fullIsInterrupted) return;
-												fullIdx = i;
-												md.get(i).flowerFindAllContents(key,i,30);//do actual search
-												//System.gc();
-											} catch (Exception e) {
-												e.printStackTrace();
-											}
-										}
-									}else {
-										try {
-											if(fullIsInterrupted) return;
-											currentDictionary.flowerFindAllContents(key,adapter_idx,30);
-										} catch (Exception e) {
-											e.printStackTrace();
-										}
-									}
-
-									adapter3.rec.invalidate();
-									adapter3.rec.currentSearchTerm=key.replace("*", ".*");
-									mTicker1.cancel();
-									String msg = " 全文搜索 \""+key+"\" "+(System.currentTimeMillis()-st)*1.f/1000+"s -> "+adapter3.rec.size()+"项";
-									System.gc();
-									Platform.runLater(() -> {
-										if(fullIsInterrupted) return;
-										listView2.setItems(null);
-										listView2.setItems(adapter3);
-										listView2.scrollTo(0);
-										((Text)tab2.getGraphic()).setText("");
-										statusBar.setText(msg);
-									});
-								}});
-							fullThread.start();
-
-							mTicker1.schedule(new TimerTask() {
-								@Override
-								public void run() {
-									int GETDIRTYKEYCOUNTER=0;
-									for(int i=0;i<fullIdx;i++){
-										GETDIRTYKEYCOUNTER+=md.get(i).getNumberEntries();
-									}
-									GETDIRTYKEYCOUNTER+=md.get(fullIdx).dirtykeyCounter;
-									final int progress = (int) Math.ceil(100.f*GETDIRTYKEYCOUNTER/GETNUMBERENTRIES_1);
-									Platform.runLater(() -> {
-										((Text)tab2.getGraphic()).setText(progress+"%");
-									});
-								}
-							},0,100);
-						} break;
+					boolean isCombinedSearch=box2.isCombinedSearching.get();
+					if(etSearch.getText().equals(""))
+						return;
+					AdvancedSearchLogicLayer layer = AdvancedSearchLogicalSet.get(tabPane.getSelectionModel().getSelectedIndex());
+					if(layer.workerThread!=null) {
+						layer.Terminate(true);
 					}
+
+					layer.IsInterrupted=false;
+					if(!isCombinedSearch)
+						layer.Idx=adapter_idx;
+
+					ArrayList<mdict> _md = layer.md;
+					int GETNUMBERENTRIES=0;
+					/* important to be here. clear and fetch total entry count.*/
+					for(int i=0, end=_md.size();i<end;i++){//遍历所有词典
+						mdict mdtmp = _md.get(i);
+						if(isCombinedSearch||i==layer.Idx)
+							GETNUMBERENTRIES+=mdtmp.getNumberEntries();
+						ArrayList<Integer>[] _combining_search_tree_ =
+								layer.type<0?layer.getInternalTree(mdtmp):layer.combining_search_tree;
+						if(_combining_search_tree_!=null)
+						for(int ti=0;ti<_combining_search_tree_.length;ti++){//遍历搜索结果
+							if(_combining_search_tree_[ti]!=null) {
+								_combining_search_tree_[ti].clear();
+							}
+						}
+					}
+					System.gc();
+					if(layer.Ticker!=null) {
+						layer.Ticker.cancel();
+						((Text)layer.chiefAmbassador.getGraphic()).setText("");
+					}
+					layer.Ticker=new Timer();
+					final Timer mTicker=layer.Ticker;
+
+					layer.workerThread = new Thread(new SearchRunnable(layer, isCombinedSearch));
+					layer.workerThread.start();
+
+					int finalGETNUMBERENTRIES = GETNUMBERENTRIES;
+					mTicker.schedule(new TimerTask() {
+						@Override
+						public void run() {
+							int GETDIRTYKEYCOUNT=0;
+							if(isCombinedSearch){
+								for(int i=0;i<layer.Idx;i++)
+									GETDIRTYKEYCOUNT+=layer.md.get(i).getNumberEntries();
+							}
+
+							GETDIRTYKEYCOUNT+=layer.dirtyProgressCounter;
+							final int progress = (int) Math.ceil(100.f*GETDIRTYKEYCOUNT/ finalGETNUMBERENTRIES);
+							Platform.runLater(() -> {
+								((Text)layer.chiefAmbassador.getGraphic()).setText(progress+"%");
+							});
+						}
+					},0,200);
 				}
 			});
 
@@ -1481,9 +1501,9 @@ public class PlainDictionaryPcJFX extends Application {
 		}
 
 
-		class ColorCell extends ListCell<Integer> {
+		class ColoredEntryCell extends ListCell<Integer> {
 			ObservableListmy adapter;
-			ColorCell(ObservableListmy adapter_){
+			ColoredEntryCell(ObservableListmy adapter_){
 				adapter=adapter_;
 			}
 			EventHandler<MouseEvent> clicker = new EventHandler<MouseEvent>() {
@@ -1501,12 +1521,12 @@ public class PlainDictionaryPcJFX extends Application {
 
 				String text = adapter.rec.getResAt(pos);
 				Node textTitleView;
-
-				if(getListView()==listView && opt.GetTintWildResult() && currentPattern!=null){
+				AdvancedSearchLogicLayer layer = (AdvancedSearchLogicLayer) adapter.rec.SearchLauncher;
+				if(layer.currentPattern!=null && layer.getTint()){
 					TextFlow titleFlow = new TextFlow();
 					textTitleView=titleFlow;
 					ObservableList<Node> textGroup = titleFlow.getChildren();
-					Matcher m = currentPattern.matcher(text);
+					Matcher m = layer.currentPattern.matcher(text);
 					Text title; int idx=0;
 					while(m.find()){
 						int start = m.start(0);
@@ -1521,7 +1541,7 @@ public class PlainDictionaryPcJFX extends Application {
 						textGroup.add(title);
 						idx=end;
 					}
-					if(idx<text.length()-1){
+					if(idx<text.length()){
 						title = new Text(text.substring(idx));
 						title.setFont(Font.font("宋体",18));
 						title.setFill(Color.BLACK);

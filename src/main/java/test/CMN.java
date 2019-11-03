@@ -1,13 +1,14 @@
 package test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 
 //common
 public class CMN{
-    public static void show(String val){System.out.println(val);}
+    public static String UniversalObject;
+	public static void show(String val){System.out.println(val);}
     public final static String replaceReg = " |:|\\.|,|-|\'";
     public final static String emptyStr = "";
     public static void Log(Object... o) {
@@ -66,8 +67,34 @@ public class CMN{
 
                 msg.append(o1).append(o.length>1?" ":"");
             }
+        if(fout!=null) {
+            try {
+                fout.write((msg+"\r\n").getBytes(StandardCharsets.UTF_8));
+            } catch (IOException ignored) { }
+        }
         System.out.println(msg.toString());
     }
-    
-    
+
+    static FileOutputStream fout;
+    public static void ConfigLogFile(String path, boolean...a) {
+        try {
+            if(fout!=null){
+                fout.flush();
+                fout.close();
+                fout=null;
+            }
+            if(path!=null)
+                fout=new FileOutputStream(path, a[0]);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    static long stst;
+    public static void rt() {
+        stst = System.currentTimeMillis();
+    }
+    public static void pt(String...args) {
+        CMN.Log(args,(System.currentTimeMillis()-stst));
+    }
 }

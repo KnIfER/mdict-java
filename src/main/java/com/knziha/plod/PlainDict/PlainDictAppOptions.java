@@ -18,6 +18,8 @@ public class PlainDictAppOptions
 	String browserPathOverwrite=null;
 	String browserArgs=null;
 	String browserSearchUrlOverwrite=null;
+	String browserSearchMiddle=null;
+	String browserSearchRight=null;
 	String PdfPath=null;
 	String PdfArgs=null;
 	String BsrArgs=null;
@@ -162,27 +164,31 @@ public class PlainDictAppOptions
 		return val;
 	}
 
-	public boolean GetWildWithoutSpace() {
-		return (FirstFlag & 0x4000) == 0x4000;
-	}
-	public boolean SetWildWithoutSpace(boolean val) {
-		updateFFAt(0x4000,val);
-		return val;
-	}
+	//xxx
+//	public boolean GetWildWithoutSpace() {
+//		return (FirstFlag & 0x4000) == 0x4000;
+//	}
+//	public boolean SetWildWithoutSpace(boolean val) {
+//		updateFFAt(0x4000,val);
+//		return val;
+//	}
 
-	public boolean GetFullWithoutSpace() {
-		return (FirstFlag & 0x8000) != 0x8000;
-	}
-	public boolean SetFullWithoutSpace(boolean val) {
-		updateFFAt(0x8000,!val);
-		return val;
-	}
+//	public boolean GetFullWithoutSpace() {
+//		return (FirstFlag & 0x8000) != 0x8000;
+//	}
+//	public boolean SetFullWithoutSpace(boolean val) {
+//		updateFFAt(0x8000,!val);
+//		return val;
+//	}
 
 	public boolean GetPageWithoutSpace() {
-		return (FirstFlag & 0x10000) != 0x10000;
+		return (FirstFlag & 0x10000) == 0x10000;
+	}
+	public int FetPageWithoutSpace() {
+		return (int) (((FirstFlag & 0x10000)>>16)&1);
 	}
 	public boolean SetPageWithoutSpace(boolean val) {
-		updateFFAt(0x10000,!val);
+		updateFFAt(0x10000,val);
 		return val;
 	}
 
@@ -210,11 +216,11 @@ public class PlainDictAppOptions
 		return val;
 	}
 
-	public boolean GetUpdateWebDictsDirect() {
-		return (FirstFlag & 0x100000) != 0x100000;
+	public boolean GetTintFullResult() {
+		return (FirstFlag & 0x100000) == 0x100000;
 	}
-	public boolean SetUpdateWebDictsDirect(boolean val) {
-		updateFFAt(0x100000,!val);
+	public boolean SetTintFullResult(boolean val) {
+		updateFFAt(0x100000,val);
 		return val;
 	}
 
@@ -230,6 +236,72 @@ public class PlainDictAppOptions
 	}
 	public boolean SetFilterPaste(boolean val) {
 		updateFFAt(0x400000,!val);
+		return val;
+	}
+
+	public boolean GetRegexSearchEngineEnabled() {
+		return (FirstFlag & 0x800000) != 0x800000;
+	}
+	public boolean SetRegexSearchEngineEnabled(boolean val) {
+		updateFFAt(0x800000,!val);
+		return val;
+	}
+
+	public boolean GetRegexSearchEngineAutoAddHead() {
+		return (FirstFlag & 0x1000000) != 0x1000000;
+	}
+	public boolean SetRegexSearchEngineAutoAddHead(boolean val) {
+		updateFFAt(0x1000000,!val);
+		return val;
+	}
+
+	public boolean GetRegexSearchEngineCaseSensitive() {
+		return (FirstFlag & 0x2000000) == 0x2000000;
+	}
+	public boolean SetRegexSearchEngineCaseSensitive(boolean val) {
+		updateFFAt(0x2000000,val);
+		return val;
+	}
+
+	public boolean GetPageSearchSeparateWord() {
+		return (FirstFlag & 0x4000000) != 0x4000000;
+	}
+	public int FetPageSearchSeparateWord() {
+		return (int) (~((FirstFlag & 0x4000000)>>26)&1);
+	}
+	public boolean SetPageSearchSeparateWord(boolean val) {
+		updateFFAt(0x4000000,!val);
+		return val;
+	}
+
+	public boolean GetPageSearchCaseSensitive() {
+		return (FirstFlag & 0x8000000) == 0x8000000;
+	}
+	public int FetPageSearchCaseSensitive() {
+		return (int) (((FirstFlag & 0x8000000)>>27)&1);
+	}
+	public boolean SetPageSearchCaseSensitive(boolean val) {
+		updateFFAt(0x8000000,val);
+		return val;
+	}
+
+	public boolean GetPageSearchUseRegex() {
+		return (FirstFlag & 0x10000000) != 0x10000000;
+	}
+	public int FetPageSearchUseRegex() {
+		return (int) (~((FirstFlag & 0x10000000)>>28)&1);
+	}
+	public boolean SetPageSearchUseRegex(boolean val) {
+		updateFFAt(0x10000000,!val);
+		return val;
+	}
+
+
+	public boolean GetClassicalKeyCaseStrategy() {
+		return (FirstFlag & 0x20000000) == 0x20000000;
+	}
+	public boolean SetClassicalKeyCaseStrategy(boolean val) {
+		updateFFAt(0x20000000,val);
 		return val;
 	}
 
@@ -298,6 +370,31 @@ public class PlainDictAppOptions
 	public void setSearchUrlOverwrite(String val){
 		browserSearchUrlOverwrite=val;
 	}
+
+	@Deprecated
+	@XmlElement(name = "SrhUrl1")
+	public String getSearchUrlMiddle(){
+		return browserSearchMiddle;
+	}
+	public String GetSearchUrlMiddle(String SearchUrlDefault){
+		return browserSearchMiddle==null?SearchUrlDefault:browserSearchMiddle;
+	}
+	public void setSearchUrlMiddle(String val){
+		browserSearchMiddle=val;
+	}
+
+	@Deprecated
+	@XmlElement(name = "SrhUrl2")
+	public String getSearchUrlRight(){
+		return browserSearchRight;
+	}
+	public String GetSearchUrlRight(String SearchUrlDefault){
+		return browserSearchRight==null?SearchUrlDefault:browserSearchRight;
+	}
+	public void setSearchUrlRight(String val){
+		browserSearchRight=val;
+	}
+
 	@Deprecated
 	@XmlElement(name = "PdfExe")
 	public String getPdfOverwrite(){

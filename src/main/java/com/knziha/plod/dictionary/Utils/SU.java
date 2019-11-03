@@ -69,7 +69,7 @@ public class  SU{
 				}
 				msg+=o[i]+" ";
 			}
-		System.out.println("fatal poison"+msg);
+		System.out.println(msg);
 	}
 }
 	

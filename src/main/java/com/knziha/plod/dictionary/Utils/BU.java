@@ -142,6 +142,10 @@ public class  BU{//byteUtils
 			e.printStackTrace();
 		}
     }
+    @Deprecated
+    public static void printFile(byte[] b, String path){
+		printFile(b,0,b.length,path);
+    }
     public static String byteTo16(byte bt){
         String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
         String resStr="";

@@ -1,4 +1,4 @@
-package com.knziha.plod.dictionarymanager;
+package com.knziha.plod.settings;
 
 import com.knziha.plod.PlainDict.PU;
 import com.knziha.plod.PlainDict.PlainDictAppOptions;
@@ -239,16 +239,6 @@ public class PdfFoldersFragment extends VBox {
 		mainRegion.setHgrow(tableRegion, Priority.ALWAYS);
 		setVgrow(mainRegion, Priority.ALWAYS);
 		getChildren().addAll(mainRegion, statusBar);
-	}
-
-	public static mdict new_mdict_prempter(String line, boolean isFilter) {
-		mdict mdTmp;
-		if(!new File(line).exists())
-			mdTmp=new mdict_nonexist(line);
-		else
-			mdTmp=new mdict_preempter(line);
-		mdTmp.tmpIsFilter=isFilter;
-		return mdTmp;
 	}
 
 	Function<File, ObservableValue<String>> propertyMapper_FilePath=m -> new SimpleStringProperty(m.getAbsolutePath());

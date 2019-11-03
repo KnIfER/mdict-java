@@ -19,20 +19,13 @@ package com.knziha.plod.dictionary;
 
 import com.knziha.plod.dictionary.Utils.BU;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.HashMap;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 
 import com.knziha.plod.dictionary.Utils.key_info_struct;
-import com.knziha.plod.dictionary.Utils.myCpr;
 import com.knziha.plod.dictionary.Utils.record_info_struct;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
@@ -54,62 +47,12 @@ public class mdictRes extends mdBase{
     
 	HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
 
-	protected mdictRes() {};
+
     //构造
 	public mdictRes(String fn) throws IOException{
 		super(fn);
-        decode_record_block_header();
+        //decode_record_block_header();
 	}
-	
-
-   
-    public byte[] getRecordAt(int position) throws IOException {//异步
-    	if(position<0||position>=_num_entries) return null;
-		if(maxDecompressedSize==0)
-    		decode_record_block_header();
-    	
-        int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
-        //blockId-=1;
-        key_info_struct infoI = _key_block_info_list[blockId];
-        //准备
-        cached_key_block infoI_cache = prepareItemByKeyInfo(infoI,blockId,null);
-
-        int i = (int) (position-infoI.num_entries_accumulator);
-        Integer Rinfo_id = reduce(infoI_cache.key_offsets[i],0,_record_info_struct_list.length);//accumulation_RecordB_tree.xxing(new myCpr(,1)).getKey().value;//null 过 key前
-        record_info_struct RinfoI = _record_info_struct_list[Rinfo_id];
-        
-        byte[] record_block = prepareRecordBlock(RinfoI,Rinfo_id);
-        
-      
-        // split record block according to the offset info from key block
-        long record_start = infoI_cache.key_offsets[i]-RinfoI.decompressed_size_accumulator;
-        long record_end;
-        if (i < infoI.num_entries-1){
-        	record_end = infoI_cache.key_offsets[i+1]-RinfoI.decompressed_size_accumulator; 	
-        }
-        else{
-        	if(blockId+1<_key_block_info_list.length) {
-        		//没办法只好重新准备一个咯
-            	record_end = prepareItemByKeyInfo(null,blockId+1,null).key_offsets[0]-RinfoI.decompressed_size_accumulator;
-            	//record_end=0;
-        	}else {
-        		record_end = RinfoI.decompressed_size;
-        		//record_end=0;
-        	}
-        }
-        
-        byte[] record = new byte[(int) (record_end-record_start)];
-        int recordLen = record.length;
-        if(recordLen+record_start>record_block.length)
-        	recordLen = (int) (record_block.length-record_start);
-    	
-        System.arraycopy(record_block, (int) (record_start), record, 0, recordLen);
-
-        return	record;
-    }
-    
-   
-	
 
 	public int reduce(String phrase,int start,int end) {//via mdict-js
         int len = end-start;
@@ -280,102 +223,6 @@ public class mdictRes extends mdBase{
 		    	return "ERR".getBytes(); 
 		    }
     }
-    public static byte[] zlib_decompress(byte[] encdata,int offset,int size) {
-	    try {
-			    ByteArrayOutputStream out = new ByteArrayOutputStream();
-			    InflaterOutputStream inf = new InflaterOutputStream(out); 
-			    inf.write(encdata,offset, size); 
-			    inf.close(); 
-			    return out.toByteArray(); 
-		    } catch (Exception ex) {
-		    	ex.printStackTrace(); 
-		    	return "ERR".getBytes(); 
-		    }
-    }    
-    
-    public static byte[] zlib_decompress2(byte[] data,int offset) {  
-        byte[] output = new byte[0];  
-  
-        Inflater decompresser = new Inflater();  
-        decompresser.reset();  
-        decompresser.setInput(data,offset,data.length-offset);  
-
-        ByteArrayOutputStream o = new ByteArrayOutputStream(data.length);
-        try {  
-            byte[] buf = new byte[1024];  
-            while (!decompresser.finished()) {  
-                int i = decompresser.inflate(buf);  
-                o.write(buf, 0, i);  
-            }  
-            output = o.toByteArray();  
-        } catch (Exception e) {  
-            output = data;  
-            e.printStackTrace();  
-        } finally {  
-            try {  
-                o.close();  
-            } catch (IOException e) {  
-                e.printStackTrace();  
-            }  
-        }  
-  
-        decompresser.end();  
-        return output;  
-    }  
-    public static byte[] gzip_decompress(byte[] bytes,int offset) {  
-        if (bytes == null || bytes.length == 0) {  
-            return null;  
-        }  
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ByteArrayInputStream in = new ByteArrayInputStream(bytes,offset, bytes.length-offset);  
-        try {  
-            GZIPInputStream ungzip = new GZIPInputStream(in);  
-            byte[] buffer = new byte[256];  
-            int n;  
-            while ((n = ungzip.read(buffer)) >= 0) {  
-                out.write(buffer, 0, n);  
-            }  
-        } catch (IOException e) {  
-            e.printStackTrace();
-        }  
-  
-        return out.toByteArray();  
-    }  
-    
-
-
-
-    public static short getShort(byte buf1, byte buf2) 
-    {
-        short r = 0;
-        r |= (buf1 & 0x00ff);
-        r <<= 8;
-        r |= (buf2 & 0x00ff);
-        return r;
-    }
-    
-    public static int getInt(byte buf1, byte buf2, byte buf3, byte buf4) 
-    {
-        int r = 0;
-        r |= (buf1 & 0x000000ff);
-        r <<= 8;
-        r |= (buf2 & 0x000000ff);
-        r <<= 8;
-        r |= (buf3 & 0x000000ff);
-        r <<= 8;
-        r |= (buf4 & 0x000000ff);
-        return r;
-    }
-   
-    public static String byteTo16(byte bt){
-        String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
-        String resStr="";
-        int low =(bt & 15);
-        int high = bt>>4 & 15;
-        resStr = strHex[high]+strHex[low];
-        return resStr;
-    }
-
 }
 
 
