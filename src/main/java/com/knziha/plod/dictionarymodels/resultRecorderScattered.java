@@ -3,6 +3,7 @@ package com.knziha.plod.dictionarymodels;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
 import javafx.scene.web.WebEngine;
 
 public class resultRecorderScattered extends resultRecorderDiscrete {
@@ -24,7 +25,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			//int baseCount=0;
 			//if(i!=0)
 			//	baseCount=firstLookUpTable[i-1];
-			ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+			ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(i);
 			if(_combining_search_tree==null)
 				_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
 
@@ -51,7 +52,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		int resCount=0;
 		mdict mdtmp = md.get(idx);
 
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(idx);
 		if(_combining_search_tree==null)
 			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
 
@@ -73,10 +74,10 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		size=resCount;
 	}
 	
-	public resultRecorderScattered(List<mdict> md_, WebEngine engine_, com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer _SearchLauncher){
-		md=md_;
+	public resultRecorderScattered(PlainDictionaryPcJFX.AdvancedSearchLogicLayer _SearchLauncher, WebEngine engine_){
+		md=_SearchLauncher.md;
 		engine=engine_;
-		firstLookUpTable = new int[md_.size()];
+		firstLookUpTable = new int[md.size()];
 		SearchLauncher=_SearchLauncher;
 	}
 	
@@ -94,7 +95,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			pos-=firstLookUpTable[Rgn-1];
 		int idxCount = 0;
 
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(Rgn);
 		if(_combining_search_tree==null)
 			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
 
@@ -111,10 +112,27 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			idxCount+=max;
 		}
 		return "!!! Error: code 3 ";
-	};
+	}
+
+	@Override
+	public mdict getMdAt(int pos) {
+		if(size<=0 || pos<0 || pos>size-1)
+			return null;
+		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
+		if(Rgn<0 || Rgn>md.size()-1)
+			return null;
+		return md.get(Rgn);
+	}
+
+	@Override
+	public int getIndexAt(int pos) {
+		if(size<=0 || pos<0 || pos>size-1)
+			return -1;
+		return binary_find_closest(firstLookUpTable,pos+1,md.size());
+	}
 	
 	@Override
-	public void renderContentAt(int pos) {
+	public void renderContentAt(int pos, int selfAtIdx, boolean post) {
 		if(size<=0 || pos<0 || pos>size-1)
 			return;
 		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
@@ -126,7 +144,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			pos-=firstLookUpTable[Rgn-1];
 		int idxCount = 0;
 
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.combining_search_tree;
+		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(Rgn);
 		if(_combining_search_tree==null)
 			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
 
@@ -139,7 +157,11 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 				continue;
 			if(pos-idxCount<max) {
 				int renderIdx = _combining_search_tree[ti].get(pos-idxCount);
-				engine.executeScript("setDictAndPos("+Rgn+","+renderIdx+");ClearAllPages();processContents('\\r"+Rgn+"@"+renderIdx+"');pendingHL='"+currentSearchTerm+"'");
+				StringBuilder basic = new StringBuilder();
+				if(post) basic.append("postInit=function(){");
+				basic.append("setDictAndPos(").append(selfAtIdx == -1 ? Rgn : selfAtIdx).append(",").append(renderIdx).append(");ClearAllPages();processContents('\\r").append(Rgn).append("@").append(renderIdx).append("');pendingHL='").append(currentSearchTerm).append("'").toString();
+				if(post) basic.append("}; ScanInDicts();");
+				engine.executeScript(basic.toString());
 				return;
 			}
 			idxCount+=max;

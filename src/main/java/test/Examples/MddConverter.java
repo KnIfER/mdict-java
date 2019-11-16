@@ -9,7 +9,7 @@ import java.io.IOException;
 public class MddConverter {
 	public static void main(String[] args) throws IOException {
 		mdictRes mdRaw = new mdictRes("F:\\assets\\mdicts\\汉语\\文言快易通.mdd");
-		mdictResBuilder builder = new mdictResBuilder("ooo","tiff pics to png");
+		mdictResBuilder builder = new mdictResBuilder("ooo","test.privateTest.tiff pics to png");
 		//builder.setRecordUnitSize(32);
 		//builder.setRecordBlockZipLevel(1);
 		builder.setCompressionType(2,0);/* 不建议压缩，根本没效果…… */

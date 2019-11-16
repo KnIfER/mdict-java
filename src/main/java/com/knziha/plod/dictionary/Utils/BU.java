@@ -17,10 +17,7 @@
 
 package com.knziha.plod.dictionary.Utils;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.zip.Adler32;
 import java.util.zip.InflaterOutputStream;
 
@@ -166,7 +163,38 @@ public class  BU{//byteUtils
         }   
         return values;  
     }
-    //废弃
+
+
+	public static ByteArrayInputStream fileToBytes(File f) {
+		return new ByteArrayInputStream(fileToByteArr(f));
+	}
+
+	public static byte[] fileToByteArr(File f) {
+		try {
+			FileInputStream fin = new FileInputStream(f);
+			byte[] data = new byte[(int) f.length()];
+			fin.read(data);
+			return data;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public static String fileToString(File f) {
+		try {
+			FileInputStream fin = new FileInputStream(f);
+			byte[] data = new byte[(int) f.length()];
+			fin.read(data);
+			return new String(data, "utf8");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+
+	@Deprecated
     public long toLong1(byte[] b,int offset)
 	{
 		long l = 0;
@@ -184,6 +212,11 @@ public class  BU{//byteUtils
     
     public static String unwrapMdxName(String in) {
     	if(in.toLowerCase().endsWith(".mdx"))
+    		return in.substring(0,in.length()-4);
+    	return in;
+    }
+    public static String unwrapMddName(String in) {
+    	if(in.toLowerCase().endsWith(".mdd"))
     		return in.substring(0,in.length()-4);
     	return in;
     }

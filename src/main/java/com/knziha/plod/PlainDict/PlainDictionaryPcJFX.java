@@ -16,6 +16,7 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Worker.State;
 import javafx.css.Styleable;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
@@ -56,7 +57,6 @@ import java.io.*;
 import java.lang.ref.WeakReference;
 import java.net.*;
 import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Timer;
 import java.util.*;
@@ -428,6 +428,7 @@ public class PlainDictionaryPcJFX extends Application {
 		public final static String pastebin_fw="pastebin_fw";
 		public final static String sr_inter="sr_inter";
 		public final static String sr_save="sr_save";
+		public final static String sr_new="sr_new";
 		public static String wildmatch;
 		public static String fulltext;
 	}
@@ -573,7 +574,7 @@ public class PlainDictionaryPcJFX extends Application {
 				} break;
 				case UI.manager:{
 					Stage mDialog;
-					if(managerDialog==null || managerDialog.get()==null){
+					if(managerDialog==null || managerDialog.get()==null || managerDialog.get().getScene()==null){
 						managerDialog = new WeakReference<>(mDialog=new Stage());
 						mDialog.setTitle(bundle.getString("manager")+" - "+opt.getCurrentPlanName());
 						mDialog.initModality(Modality.WINDOW_MODAL);
@@ -1176,10 +1177,10 @@ public class PlainDictionaryPcJFX extends Application {
 
 
 	public MdictServer server;
-	static class AdvancedSearchLogicLayer extends com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer {
+	public static class AdvancedSearchLogicLayer extends com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer {
 		final Tab chiefAmbassador;
 		final Text statusBar;
-		final ArrayList<mdict> md;
+		public final ArrayList<mdict> md;
 		final String Tag;
 		final PlainDictAppOptions opt;
 		Thread workerThread;
@@ -1196,9 +1197,38 @@ public class PlainDictionaryPcJFX extends Application {
 			Tag=(type==1||type==-1)?UI.wildmatch:UI.fulltext;
 		}
 
+		@Override
+		public ArrayList<Integer>[] getCombinedTree(int DX) {
+			if(combining_search_tree!=null && DX<combining_search_tree.size())
+				return combining_search_tree.get(DX);
+			return null;
+		}
+
+		@Override
+		public void setCombinedTree(int DX, ArrayList<Integer>[] _combining_search_tree) {
+			combining_search_tree.set(DX, _combining_search_tree);
+		}
+
+		@Override
 		public ArrayList<Integer>[] getInternalTree(com.knziha.plod.dictionary.mdict md){
 			return type==-1?md.combining_search_tree2:(type==-2?md.combining_search_tree_4:null);
 		}
+
+		@Override
+		public Pattern getBakedPattern() {
+			return null;
+		}
+
+		@Override
+		public void bakePattern(String currentSearchText) {
+
+		}
+
+		@Override
+		public String getBakedPatternStr() {
+			return null;
+		}
+
 		ObservableListmy adapter;
 		ListView<Integer> listView;
 
@@ -1246,11 +1276,15 @@ public class PlainDictionaryPcJFX extends Application {
 		}
 	}
 
-//	static class AdvancedSearchScopedLogicLayer extends AdvancedSearchLogicLayer{
-//		AdvancedSearchScopedLogicLayer(Tab chiefAmbassador, ArrayList<mdict> md) {
-//			super(chiefAmbassador, statusBar, md);
-//		}
-//	}
+	static class AdvancedScopedSearchLayer extends AdvancedSearchLogicLayer{
+		AdvancedScopedSearchLayer(PlainDictAppOptions opt, ArrayList<mdict> md, Tab chiefAmbassador, Text statusBar, int type) {
+			super(opt, new ArrayList<>(md), chiefAmbassador, statusBar, type);
+			combining_search_tree = new ArrayList<>();
+			for (int i = 0; i < md.size(); i++) {
+				combining_search_tree.add(new ArrayList[]{});
+			}
+		}
+	}
 
 	ArrayList<AdvancedSearchLogicLayer> AdvancedSearchLogicalSet = new ArrayList<>(2);
 
@@ -1352,6 +1386,7 @@ public class PlainDictionaryPcJFX extends Application {
 			final String tabCss = HiddenSplitPaneApp.class.getResource("tabPane.css").toExternalForm();
 			tabPane.getStylesheets().add(tabCss);
 			tabPane.styleProperty().set("-fx-content-display:right;");
+
 			Tab tab1 = new Tab();
 			tab1.setText(UI.wildmatch = bundle.getString("wildmatch"));
 			tab1.setTooltip(new Tooltip(bundle.getString("hintwm")));
@@ -1379,7 +1414,8 @@ public class PlainDictionaryPcJFX extends Application {
 			ContextMenu contextMenu = new ContextMenu();
 			String[] allItems = new String[]{
 					UI.sr_inter,
-					UI.sr_save
+					UI.sr_save,
+					UI.sr_new
 			};
 			ObservableList<MenuItem> items = contextMenu.getItems();
 			for(String mI:allItems){
@@ -1393,12 +1429,50 @@ public class PlainDictionaryPcJFX extends Application {
 				int idx = id.indexOf("id=");
 				id = id.substring(idx + 3, id.indexOf(",", idx));
 				switch (id) {
-					case UI.sr_inter:
+					case UI.sr_inter:{
 						AdvancedSearchLogicLayer layer = AdvancedSearchLogicalSet.get(tabPane.getSelectionModel().getSelectedIndex());
 						if(layer.workerThread!=null) {
 							layer.Terminate(false);
 						}
-					break;
+					} break;
+					case UI.sr_new:{
+						Tab tab = new Tab();
+						tab.setText(UI.wildmatch = bundle.getString("wildmatch"));
+						tab.setTooltip(new Tooltip(bundle.getString("hintwm")));
+						Text text = new Text("");
+						text.setStyle("-fx-fill: #ff0000;");
+						text.setText("");
+						tab.setGraphic(text);
+						AdvancedSearchLogicLayer layer = new AdvancedScopedSearchLayer(opt, md, tab, statusBar, 1);
+
+						ObservableListmy adapter = layer.adapter = new ObservableListmy(new resultRecorderScattered(layer, engine));
+						ListView<Integer> listView = layer.listView = new ListView<>(adapter);
+						listView.getSelectionModel().selectedIndexProperty().addListener((ov, oldV, newV) -> {//this is Number ChangeListener
+							if(newV != null){
+								int index=newV.intValue();
+								if(listView.getSelectionModel().getSelectedItem()!=null) {
+									mdict mdTmp = layer.adapter.rec.getMdAt(index);
+									CMN.Log("onitemclicked!!!", index, layer.adapter.rec.getIndexAt(index), layer.md.size());
+									boolean post=false;
+									if (!md.contains(mdTmp)) {
+										md.add(mdTmp);
+										post=true;
+									}
+									CMN.Log("virtual position : ", md.indexOf(mdTmp));
+									layer.adapter.rec.renderContentAt(index, md.indexOf(mdTmp), post);
+								}
+							}
+						});
+						listView.setCellFactory((ListView<Integer> l) -> new ColoredEntryCell(layer.adapter));//setCellFactory((ListView<String> l) -> new ColorCell());
+						tab.setContent(listView);
+						tab.setOnCloseRequest(event1 -> {
+							AdvancedSearchLogicalSet.remove(layer);
+							layer.md.clear();
+						});
+
+						AdvancedSearchLogicalSet.add(layer);
+						tabPane.getTabs().add(tab);
+					} break;
 				}
 			});
 
@@ -1406,24 +1480,24 @@ public class PlainDictionaryPcJFX extends Application {
 
 			VBox.setVgrow(tabPane, Priority.ALWAYS);
 
-			AdvancedSearchLogicalSet.add(fuzzySearchLayer= new AdvancedSearchLogicLayer(opt, md, tab1, statusBar, -1));
-			AdvancedSearchLogicalSet.add(fullSearchLayer= new AdvancedSearchLogicLayer(opt, md, tab2, statusBar, -2));
+			AdvancedSearchLogicalSet.add(fuzzySearchLayer=new AdvancedSearchLogicLayer(opt, md, tab1, statusBar, -1));
+			AdvancedSearchLogicalSet.add(fullSearchLayer=new AdvancedSearchLogicLayer(opt, md, tab2, statusBar, -2));
 
-			ObservableListmy adapter = fuzzySearchLayer.adapter = new ObservableListmy(new resultRecorderScattered(md, engine, fuzzySearchLayer));
+			ObservableListmy adapter = fuzzySearchLayer.adapter = new ObservableListmy(new resultRecorderScattered(fuzzySearchLayer, engine));
 			ListView<Integer> listView = fuzzySearchLayer.listView = new ListView<>(adapter);
 			listView.getSelectionModel().selectedIndexProperty().addListener((ov, oldV, newV) -> {//this is Number ChangeListener
 				if(newV != null){
-					fuzzySearchLayer.adapter.rec.renderContentAt(newV.intValue());
+					fuzzySearchLayer.adapter.rec.renderContentAt(newV.intValue(), -1, false);
 				}
 			});
 			listView.setCellFactory((ListView<Integer> l) -> new ColoredEntryCell(fuzzySearchLayer.adapter));//setCellFactory((ListView<String> l) -> new ColorCell());
 			tab1.setContent(listView);
 
-			adapter = fullSearchLayer.adapter = new ObservableListmy(new resultRecorderScattered(md, engine, fullSearchLayer));
+			adapter = fullSearchLayer.adapter = new ObservableListmy(new resultRecorderScattered(fullSearchLayer, engine));
 			listView = fullSearchLayer.listView = new ListView<>(adapter);
 			listView.getSelectionModel().selectedIndexProperty().addListener((ov, oldV, newV) -> {
 				if(newV != null){
-					fullSearchLayer.adapter.rec.renderContentAt(newV.intValue());
+					fullSearchLayer.adapter.rec.renderContentAt(newV.intValue(), -1, false);
 				}
 			});
 			listView.setCellFactory((ListView<Integer> l) -> new ColoredEntryCell(fullSearchLayer.adapter));//setCellFactory((ListView<String> l) -> new ColorCell());
@@ -1453,7 +1527,7 @@ public class PlainDictionaryPcJFX extends Application {
 						if(isCombinedSearch||i==layer.Idx)
 							GETNUMBERENTRIES+=mdtmp.getNumberEntries();
 						ArrayList<Integer>[] _combining_search_tree_ =
-								layer.type<0?layer.getInternalTree(mdtmp):layer.combining_search_tree;
+								layer.type<0?layer.getInternalTree(mdtmp):layer.getCombinedTree(i);
 						if(_combining_search_tree_!=null)
 						for(int ti=0;ti<_combining_search_tree_.length;ti++){//遍历搜索结果
 							if(_combining_search_tree_[ti]!=null) {
@@ -1501,78 +1575,78 @@ public class PlainDictionaryPcJFX extends Application {
 		}
 
 
-		class ColoredEntryCell extends ListCell<Integer> {
-			ObservableListmy adapter;
-			ColoredEntryCell(ObservableListmy adapter_){
-				adapter=adapter_;
-			}
-			EventHandler<MouseEvent> clicker = new EventHandler<MouseEvent>() {
-				@Override
-				public void handle(MouseEvent event) {
-					adapter.rec.renderContentAt(Integer.valueOf(((Node)event.getSource()).idProperty().getValue()));
-				}
-			};
-			@Override
-			protected void updateItem(Integer pos, boolean empty) {
-				super.updateItem(pos, empty);
-				if(empty || pos==null)
-					return;
-				BorderPane cell = new BorderPane();
+	}
 
-				String text = adapter.rec.getResAt(pos);
-				Node textTitleView;
-				AdvancedSearchLogicLayer layer = (AdvancedSearchLogicLayer) adapter.rec.SearchLauncher;
-				if(layer.currentPattern!=null && layer.getTint()){
-					TextFlow titleFlow = new TextFlow();
-					textTitleView=titleFlow;
-					ObservableList<Node> textGroup = titleFlow.getChildren();
-					Matcher m = layer.currentPattern.matcher(text);
-					Text title; int idx=0;
-					while(m.find()){
-						int start = m.start(0);
-						int end = m.end(0);
-						title = new Text(text.substring(idx, start));
-						title.setFont(Font.font("宋体",18));
-						title.setFill(Color.BLACK);
-						textGroup.add(title);
-						title = new Text(text.substring(start, end));
-						title.setFont(Font.font("宋体",18));
-						title.setFill(Color.RED);
-						textGroup.add(title);
-						idx=end;
-					}
-					if(idx<text.length()){
-						title = new Text(text.substring(idx));
-						title.setFont(Font.font("宋体",18));
-						title.setFill(Color.BLACK);
-						textGroup.add(title);
-					}
-				}
-				else{
-					textTitleView=new Text(text);
-				}
-				//title.setStyle("-fx-font-style:bold;");
-
-				Text dictName = new Text(md.get(adapter.rec.dictIdx)._Dictionary_fName);
-				dictName.setFont(Font.font("宋体",12));
-				dictName.setStyle("-fx-fill: #666666;-fx-opacity: 0.66;");
-				//Text source = new Text("dd");
-				//source.setFont(Font.font(10));
-
-				cell.setTop(textTitleView);
-				cell.setLeft(dictName);
-				cell.setId(pos.toString());
-				//cell.setRight(source);
-				//cell.setOnMouseClicked(clicker);
-				cell.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
-					getListView().requestFocus();
-					getListView().getSelectionModel().clearSelection();
-					getListView().getSelectionModel().select(pos);
-				});
-				setGraphic(cell);
-			}
+	static class ColoredEntryCell extends ListCell<Integer> {
+		ObservableListmy adapter;
+		ColoredEntryCell(ObservableListmy adapter_){
+			adapter=adapter_;
 		}
+		EventHandler<MouseEvent> clicker = new EventHandler<MouseEvent>() {
+			@Override
+			public void handle(MouseEvent event) {
+				adapter.rec.renderContentAt(Integer.valueOf(((Node)event.getSource()).idProperty().getValue()), -1, false);
+			}
+		};
+		@Override
+		protected void updateItem(Integer pos, boolean empty) {
+			super.updateItem(pos, empty);
+			if(empty || pos==null)
+				return;
+			BorderPane cell = new BorderPane();
 
+			String text = adapter.rec.getResAt(pos);
+			Node textTitleView;
+			AdvancedSearchLogicLayer layer = (AdvancedSearchLogicLayer) adapter.rec.SearchLauncher;
+			if(layer.currentPattern!=null && layer.getTint()){
+				TextFlow titleFlow = new TextFlow();
+				textTitleView=titleFlow;
+				ObservableList<Node> textGroup = titleFlow.getChildren();
+				Matcher m = layer.currentPattern.matcher(text);
+				Text title; int idx=0;
+				while(m.find()){
+					int start = m.start(0);
+					int end = m.end(0);
+					title = new Text(text.substring(idx, start));
+					title.setFont(Font.font("宋体",18));
+					title.setFill(Color.BLACK);
+					textGroup.add(title);
+					title = new Text(text.substring(start, end));
+					title.setFont(Font.font("宋体",18));
+					title.setFill(Color.RED);
+					textGroup.add(title);
+					idx=end;
+				}
+				if(idx<text.length()){
+					title = new Text(text.substring(idx));
+					title.setFont(Font.font("宋体",18));
+					title.setFill(Color.BLACK);
+					textGroup.add(title);
+				}
+			}
+			else{
+				textTitleView=new Text(text);
+			}
+			//title.setStyle("-fx-font-style:bold;");
+
+			Text dictName = new Text(layer.md.get(adapter.rec.dictIdx)._Dictionary_fName);
+			dictName.setFont(Font.font("宋体",12));
+			dictName.setStyle("-fx-fill: #666666;-fx-opacity: 0.66;");
+			//Text source = new Text("dd");
+			//source.setFont(Font.font(10));
+
+			cell.setTop(textTitleView);
+			cell.setLeft(dictName);
+			cell.setId(pos.toString());
+			//cell.setRight(source);
+			//cell.setOnMouseClicked(clicker);
+			cell.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+				getListView().requestFocus();
+				getListView().getSelectionModel().clearSelection();
+				getListView().getSelectionModel().select(pos);
+			});
+			setGraphic(cell);
+		}
 	}
 
 

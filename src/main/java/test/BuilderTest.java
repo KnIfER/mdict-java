@@ -34,8 +34,6 @@ public class BuilderTest {
     	mdxBD.write("F:\\123Test.mdx");
     	
     	mdict md = new mdict("F:\\123Test.mdx");//en-irish.mdx
-    	md.printDictInfo();
-    	md.printAllKeys();
     	//md.printAllContents();
     	CMN.show(md.getRecordAt(md.lookUp("happy")));
     	CMN.show(md.getRecordAt(1024));

@@ -14,11 +14,11 @@ public class Rebuild_formation {
 	
     static int d=0;
     public static void main(String[] args) throws IOException{
-    	mdictBuilder mdxDB = new mdictBuilder("GoldenDict Hunspell en_US构词法规则库","converted by mdict-java builder to reduce entries of unwanted formation rules","UTF-8");
+    	mdictBuilder mdxDB = new mdictBuilder("GoldenDict Hunspell en_US构词法规则库","converted by mdict-java builder to reduce entries of unwanted formation rules","UTF-16");
 
 		mdict mraw = new mdict("D:\\assets\\mdicts\\构词法\\白鸽英语构词法.mdx");
 
-    	for(int i=0;i<mraw.getNumberEntries();i++) {
+    	for(int i=0;i<100;i++) {
     		String key = mraw.getEntryAt(i).trim();
     		String record = mraw.getRecordAt(i).trim();
     		if(startWith(record, key)){
@@ -26,7 +26,7 @@ public class Rebuild_formation {
 			}
     	}
 
-		mdxDB.setCompressionType(2);
+		//mdxDB.setCompressionType(2);
     	mdxDB.write("D:\\assets\\mdicts\\构词法\\精简白鸽英语构词法.mdx");
     }
 

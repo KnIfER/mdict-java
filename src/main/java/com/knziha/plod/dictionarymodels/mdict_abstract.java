@@ -48,4 +48,9 @@ public abstract class mdict_abstract extends mdict {
 		}
 		return true;
 	}
+
+	@Override
+	protected boolean StreamAvailable() {
+		return false;
+	}
 }

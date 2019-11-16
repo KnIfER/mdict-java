@@ -10,6 +10,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /*
@@ -54,7 +56,7 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 	}
 
 	@Override
-	protected boolean getUseJoniRegex(){
+	protected boolean getUseJoniRegex(int mode){
 		return opt.GetRegexSearchEngineEnabled();
 	}
 
@@ -105,5 +107,10 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 			out.write(getRecordsAt(position).getBytes(StandardCharsets.UTF_8));
 			out.close();
 		}
+	}
+
+	@Override
+	protected ExecutorService OpenThreadPool(int thread_number) {
+		return Executors.newWorkStealingPool();
 	}
 }

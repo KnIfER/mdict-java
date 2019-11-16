@@ -17,13 +17,13 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.LinkedList;
 
-/** tiff is small but unsupported by most browsers. */
+/** test.privateTest.tiff is small but unsupported by most browsers. */
 public class TiffMddConverter {
 	public static void main(String[] args) throws IOException {
 		mdictRes mddRaw = new mdictRes("F:\\assets\\mdicts\\汉语\\文言快易通.mdd");
 
 		if(false){/* true false */
-			mdictResBuilder builder = new mdictResBuilder("","tiff pics to png");
+			mdictResBuilder builder = new mdictResBuilder("","test.privateTest.tiff pics to png");
 			/* JAIConverter or ICAFEConverter */
 			TiffTerminator hey = new JAIConverter();
 			long len = mddRaw.getNumberEntries();
@@ -47,7 +47,7 @@ public class TiffMddConverter {
 			mdictBuilder builder = new mdictBuilder("文言快易通","", mdxRaw.getEncoding());
 			builder.setCompressionType(0,2);
 			for (int i = 0; i < mdxRaw.getNumberEntries(); i++) {
-				builder.insert(mdxRaw.getEntryAt(i), mdxRaw.getRecordAt(i).replace(".tif", ".png"));
+				builder.insert(mdxRaw.getEntryAt(i), mdxRaw.getRecordAt(i).replace(".tif", ".png").replace("src=\"", "src=\"/"));
 			}
 			builder.write("F:\\assets\\mdicts\\汉语\\文言快易通.converted.mdx");
 		}
@@ -67,7 +67,7 @@ public class TiffMddConverter {
 
 
 		if(false){/* true false */
-			UnpackMdd("F:\\assets\\mdicts\\汉语\\文言快易通\\", mddRaw);
+			UnpackMdd("F:\\assets\\mdicts\\汉语\\文言快易通\\", mddRaw, false);
 		}
 
 		if(false){/* true false */
@@ -104,15 +104,24 @@ public class TiffMddConverter {
 	}
 
 
-	static void UnpackMdd(String startPath, mdictRes mdd) throws IOException {
+	static void UnpackMdd(String startPath, mdictRes mdd, boolean overWrite) throws IOException {
 		final String SepWindows = "\\";
 		File spf=new File(startPath);
 		spf.mkdirs();
 		if(!spf.isDirectory())
 			throw new FileNotFoundException(startPath);
+		File targetFile;
 		for (int i = 0; i < mdd.getNumberEntries(); i++) {
 			String key = mdd.getEntryAt(i);
-			BU.printFile(mdd.getRecordData(i), new File(startPath, key.replace(SepWindows, File.separator)).getAbsolutePath());
+			try {
+				targetFile=new File(startPath, key.replace(SepWindows, File.separator));
+				if(!overWrite && targetFile.exists()) continue;
+				if(!targetFile.getParentFile().isDirectory())
+					targetFile.getParentFile().mkdirs();
+				BU.printFile(mdd.getRecordData(i), targetFile.getAbsolutePath());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

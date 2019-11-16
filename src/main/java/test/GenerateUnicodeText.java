@@ -91,6 +91,7 @@ public class GenerateUnicodeText {
 		CMN.Log("class_case="+StringEscapeUtils.escapeJava("旧版Mdict大小写转换"));
 		CMN.Log("sr_inter="+StringEscapeUtils.escapeJava("中断搜索"));
 		CMN.Log("sr_save="+StringEscapeUtils.escapeJava("保存搜索…"));
+		CMN.Log("sr_new="+StringEscapeUtils.escapeJava("新建搜索域"));
 		CMN.ConfigLogFile(null);
     }
 

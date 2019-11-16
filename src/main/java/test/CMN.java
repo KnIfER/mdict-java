@@ -1,7 +1,12 @@
 package test;
 
+import com.knziha.plod.dictionaryBuilder.ArrayListTree;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 
@@ -90,11 +95,68 @@ public class CMN{
         }
     }
 
-    static long stst;
+    static volatile long stst;
     public static void rt() {
         stst = System.currentTimeMillis();
     }
     public static void pt(String...args) {
         CMN.Log(args,(System.currentTimeMillis()-stst));
     }
+
+    public static HashSet<String> AdaptivelyGetAllLines(String path, HashSet<String> proessed) {
+        if(proessed==null) proessed=new HashSet<>();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(path));
+            String line;
+            while((line=br.readLine())!=null){
+                line=line.trim();
+                if(line.length()>0)
+                    proessed.add(line);
+            }
+        } catch (Exception e) { }
+        return proessed;
+    }
+
+    public static ArrayList<String> AdaptivelyGetAllLines(ArrayList<String> proessed, String path) {
+        if(proessed==null) proessed=new ArrayList<>();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(path));
+            String line;
+            while((line=br.readLine())!=null){
+                line=line.trim();
+                if(line.length()>0)
+                    proessed.add(line);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return proessed;
+    }
+
+    public static void AdaptivelyLogFiles(HashMap<String, FileOutputStream> cache, boolean append, String path, String msg) {
+        try {
+            FileOutputStream fin = cache.get(path);
+            if(fin==null){
+                fin = new FileOutputStream(path, append);
+                cache.put(path, fin);
+            }
+            fin.write((msg+"\r\n").getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void AdaptivelyLogFiles(HashMap<String, FileOutputStream> cache) {
+        try {
+            for(String key:cache.keySet()){
+                cache.get(key).flush();
+                cache.get(key).close();
+            }
+            cache.clear();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }

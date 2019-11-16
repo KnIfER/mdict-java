@@ -10,16 +10,20 @@ public abstract class resultRecorderDiscrete {
 	Flag mflag = new Flag();
 	
 	public String getResAt(int pos) {return "";}
-	
-	public void renderContentAt(int pos) {}
-	
-	public int size() {return 0;}
-	
-	public void invalidate() {}
-	
-	public void invalidate(int adapter_idx) {}
 
-	public void shutUp() {}
+	public abstract mdict getMdAt(int pos);
+
+	public abstract int getIndexAt(int pos);
+
+	public abstract void renderContentAt(int pos, int selfAtIdx, boolean post);
+
+	public abstract int size();
+	
+	public abstract void invalidate();
+	
+	public abstract void invalidate(int adapter_idx);
+
+	public abstract void shutUp();
 	
 	public int dictIdx=0;
 

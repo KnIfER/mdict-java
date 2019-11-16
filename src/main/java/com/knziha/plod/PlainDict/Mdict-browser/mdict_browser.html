@@ -1050,7 +1050,7 @@
 			ScanInDicts();
 		}
 	
-		function postInit(){
+		var postInit = function(){
 			if(app){
 				flag=app.getFlag();
 				if(isCombinedSeaching())
@@ -1064,7 +1064,8 @@
 				lvPs.width = Math.floor($(window).innerWidth()*0.42) + 'px';
 				pRs.marginLeft = lvPs.width;
 			}
-		/**/}
+			postInit=null;
+		/**/};
 		
 		var flag=0;
 		function updateFFAt(o, val) {
@@ -1115,7 +1116,7 @@
 		}
 	
 		function setListPos(p){
-			console.log("list pos is: ",getListSize()-p);
+			//console.log("list pos is: ",getListSize()-p);
 			seekBarmy.setValue(getListSize()-p);
 			pos=p;
 			//seekBarmy.render();
@@ -1252,7 +1253,8 @@
 						dictsP.appendChild(item);
 					}
 					p2(e);
-					postInit();
+					if(postInit)
+						postInit();
 				}
 			});
 		}
@@ -1316,7 +1318,7 @@
 		}
 		function showAbout(){
 			if(currentContext){
-				aboutPage.context_idx=currentContext.frameAt;
+				if(currentContext.frameAt) aboutPage.context_idx=currentContext.frameAt;
 				do_showAbout(0);
 			}
 		}
@@ -1795,6 +1797,7 @@
 <div id="cover_Menu" class='ctx_menu'>
 	<div class="menu_item" onclick="contextMouseDown1()" onmousedown="contextMouseDown()">text</div>
 	<div class="menu_item" onclick="reloadDict()">重新加载词典</div>
+	<div class="menu_item" onclick="showAbout()">关于…</div>
 </div>
 
 <div id="dict_menu" class='ctx_menu'>

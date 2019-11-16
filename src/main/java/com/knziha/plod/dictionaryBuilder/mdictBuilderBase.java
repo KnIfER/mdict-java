@@ -64,8 +64,10 @@ abstract class mdictBuilderBase {
 	Integer[] blockDataInfo_L;
 	Integer[] blockInfo_L;
 
-	int ContentTailLen=3;
 	int RecordBlockZipLevel=-1;
+	byte[] mContentDelimiter;
+	//final static byte[] contentDelimiterNormal=new byte[] {0x0d,0x0a,0};
+	//final static byte[] contentDelimiterUTF16=new byte[] {0x0d,0,0x0a,0,0,0};
 
 	public long getNumberEntries(){return _num_entries;}
 
@@ -157,7 +159,7 @@ abstract class mdictBuilderBase {
 				}else
 					byteContent = values.get(baseCounter+entryC);
 				data_raw.write(byteContent);
-				if(ContentTailLen==3)data_raw.write(new byte[] {0x0d,0x0a,0});
+				if(mContentDelimiter!=null)data_raw.write(mContentDelimiter);
 			}
 
 			byte[] data_raw_out = data_raw.toByteArray();
@@ -173,7 +175,7 @@ abstract class mdictBuilderBase {
 			else if(CompressionType==1) {
 				fOut.write(new byte[]{1,0,0,0});
 				int in_len = data_raw_out.length;
-				int out_len_preEmpt =  (in_len + in_len / 16 + 64+ContentTailLen);
+				int out_len_preEmpt =  (in_len + in_len / 16 + 64+(mContentDelimiter==null?0:mContentDelimiter.length));
 				byte[] record_block_data = new byte[out_len_preEmpt];
 				lzo_uintp out_len = new lzo_uintp();
 				new LzoCompressor1x_1().compress(data_raw_out, 0, in_len, record_block_data, 0, out_len);
@@ -365,7 +367,7 @@ abstract class mdictBuilderBase {
 				//2nd, judge & save data.
 				if(preJudge<1024*perRecordBlockSize) {
 					/* PASSING */
-					offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+ContentTailLen*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
+					offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+(mContentDelimiter==null?0:mContentDelimiter.length)*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
 					record_block_decompressed_size_accumulator+=recordLen;
 					blockDataInfo.set(idx, preJudge);/*offset+=preJudge*/
 					blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
@@ -373,7 +375,7 @@ abstract class mdictBuilderBase {
 				}
 				else if(recordLen>=1024*perRecordBlockSize) {
 					/* MONO OCCUPYING */
-					offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+ContentTailLen*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
+					offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+(mContentDelimiter==null?0:mContentDelimiter.length)*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
 					record_block_decompressed_size_accumulator+=recordLen;
 					if(bAbortOldRecordBlockOnOverFlow) {
 						if (blockDataInfo.get(idx)!=0) {//新开一个recblock
@@ -413,7 +415,7 @@ abstract class mdictBuilderBase {
 				for(int i=interval.key;i<=interval.value;i++) {
 					//CMN.show("putting!.."+(_num_entries-counter));
 					key_block_data_wrap.putLong(offsets[i]);//占位 offsets i.e. keyid
-					key_block_data_wrap.put(keyslist.get(i).getBytes(_charset));
+					key_block_data_wrap.put(keys[i].getBytes(_charset));
 					//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
 					if(_encoding.startsWith("UTF-16")){
 						key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
@@ -437,7 +439,7 @@ abstract class mdictBuilderBase {
 					try {//必定抛出，除非最后一个block.
 						if(privateZone!=null && privateZone.container((int) (_num_entries-counter))!=null) throw new BufferOverflowException();
 						key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
-						key_block_data_wrap.put(keyslist.get((int) (_num_entries-counter)).getBytes(_charset));
+						key_block_data_wrap.put(keys[(int) (_num_entries-counter)].getBytes(_charset));
 						//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
 						if(_encoding.startsWith("UTF-16")){
 							key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
@@ -475,7 +477,7 @@ abstract class mdictBuilderBase {
 			}
 			else if(CompressionType==1) {//lzo
 				//fOut.write(new byte[] {0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,9,9,9,9,9});
-				int out_len_preEmpt =  (in_len + in_len / 16 + 64 + ContentTailLen);
+				int out_len_preEmpt =  (in_len + in_len / 16 + 64 + (mContentDelimiter==null?0:mContentDelimiter.length));
 				byte[] compressed_key_block_data = new byte[out_len_preEmpt];
 
 

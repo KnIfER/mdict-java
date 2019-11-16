@@ -17,6 +17,7 @@
 
 package com.knziha.plod.dictionary;
 
+import com.knziha.plod.dictionary.Utils.BSI;
 import com.knziha.plod.dictionary.Utils.BU;
 
 import java.io.*;
@@ -44,8 +45,8 @@ import org.anarres.lzo.lzo_uintp;
  */
 
 public class mdictRes extends mdBase{
-    
-	HashMap<Integer,String[]> _stylesheet = new HashMap<Integer,String[]>();
+
+	HashMap<Integer,String[]> _stylesheet = new HashMap<>();
 
 
     //构造
@@ -66,25 +67,25 @@ public class mdictRes extends mdBase{
           return start;
         }
     }
-	
+
     public int lookUp(String keyword)
     {
 		if(_key_block_info_list==null) read_key_block_info();
 		//keyword = mdict.processText(keyword);
 		keyword = keyword.toLowerCase();
-		
+
     	int blockId = reduce(keyword,0,_key_block_info_list.length);
     	//show("blockId:"+blockId);
         //while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,keyword.getBytes(_charset))>=0)
         //	blockId--;
 
-    	
+
         key_info_struct infoI = _key_block_info_list[blockId];
-        
+
         cached_key_block infoI_cache = prepareItemByKeyInfo(infoI,blockId,null);
-        
+
         int res = reduce_keys(infoI_cache.keys,keyword,0,infoI_cache.keys.length);//keyword
-        
+
         if (res==-1){
         	System.out.println("search failed!");
         	return -1;
@@ -97,8 +98,18 @@ public class mdictRes extends mdBase{
         	return (int) (infoI.num_entries_accumulator+res);
         }
     }
-    
-    
+
+
+//	public ByteArrayInputStream getResourseByKey(String key) throws IOException {
+//		int idx = lookUp(key);
+//		if(idx>=0){
+//			RecordLogicLayer va1=new RecordLogicLayer();
+//			getRecordData(idx, va1);
+//			return new BSI(va1.data, va1.ral, va1.val-va1.ral);
+//		}
+//		return null;
+//	}
+
 	public int reduce_keys(byte[][] keys,String val,int start,int end) {//via mdict-js
         int len = end-start;
 		//show(new String(keys[start],_charset)+"  "+new String(keys[Math.min(end, keys.length-1)],_charset));
@@ -110,118 +121,6 @@ public class mdictRes extends mdBase{
         } else {
           return start;
         }
-    }
-	
-	
-    public int  binary_find_closest(byte[][] array,String val){
-    	if(array==null)
-    		return -1;
-    	int iLen = array.length;
-    	if(iLen<1)
-    		return -1;
-    	int boundaryCheck = val.compareTo(mdict.processText(new String(array[0],_charset)));
-    	if(boundaryCheck<0){
-    		return -1;
-    	}else if(boundaryCheck==0)
-			return 0;
-    	boundaryCheck = val.compareTo(mdict.processText(new String(array[iLen-1],_charset)));
-    	if(boundaryCheck>0){
-    		return -1;
-    	}else if(boundaryCheck==0)
-			return iLen-1;
-    	
-    	int resPreFinal = reduce_keys(array,val,0,array.length);
-    	return resPreFinal;
-    }
-
-	
-    public void printAllKeys(){
-		if(_key_block_info_list==null) read_key_block_info();
-    	int blockCounter = 0;
-    	for(key_info_struct infoI:_key_block_info_list){
-    		for(byte[] entry:prepareItemByKeyInfo(infoI,blockCounter,null).keys){
-    			//CMN.show(entry);
-    			System.out.println(new String(entry,_charset));
-    		}
-    		//CMN.show("block no."+(blockCounter++)+"printed");
-    	}
-    }
-    
-    public void printAllContents() throws IOException{
-    	FileOutputStream fOut = new FileOutputStream(f.getAbsolutePath()+".txt");
-
-        DataInputStream data_in = getStreamAt(_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width);
-        // record block info section
-        
-        // actual record block data
-        //int i = (int) (position-infoI.num_entries_accumulator);//处于当前record块的第几个
-        //record_info_struct RinfoI = _record_info_struct_list[accumulation_RecordB_tree.xxing(new myCpr(infoI.key_offsets[i],1)).getKey().value];
-        
-        
-        //whole section of record_blocks;
-        for(int i=0; i<_record_info_struct_list.length; i++){
-        	record_info_struct RinfoI = _record_info_struct_list[i];
-        	//data_in.skipBytes((int) RinfoI.compressed_size_accumulator);
-        	long compressed_size = RinfoI.compressed_size;
-        	long decompressed_size = RinfoI.decompressed_size;//用于验证
-        	byte[] record_block_compressed = new byte[(int) compressed_size];
-        	data_in.read(record_block_compressed);//+8 TODO optimize
-            // 4 bytes indicates block compression type
-        	byte[] record_block_type = new byte[4];
-        	System.arraycopy(record_block_compressed, 0, record_block_type, 0, 4);
-        	String record_block_type_str = new String(record_block_type);
-        	// 4 bytes adler checksum of uncompressed content
-        	ByteBuffer sf1 = ByteBuffer.wrap(record_block_compressed);
-            int adler32 = sf1.order(ByteOrder.BIG_ENDIAN).getInt(4);
-            byte[] record_block = new byte[1];
-            // no compression
-            if(record_block_type_str.equals(new String(new byte[]{0,0,0,0}))){
-            	record_block = new byte[(int) (compressed_size-8)];
-            	System.arraycopy(record_block_compressed, 8, record_block, 0, record_block.length-8);
-            }
-            // lzo compression
-            else if(record_block_type_str.equals(new String(new byte[]{1,0,0,0}))){
-            	record_block = new byte[(int) (compressed_size-8)];
-                //long st=System.currentTimeMillis(); //获取开始时间 
-                //record_block = new byte[(int) decompressed_size];
-                //MInt len = new MInt((int) decompressed_size);
-                //byte[] arraytmp = new byte[(int) compressed_size];
-                //System.arraycopy(record_block_compressed, 8, arraytmp, 0,(int) (compressed_size-8));
-                //MiniLZO.lzo1x_decompress(arraytmp,(int) compressed_size,record_block,len);
-	            new LzoDecompressor1x().decompress(record_block_compressed, +8, (int)(compressed_size-8), record_block, 0,new lzo_uintp());
-
-            	//System.out.println("get Record LZO decompressing key blocks done!") ;
-                //System.out.println("解压Record耗时："+(System.currentTimeMillis()-st));
-            }
-            // zlib compression
-            else if(record_block_type_str.equals(new String(new byte[]{02,00,00,00}))){
-                record_block = zlib_decompress(record_block_compressed,8);
-            }
-            // notice not that adler32 return signed value
-            //CMN.show(adler32+"!:"+BU.calcChecksum(record_block) );
-            assert(adler32 == (BU.calcChecksum(record_block) ));
-            assert(record_block.length == decompressed_size );
- //当前内容块解压完毕
-                 
-            fOut.write(record_block);
-            
-            
-        }
-        fOut.close();
-    }
-
-    //解压
-    public static byte[] zlib_decompress(byte[] encdata,int offset) {
-	    try {
-			    ByteArrayOutputStream out = new ByteArrayOutputStream();
-			    InflaterOutputStream inf = new InflaterOutputStream(out); 
-			    inf.write(encdata,offset, encdata.length-offset); 
-			    inf.close(); 
-			    return out.toByteArray(); 
-		    } catch (Exception ex) {
-		    	ex.printStackTrace(); 
-		    	return "ERR".getBytes(); 
-		    }
     }
 }
 

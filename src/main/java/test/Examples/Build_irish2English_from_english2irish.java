@@ -62,8 +62,7 @@ public class Build_irish2English_from_english2irish {
     	}
     	
     	mdict md2 = new mdict("C:\\Irish-En.mdx");
-    	md2.printDictInfo();
-    	
+
     	//CMN.show(md2.getEntryAt(1328));
     	CMN.show(md2.getRecordAt(13280));
     	//md.printAllKeys();//md2.lookUp("úth")

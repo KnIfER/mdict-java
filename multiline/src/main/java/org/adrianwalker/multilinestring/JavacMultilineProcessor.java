@@ -34,7 +34,7 @@ public final class JavacMultilineProcessor extends AbstractProcessor {
                return SourceVersion.latest();
 	}
 
-	static Pattern comments=Pattern.compile("(//.*)?(\r)?\n");
+	public static Pattern comments=Pattern.compile("((?<!:)//.*)?(\r)?\n");
 
 	@Override
 	public boolean process(final Set<? extends TypeElement> annotations, final RoundEnvironment roundEnv) {

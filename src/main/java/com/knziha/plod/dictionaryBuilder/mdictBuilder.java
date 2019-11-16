@@ -33,8 +33,12 @@ public class mdictBuilder extends mdictBuilderBase {
 		privateZone = new IntervalTree();
 		_Dictionary_Name=Dictionary_Name;
 		_about=StringEscapeUtils.escapeHtml4(about);
+		if(charset.toUpperCase().startsWith("UTF-16")){
+			charset="UTF-16LE";
+		}
 		_encoding=charset;
 		_charset=Charset.forName(_encoding);
+		mContentDelimiter="\r\n\0".getBytes(_charset);
 	}
 
 	public int insert(String key,String data) {
@@ -201,7 +205,7 @@ public class mdictBuilder extends mdictBuilderBase {
 
 		@Override
 		public byte[] getBinVals() {
-			return value.getBytes(_charset);
+			return value==null?null:value.getBytes(_charset);
 		}
 
 	}

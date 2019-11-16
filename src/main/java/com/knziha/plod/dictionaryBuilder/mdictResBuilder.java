@@ -28,7 +28,6 @@ public class mdictResBuilder extends mdictBuilderBase {
 		perKeyBlockSize_IE_IndexBlockSize=16;
 		bAbortOldRecordBlockOnOverFlow=false;
 		globalCompressionType=2;
-		ContentTailLen=0;
 		_encoding="UTF-16LE";
 		_charset=StandardCharsets.UTF_16LE;
 		data_tree= new RBTree<>();

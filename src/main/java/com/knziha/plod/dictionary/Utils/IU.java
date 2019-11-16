@@ -118,6 +118,12 @@ the valueOf method.
 }
 
 
+    public static int parseInteger(Object o, int val)
+{
+    return o instanceof Integer?(int)o:val;
+}
+
+
 
     public static int reduce(String phrase,int start,int end) {//via mdict-js
         int len = end-start;

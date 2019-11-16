@@ -526,7 +526,7 @@ public abstract class NanoHTTPD {
      *            the incoming session
      * @return a response to the incoming session
      */
-    public Response handle(IHTTPSession session) {
+    public Response handle(IHTTPSession session) throws IOException {
         for (IHandler<IHTTPSession, Response> interceptor : interceptors) {
             Response response = interceptor.handle(session);
             if (response != null)
