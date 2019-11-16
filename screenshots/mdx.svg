@@ -15,8 +15,8 @@
    viewBox="0 0 199.20647 314.55368"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
-   sodipodi:docname="mdx.svg">
+   sodipodi:docname="mdx.svg"
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)">
   <defs
      id="defs2">
     <linearGradient
@@ -35,9 +35,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.7"
-     inkscape:cx="303.00078"
-     inkscape:cy="970.36013"
+     inkscape:zoom="1.4"
+     inkscape:cx="309.11746"
+     inkscape:cy="1032.4336"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -3247,27 +3247,6 @@
          id="rect4479-3"
          style="fill:#b28000;fill-opacity:1;stroke:#000000;stroke-width:0.41499999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
       <text
-         id="text3632-8"
-         y="-29.767853"
-         x="417.7135"
-         style="font-style:normal;font-weight:normal;font-size:14px;line-height:62.00000048%;font-family:Sans;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
-         xml:space="preserve"><tspan
-           id="tspan3637-3"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;line-height:62.00000048%;font-family:Sans;-inkscape-font-specification:Sans"
-           y="-29.767853"
-           x="417.7135"
-           sodipodi:role="line">           0 Byte when verison &lt; 2.0</tspan><tspan
-           id="tspan8293"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;line-height:62.00000048%;font-family:Sans;-inkscape-font-specification:Sans"
-           y="-21.087852"
-           x="417.7135"
-           sodipodi:role="line">1 Bytte when charset != UTF-16</tspan><tspan
-           id="tspan8295"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6px;line-height:62.00000048%;font-family:Sans;-inkscape-font-specification:Sans"
-           y="-12.407853"
-           x="417.7135"
-           sodipodi:role="line">2 Byets when charset == UTF-16</tspan></text>
-      <text
          id="text3632-8-2"
          y="338.91943"
          x="568.7597"
@@ -3430,5 +3409,26 @@
            x="476.4404"
            sodipodi:role="line">\r\n\0 encoded by charset</tspan></text>
     </g>
+    <text
+       id="text3632-8"
+       y="16.412983"
+       x="120.38093"
+       style="font-style:normal;font-weight:normal;font-size:3.70416665px;line-height:62.00000048%;font-family:Sans;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       xml:space="preserve"><tspan
+         id="tspan3637-3"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.58749998px;line-height:62.00000048%;font-family:Sans;-inkscape-font-specification:Sans;stroke-width:0.26458332"
+         y="16.412983"
+         x="120.38093"
+         sodipodi:role="line">           0 Byte when verison &lt; 2.0</tspan><tspan
+         id="tspan8293"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.58749998px;line-height:62.00000048%;font-family:Sans;-inkscape-font-specification:Sans;stroke-width:0.26458332"
+         y="18.709568"
+         x="120.38093"
+         sodipodi:role="line">1 Bytte when charset != UTF-16</tspan><tspan
+         id="tspan8295"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.58749998px;line-height:62.00000048%;font-family:Sans;-inkscape-font-specification:Sans;stroke-width:0.26458332"
+         y="21.006151"
+         x="120.38093"
+         sodipodi:role="line">2 Byets when charset == UTF-16</tspan></text>
   </g>
 </svg>
