@@ -77,7 +77,8 @@ public static int reduce(int phrase, int[] array,int start,int end) {
 	
 MDX File Format
 ===============
-<img src="https://github.com/KnIfER/mdict-java/raw/master/screenshots/mdx.svg">
+<img src="https://github.com/KnIfER/mdict-java/blob/master/screenshots/mdx.svg">
+
 
 MDD File Format
 ===============
