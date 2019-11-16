@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
@@ -86,7 +87,7 @@ import org.joni.exception.SyntaxException;
 /**
  * **Mdict Java Library**<br/><br/>
  * <b>FEATURES</b>:<br/>
- * 1. Basic listing and fast binary query function.<br/>
+ * 1. Basic listing and fast binary query of mdx files.<br/>
  * 2. Dictionary conjunction search.<br/>
  * 3. Fast Multi-threaded search in all contents.<br/>
  * 4. Fast Multi-threaded search in all entries.<br/>
@@ -190,11 +191,8 @@ public class mdict extends mdBase{
 						mdd.add(new mdictRes(f2.getAbsolutePath()));
 					}
 				}
-				if(_header_tag.containsKey("SharedMdd")) {
-					//File SharedMddF=new File(f.getParentFile(),_header_tag.get("SharedMdd")+".mdd");
-					//if(SharedMddF.exists())
-					//	mdd=new mdictRes(SharedMddF.getAbsolutePath());
-				}
+				//if(_header_tag.containsKey("SharedMdd")) {
+				//}
 			}
 		}
 		calcFuzzySpace();
@@ -365,12 +363,7 @@ public class mdict extends mdBase{
 			System.out.println("search failed!"+keyword);
 			return -1;
 		}
-		if(isCompact) {//compatibility fix.
-
-
-
-
-		}
+		////if(isCompact) //compatibility fix
 		String other_key = new String(infoI_cache.keys[res],_charset);
 		String looseMatch = processMyText(other_key);
 		boolean bIsEqual = looseMatch.equals(keyword);
@@ -533,11 +526,11 @@ public class mdict extends mdBase{
 
 	/**
 	 <style>
-	 	audio {
-			position:absolute;
-			top:45%;
-			width:100%;
-	    }
+	 audio {
+	 position:absolute;
+	 top:45%;
+	 width:100%;
+	 }
 	 </style>
 	 */
 	@Multiline
@@ -666,10 +659,10 @@ public class mdict extends mdBase{
 						BlockOff=8;
 						currentKeyBlock=_key_block_compressed;
 						//System.arraycopy(_key_block_compressed, 8, key_block, 0,(int) (compressedSize-8));
-					break;
+						break;
 					case 1:
 						new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), currentKeyBlock, 0,new lzo_uintp());
-					break;
+						break;
 					case 2:
 						//key_block = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
 						Inflater inf = new Inflater();
@@ -677,7 +670,7 @@ public class mdict extends mdBase{
 						try {
 							int ret = inf.inflate(currentKeyBlock,0,(int)(infoI.key_block_decompressed_size));
 						} catch (DataFormatException e) {e.printStackTrace();}
-					break;
+						break;
 				}
 				//!!spliting curr Key block
 
@@ -694,7 +687,7 @@ public class mdict extends mdBase{
 
 
 	int split_recs_thread_number;
-	public void flowerFindAllContents(String key, int selfAtIdx, AbsAdvancedSearchLogicLayer SearchLauncher) throws IOException, DataFormatException{
+	public void flowerFindAllContents(String key, int selfAtIdx, AbsAdvancedSearchLogicLayer SearchLauncher) throws IOException{
 		byte[][][] matcher=null;
 		Regex Joniregex = null;
 		if(getUseJoniRegex(1)){
@@ -745,14 +738,14 @@ public class mdict extends mdBase{
 		}
 
 
-		SearchLauncher.poolEUSize = SearchLauncher.dirtyProgressCounter =0;
+		SearchLauncher.poolEUSize.set(SearchLauncher.dirtyProgressCounter=0);
 
 		ExecutorService fixedThreadPool = OpenThreadPool(thread_number);
 		for(int ti=0; ti<split_recs_thread_number; ti++){//分  thread_number 股线程运行
 			if(SearchLauncher.IsInterrupted) break;
 			final int it = ti;
 			//if(false)
-			if(split_recs_thread_number>thread_number) while (SearchLauncher.poolEUSize>=thread_number) {
+			if(split_recs_thread_number>thread_number) while (SearchLauncher.poolEUSize.get()>=thread_number) {
 				try {
 					Thread.sleep(2);
 				} catch (InterruptedException e) {
@@ -763,104 +756,104 @@ public class mdict extends mdBase{
 			if(combining_search_tree_4[it]==null)
 				combining_search_tree_4[it] = new ArrayList<>();
 
-			if(split_recs_thread_number>thread_number) SearchLauncher.countDelta(1);
+			if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(1);
 
 			Regex finalJoniregex = Joniregex;
 			byte[][][] finalMatcher = matcher;
 			fixedThreadPool.execute(
-				new Runnable(){@Override public void run()
-				{
-					if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize=0; return; }
-					final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
-					final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
-					try
+					new Runnable(){@Override public void run()
 					{
-						InputStream data_in = mOpenInputStream();
-						long seekTarget=_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width;
-						long seek = data_in.skip(seekTarget);
-						//if(seek!=seekTarget)
-						//	throw new RuntimeException("seek!=seekTarget !!!");
-						int jiaX=0;
-						if(it==split_recs_thread_number-1) jiaX=yuShu;
-						for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
+						if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize.set(0); return; }
+						final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
+						final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
+						try
 						{
-							if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize=0; return; }
-							record_info_struct RinfoI = _record_info_struct_list[i];
+							InputStream data_in = mOpenInputStream();
+							long seekTarget=_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width;
+							long seek = data_in.skip(seekTarget);
+							//if(seek!=seekTarget)
+							//	throw new RuntimeException("seek!=seekTarget !!!");
+							int jiaX=0;
+							if(it==split_recs_thread_number-1) jiaX=yuShu;
+							for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
+							{
+								if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize.set(0); return; }
+								record_info_struct RinfoI = _record_info_struct_list[i];
 
-							int compressed_size = (int) RinfoI.compressed_size;
-							int decompressed_size = (int) RinfoI.decompressed_size;
-							data_in.read(record_block_compressed,0, compressed_size);
+								int compressed_size = (int) RinfoI.compressed_size;
+								int decompressed_size = (int) RinfoI.decompressed_size;
+								data_in.read(record_block_compressed,0, compressed_size);
 
-							//解压开始
-							switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
-								case 0:
-									System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
-								break;
-								case 1:
-									new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
-								break;
-								case 2:
-									Inflater inf = new Inflater();
-									inf.setInput(record_block_compressed,8,compressed_size-8);
-									int ret = inf.inflate(record_block_,0,decompressed_size);
-								break;
-							}
-
-							//内容块解压完毕
-							long off = RinfoI.decompressed_size_accumulator;
-							int key_block_id = binary_find_closest(keyBlocksHeaderTextKeyID,off);
-
-							org.joni.Matcher Jonimatcher = null;
-							if(finalJoniregex !=null)
-								Jonimatcher = finalJoniregex.matcher(record_block_);
-							long[] ko; int recordodKeyLen, try_idx;
-							OUT:
-							while(true) {
-								if(key_block_id>=_key_block_info_list.length) break;
-								ko = prepareItemByKeyInfo(null,key_block_id,null).key_offsets;
-								//if(infoI_cacheI.blockID!=key_block_id)
-								//	throw new RuntimeException("bad !!!"+infoI_cacheI.blockID+" != "+key_block_id);
-								for(int relative_pos=binary_find_closest(ko,off);relative_pos<ko.length;relative_pos++) {
-									if(relative_pos<ko.length-1){//不是最后一个entry
-										recordodKeyLen=(int) (ko[relative_pos+1]-ko[relative_pos]);
-									}
-									else if(key_block_id<keyBlocksHeaderTextKeyID.length-1){//不是最后一块key block
-										recordodKeyLen=(int) (keyBlocksHeaderTextKeyID[key_block_id+1]-ko[relative_pos]);
-									}else {
-										recordodKeyLen = (int) (decompressed_size-(ko[ko.length-1]-RinfoI.decompressed_size_accumulator));
-									}
-
-									if(ko[relative_pos]-RinfoI.decompressed_size_accumulator+recordodKeyLen>RinfoI.decompressed_size) {
-										//show("break OUT");
-										break OUT;
-									}
-
-									try_idx=(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator);
-									try_idx=Jonimatcher==null?
-											flowerIndexOf(record_block_,try_idx,recordodKeyLen, finalMatcher,0,0)
-											:Jonimatcher.match(try_idx, try_idx+recordodKeyLen, Option.DEFAULT)
-											;
-
-									if(try_idx!=-1) {
-										int pos = (int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator);
-										SearchLauncher.dirtyResultCounter++;
-										combining_search_tree_4[it].add(pos);
-									}
-									SearchLauncher.dirtyProgressCounter++;
+								//解压开始
+								switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
+									case 0:
+										System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
+										break;
+									case 1:
+										new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
+										break;
+									case 2:
+										Inflater inf = new Inflater();
+										inf.setInput(record_block_compressed,8,compressed_size-8);
+										int ret = inf.inflate(record_block_,0,decompressed_size);
+										break;
 								}
-								key_block_id++;
-							}
-						}
-						data_in.close();
 
-					} catch (Exception e) {
-						//BU.printBytes(record_block_compressed,0,4);
-						//CMN.Log(record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32);
-						e.printStackTrace();
-					}
-					SearchLauncher.thread_number_count--;
-					if(split_recs_thread_number>thread_number) SearchLauncher.countDelta(-1);
-				}});
+								//内容块解压完毕
+								long off = RinfoI.decompressed_size_accumulator;
+								int key_block_id = binary_find_closest(keyBlocksHeaderTextKeyID,off);
+
+								org.joni.Matcher Jonimatcher = null;
+								if(finalJoniregex !=null)
+									Jonimatcher = finalJoniregex.matcher(record_block_);
+								long[] ko; int recordodKeyLen, try_idx;
+								OUT:
+								while(true) {
+									if(key_block_id>=_key_block_info_list.length) break;
+									ko = prepareItemByKeyInfo(null,key_block_id,null).key_offsets;
+									//if(infoI_cacheI.blockID!=key_block_id)
+									//	throw new RuntimeException("bad !!!"+infoI_cacheI.blockID+" != "+key_block_id);
+									for(int relative_pos=binary_find_closest(ko,off);relative_pos<ko.length;relative_pos++) {
+										if(relative_pos<ko.length-1){//不是最后一个entry
+											recordodKeyLen=(int) (ko[relative_pos+1]-ko[relative_pos]);
+										}
+										else if(key_block_id<keyBlocksHeaderTextKeyID.length-1){//不是最后一块key block
+											recordodKeyLen=(int) (keyBlocksHeaderTextKeyID[key_block_id+1]-ko[relative_pos]);
+										}else {
+											recordodKeyLen = (int) (decompressed_size-(ko[ko.length-1]-RinfoI.decompressed_size_accumulator));
+										}
+
+										if(ko[relative_pos]-RinfoI.decompressed_size_accumulator+recordodKeyLen>RinfoI.decompressed_size) {
+											//show("break OUT");
+											break OUT;
+										}
+
+										try_idx=(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator);
+										try_idx=Jonimatcher==null?
+												flowerIndexOf(record_block_,try_idx,recordodKeyLen, finalMatcher,0,0)
+												:Jonimatcher.match(try_idx, try_idx+recordodKeyLen, Option.DEFAULT)
+										;
+
+										if(try_idx!=-1) {
+											int pos = (int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator);
+											SearchLauncher.dirtyResultCounter++;
+											combining_search_tree_4[it].add(pos);
+										}
+										SearchLauncher.dirtyProgressCounter++;
+									}
+									key_block_id++;
+								}
+							}
+							data_in.close();
+
+						} catch (Exception e) {
+							//BU.printBytes(record_block_compressed,0,4);
+							//CMN.Log(record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32);
+							e.printStackTrace();
+						}
+						SearchLauncher.thread_number_count--;
+						if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(-1);
+					}});
 		}
 		fixedThreadPool.shutdown();
 		try {
@@ -874,124 +867,124 @@ public class mdict extends mdBase{
 		switch (_charset.name()){
 			case "US-ASCII":
 				encoding=ASCIIEncoding.INSTANCE;
-			break;
+				break;
 			case "Big5":
 				encoding=BIG5Encoding.INSTANCE;
-			break;
+				break;
 			case "Big5-HKSCS":
 				encoding=Big5HKSCSEncoding.INSTANCE;
-			break;
+				break;
 			case "x-IBM949":
 				encoding=CP949Encoding.INSTANCE;
-			break;
+				break;
 			case "EUC-JP":
 				encoding=EUCJPEncoding.INSTANCE;
-			break;
+				break;
 			case "EUC-KR":
 				encoding=EUCKREncoding.INSTANCE;
-			break;
+				break;
 			case "x-EUC-TW":
 				encoding=EUCTWEncoding.INSTANCE;
-			break;
+				break;
 			case "GB2312":
 				encoding=GB2312Encoding.INSTANCE;
-			break;
+				break;
 			case "GB18030":
 				encoding=GB18030Encoding.INSTANCE;
-			break;
+				break;
 			case "GBK":
 				encoding=GBKEncoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-1":
 				encoding=ISO8859_1Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-2":
 				encoding=ISO8859_2Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-3":
 				encoding=ISO8859_3Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-4":
 				encoding=ISO8859_4Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-5":
 				encoding=ISO8859_5Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-6":
 				encoding=ISO8859_6Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-7":
 				encoding=ISO8859_7Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-8":
 				encoding=ISO8859_8Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-9":
 				encoding=ISO8859_9Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-10":
 				encoding=ISO8859_10Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-11":
 				encoding=ISO8859_11Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-13":
 				encoding=ISO8859_13Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-14":
 				encoding=ISO8859_14Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-15":
 				encoding=ISO8859_15Encoding.INSTANCE;
-			break;
+				break;
 			case "ISO-8859-16":
 				encoding=ISO8859_16Encoding.INSTANCE;
-			break;
+				break;
 			case "KOI8-R":
 				encoding=KOI8REncoding.INSTANCE;
-			break;
+				break;
 			case "KOI8-U":
 				encoding=KOI8UEncoding.INSTANCE;
-			break;
+				break;
 			case "Shift_JIS":
 				encoding=SJISEncoding.INSTANCE;
-			break;
+				break;
 			case "UTF-8":
 				encoding=UTF8Encoding.INSTANCE;
-			break;
+				break;
 			case "UTF-16BE":
 				encoding=UTF16BEEncoding.INSTANCE;
-			break;
+				break;
 			case "UTF-16LE":
 				encoding=UTF16LEEncoding.INSTANCE;
-			break;
+				break;
 			case "UTF-32BE":
 				encoding=UTF32BEEncoding.INSTANCE;
-			break;
+				break;
 			case "UTF-32LE":
 				encoding=UTF32LEEncoding.INSTANCE;
-			break;
+				break;
 			case "Windows-31j":
 				encoding=Windows_31JEncoding.INSTANCE;
-			break;
+				break;
 			case "Windows-1250":
 				encoding=Windows_1250Encoding.INSTANCE;
-			break;
+				break;
 			case "Windows-1251":
 				encoding=Windows_1251Encoding.INSTANCE;
-			break;
+				break;
 			case "Windows-1252":
 				encoding=Windows_1252Encoding.INSTANCE;
-			break;
+				break;
 			case "Windows-1253":
 				encoding=Windows_1253Encoding.INSTANCE;
-			break;
+				break;
 			case "Windows-1254":
 				encoding=Windows_1254Encoding.INSTANCE;
-			break;
+				break;
 			case "Windows-1257":
 				encoding=Windows_1257Encoding.INSTANCE;
-			break;
+				break;
 		}
 	}
 
@@ -1063,18 +1056,8 @@ public class mdict extends mdBase{
 		public long st;
 		public String key;
 
-		volatile int poolEUSize;
+		public AtomicInteger poolEUSize = new AtomicInteger(0);
 
-		public void countDelta(int delta) {
-			Lock lock = new ReentrantLock();
-			lock.lock();
-			try {
-				poolEUSize+=delta;
-			} catch (Exception e) {
-			}finally {
-				lock.unlock();
-			}
-		}
 
 		protected ArrayList<ArrayList<Integer>[]> combining_search_tree;
 
@@ -1164,7 +1147,7 @@ public class mdict extends mdBase{
 		split_keys_thread_number = _num_key_blocks<6?1:(int) (_num_key_blocks/6);//Runtime.getRuntime().availableProcessors()/2*2+10;
 		final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+5, split_keys_thread_number);
 
-		SearchLauncher.poolEUSize = SearchLauncher.dirtyProgressCounter =0;
+		SearchLauncher.poolEUSize.set(SearchLauncher.dirtyProgressCounter=0);
 
 		SearchLauncher.thread_number_count = split_keys_thread_number;
 		final int step = (int) (_num_key_blocks/split_keys_thread_number);
@@ -1190,14 +1173,15 @@ public class mdict extends mdBase{
 
 		for(int ti=0; ti<split_keys_thread_number; ti++){//分  thread_number 股线程运行
 			if(SearchLauncher.IsInterrupted) break;
-			if(split_keys_thread_number>thread_number) while (SearchLauncher.poolEUSize>=thread_number) {
+			//if(false)
+			if(split_keys_thread_number>thread_number) while (SearchLauncher.poolEUSize.get()>=thread_number) {
 				try {
-					Thread.sleep(1);
+					Thread.sleep(2);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			if(split_keys_thread_number>thread_number) SearchLauncher.countDelta(1);
+			if(split_keys_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(1);
 			final int it = ti;
 			Regex finalJoniregex = Joniregex;
 			Pattern finalKeyPattern = keyPattern;
@@ -1206,7 +1190,7 @@ public class mdict extends mdBase{
 			fixedThreadPoolmy.execute(
 					new Runnable(){@Override public void run()
 					{
-						if(SearchLauncher.IsInterrupted) {SearchLauncher.poolEUSize=0; return; }
+						if(SearchLauncher.IsInterrupted) {SearchLauncher.poolEUSize.set(0); return; }
 						int jiaX=0;
 						if(it==split_keys_thread_number-1) jiaX=yuShu;
 						if(final_combining_search_tree[it]==null)
@@ -1238,7 +1222,7 @@ public class mdict extends mdBase{
 							data_in=null;
 							//大循环
 							for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
-								if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize=0; return; }
+								if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize.set(0); return; }
 
 								int compressedSize;
 								key_info_struct infoI = _key_block_info_list[blockId];
@@ -1265,17 +1249,17 @@ public class mdict extends mdBase{
 								switch (_key_block_compressed_many[startI]|_key_block_compressed_many[startI+1]<<8|_key_block_compressed_many[startI+2]<<16|_key_block_compressed_many[startI+3]<<32){
 									case 0:
 										System.arraycopy(_key_block_compressed_many, (startI+8), key_block, 0, (int)(_key_block_size-8));
-									break;
+										break;
 									case 1:
 										new LzoDecompressor1x().decompress(_key_block_compressed_many, startI+8, compressedSize-8, key_block, 0,new lzo_uintp());
-									break;
+										break;
 									case 2:
 										Inflater inf = new Inflater();
 										inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
 										try {
 											int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
 										} catch (DataFormatException e) {e.printStackTrace();}
-									break;
+										break;
 								}
 								find_in_keyBlock(finalJoniregex, finalKeyPattern, key_block,infoI, finalMatcher,SelfAtIdx,item, SearchLauncher);
 							}
@@ -1289,7 +1273,7 @@ public class mdict extends mdBase{
 							}
 						}
 						SearchLauncher.thread_number_count--;
-						if(split_keys_thread_number>thread_number) SearchLauncher.countDelta(-1);
+						if(split_keys_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(-1);
 					}});
 		}//任务全部分发完毕
 		fixedThreadPoolmy.shutdown();
@@ -1429,7 +1413,7 @@ public class mdict extends mdBase{
 		//!!spliting curr Key block
 		int key_start_index = 0;
 		//String delimiter;
-		int key_end_index=0;
+		int key_end_index;
 		//int keyCounter = 0;
 
 		//ByteBuffer sf = ByteBuffer.wrap(key_block);//must outside of while...
@@ -1471,12 +1455,12 @@ public class mdict extends mdBase{
 						String LexicalEntry = new String(key_block, key_start_index + _number_width, key_end_index - (key_start_index + _number_width), _charset);
 						//int LexicalEntryIdx = LexicalEntry.toLowerCase().indexOf(keyword);
 						if (keyPattern != null)
-						if (!keyPattern.matcher(LexicalEntry).find()) {
-							key_start_index = key_end_index + delimiter_width;
-							SearchLauncher.dirtyProgressCounter++;
-							keyCounter++;
-							continue;
-						}
+							if (!keyPattern.matcher(LexicalEntry).find()) {
+								key_start_index = key_end_index + delimiter_width;
+								SearchLauncher.dirtyProgressCounter++;
+								keyCounter++;
+								continue;
+							}
 					}
 					//StringBuilder sb = new StringBuilder(LexicalEntry);
 					//byte[] arraytmp = new byte[key_end_index-(key_start_index+_number_width)];
@@ -1549,15 +1533,6 @@ public class mdict extends mdBase{
 					: reduce2(phrase,data,scaler,start,start+len);
 		} else {
 			return start;
-		}
-	}
-
-	class WMCompatLet{
-		key_info_struct infoI;
-		String hearderTextStr;
-		String tailerKeyTextStr;
-		WMCompatLet(key_info_struct _infoI){
-			infoI=_infoI;
 		}
 	}
 
@@ -1648,7 +1623,7 @@ public class mdict extends mdBase{
 					if(!doHarvest)
 						scaler_ = new int[(int) infoI.num_entries][2];
 					int key_start_index = 0;
-					int key_end_index=0;
+					int key_end_index;
 					int keyCounter = 0;
 
 					while(key_start_index < key_block_cache_.length){
@@ -1730,26 +1705,17 @@ public class mdict extends mdBase{
 		}
 	}
 
-
-
-
-
-
-
 	public String processKey(byte[] in){
 		return processMyText(new String(in,_charset));
 	}
 
-
-
-
 	public static int  binary_find_closest(long[] array,long val){
 		int middle;
-		int iLen = array.length;
-		int low=0,high=iLen-1;
-		if(array==null || iLen<1){
+		int iLen ;
+		if(array==null || (iLen=array.length)<1){
 			return -1;
 		}
+		int low=0,high=iLen-1;
 		if(iLen==1){
 			return 0;
 		}
@@ -1805,15 +1771,6 @@ public class mdict extends mdBase{
 				.append("Path: ").append(getPath()).toString();
 	}
 
-	private byte[][] SanLieZhi(String str) {
-		byte[][] res = new byte[str.length()][];
-		for(int i=0;i<str.length();i++){
-			String c = str.substring(i, i+1);
-			res[i] = c.getBytes(_charset);
-		}
-		return res;
-	}
-
 	static boolean bingStartWith(byte[] source, int sourceOffset,byte[] target, int targetOffset, int targetCount, int fromIndex) {
 		if (fromIndex >= source.length) {
 			return false;
@@ -1860,7 +1817,7 @@ public class mdict extends mdBase{
 			String now = m.group(1);
 			String[] nowArr = _stylesheet.get(now);
 			if(nowArr==null)
-				if(now.equals("0")) {
+				if("0".equals(now)) {
 					nowArr=new String[] {getCachedEntryAt(pos),""};
 				}
 			if(nowArr==null) {
