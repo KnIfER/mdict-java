@@ -23,7 +23,6 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
@@ -87,7 +86,7 @@ import org.joni.exception.SyntaxException;
 /**
  * **Mdict Java Library**<br/><br/>
  * <b>FEATURES</b>:<br/>
- * 1. Basic listing and fast binary query of mdx files.<br/>
+ * 1. Basic listing and fast binary query function.<br/>
  * 2. Dictionary conjunction search.<br/>
  * 3. Fast Multi-threaded search in all contents.<br/>
  * 4. Fast Multi-threaded search in all entries.<br/>
@@ -191,8 +190,11 @@ public class mdict extends mdBase{
 						mdd.add(new mdictRes(f2.getAbsolutePath()));
 					}
 				}
-				//if(_header_tag.containsKey("SharedMdd")) {
-				//}
+				if(_header_tag.containsKey("SharedMdd")) {
+					//File SharedMddF=new File(f.getParentFile(),_header_tag.get("SharedMdd")+".mdd");
+					//if(SharedMddF.exists())
+					//	mdd=new mdictRes(SharedMddF.getAbsolutePath());
+				}
 			}
 		}
 		calcFuzzySpace();
@@ -363,7 +365,12 @@ public class mdict extends mdBase{
 			System.out.println("search failed!"+keyword);
 			return -1;
 		}
-		////if(isCompact) //compatibility fix
+		if(isCompact) {//compatibility fix.
+
+
+
+
+		}
 		String other_key = new String(infoI_cache.keys[res],_charset);
 		String looseMatch = processMyText(other_key);
 		boolean bIsEqual = looseMatch.equals(keyword);
@@ -687,7 +694,7 @@ public class mdict extends mdBase{
 
 
 	int split_recs_thread_number;
-	public void flowerFindAllContents(String key, int selfAtIdx, AbsAdvancedSearchLogicLayer SearchLauncher) throws IOException{
+	public void flowerFindAllContents(String key, int selfAtIdx, AbsAdvancedSearchLogicLayer SearchLauncher) throws IOException, DataFormatException{
 		byte[][][] matcher=null;
 		Regex Joniregex = null;
 		if(getUseJoniRegex(1)){
@@ -738,14 +745,14 @@ public class mdict extends mdBase{
 		}
 
 
-		SearchLauncher.poolEUSize.set(SearchLauncher.dirtyProgressCounter=0);
+		SearchLauncher.poolEUSize = SearchLauncher.dirtyProgressCounter =0;
 
 		ExecutorService fixedThreadPool = OpenThreadPool(thread_number);
 		for(int ti=0; ti<split_recs_thread_number; ti++){//分  thread_number 股线程运行
 			if(SearchLauncher.IsInterrupted) break;
 			final int it = ti;
 			//if(false)
-			if(split_recs_thread_number>thread_number) while (SearchLauncher.poolEUSize.get()>=thread_number) {
+			if(split_recs_thread_number>thread_number) while (SearchLauncher.poolEUSize>=thread_number) {
 				try {
 					Thread.sleep(2);
 				} catch (InterruptedException e) {
@@ -756,14 +763,14 @@ public class mdict extends mdBase{
 			if(combining_search_tree_4[it]==null)
 				combining_search_tree_4[it] = new ArrayList<>();
 
-			if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(1);
+			if(split_recs_thread_number>thread_number) SearchLauncher.countDelta(1);
 
 			Regex finalJoniregex = Joniregex;
 			byte[][][] finalMatcher = matcher;
 			fixedThreadPool.execute(
 				new Runnable(){@Override public void run()
 				{
-					if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize.set(0); return; }
+					if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize=0; return; }
 					final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
 					final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
 					try
@@ -777,7 +784,7 @@ public class mdict extends mdBase{
 						if(it==split_recs_thread_number-1) jiaX=yuShu;
 						for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
 						{
-							if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize.set(0); return; }
+							if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize=0; return; }
 							record_info_struct RinfoI = _record_info_struct_list[i];
 
 							int compressed_size = (int) RinfoI.compressed_size;
@@ -852,7 +859,7 @@ public class mdict extends mdBase{
 						e.printStackTrace();
 					}
 					SearchLauncher.thread_number_count--;
-					if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(-1);
+					if(split_recs_thread_number>thread_number) SearchLauncher.countDelta(-1);
 				}});
 		}
 		fixedThreadPool.shutdown();
@@ -1056,8 +1063,18 @@ public class mdict extends mdBase{
 		public long st;
 		public String key;
 
-		public AtomicInteger poolEUSize = new AtomicInteger(0);
+		volatile int poolEUSize;
 
+		public void countDelta(int delta) {
+			Lock lock = new ReentrantLock();
+			lock.lock();
+			try {
+				poolEUSize+=delta;
+			} catch (Exception e) {
+			}finally {
+				lock.unlock();
+			}
+		}
 
 		protected ArrayList<ArrayList<Integer>[]> combining_search_tree;
 
@@ -1147,7 +1164,7 @@ public class mdict extends mdBase{
 		split_keys_thread_number = _num_key_blocks<6?1:(int) (_num_key_blocks/6);//Runtime.getRuntime().availableProcessors()/2*2+10;
 		final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+5, split_keys_thread_number);
 
-		SearchLauncher.poolEUSize.set(SearchLauncher.dirtyProgressCounter=0);
+		SearchLauncher.poolEUSize = SearchLauncher.dirtyProgressCounter =0;
 
 		SearchLauncher.thread_number_count = split_keys_thread_number;
 		final int step = (int) (_num_key_blocks/split_keys_thread_number);
@@ -1173,15 +1190,14 @@ public class mdict extends mdBase{
 
 		for(int ti=0; ti<split_keys_thread_number; ti++){//分  thread_number 股线程运行
 			if(SearchLauncher.IsInterrupted) break;
-			//if(false)
-			if(split_keys_thread_number>thread_number) while (SearchLauncher.poolEUSize.get()>=thread_number) {
+			if(split_keys_thread_number>thread_number) while (SearchLauncher.poolEUSize>=thread_number) {
 				try {
-					Thread.sleep(2);
+					Thread.sleep(1);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			if(split_keys_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(1);
+			if(split_keys_thread_number>thread_number) SearchLauncher.countDelta(1);
 			final int it = ti;
 			Regex finalJoniregex = Joniregex;
 			Pattern finalKeyPattern = keyPattern;
@@ -1190,7 +1206,7 @@ public class mdict extends mdBase{
 			fixedThreadPoolmy.execute(
 					new Runnable(){@Override public void run()
 					{
-						if(SearchLauncher.IsInterrupted) {SearchLauncher.poolEUSize.set(0); return; }
+						if(SearchLauncher.IsInterrupted) {SearchLauncher.poolEUSize=0; return; }
 						int jiaX=0;
 						if(it==split_keys_thread_number-1) jiaX=yuShu;
 						if(final_combining_search_tree[it]==null)
@@ -1222,7 +1238,7 @@ public class mdict extends mdBase{
 							data_in=null;
 							//大循环
 							for(int blockId=it*step; blockId<it*step+step+jiaX; blockId++){
-								if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize.set(0); return; }
+								if(SearchLauncher.IsInterrupted) { SearchLauncher.poolEUSize=0; return; }
 
 								int compressedSize;
 								key_info_struct infoI = _key_block_info_list[blockId];
@@ -1273,7 +1289,7 @@ public class mdict extends mdBase{
 							}
 						}
 						SearchLauncher.thread_number_count--;
-						if(split_keys_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(-1);
+						if(split_keys_thread_number>thread_number) SearchLauncher.countDelta(-1);
 					}});
 		}//任务全部分发完毕
 		fixedThreadPoolmy.shutdown();
@@ -1413,7 +1429,7 @@ public class mdict extends mdBase{
 		//!!spliting curr Key block
 		int key_start_index = 0;
 		//String delimiter;
-		int key_end_index;
+		int key_end_index=0;
 		//int keyCounter = 0;
 
 		//ByteBuffer sf = ByteBuffer.wrap(key_block);//must outside of while...
@@ -1536,6 +1552,15 @@ public class mdict extends mdBase{
 		}
 	}
 
+	class WMCompatLet{
+		key_info_struct infoI;
+		String hearderTextStr;
+		String tailerKeyTextStr;
+		WMCompatLet(key_info_struct _infoI){
+			infoI=_infoI;
+		}
+	}
+
 	public ArrayList<myCpr<String, Integer>> combining_search_list;
 	//联合搜索  555
 	public void size_confined_lookUp5(String keyword,
@@ -1623,7 +1648,7 @@ public class mdict extends mdBase{
 					if(!doHarvest)
 						scaler_ = new int[(int) infoI.num_entries][2];
 					int key_start_index = 0;
-					int key_end_index;
+					int key_end_index=0;
 					int keyCounter = 0;
 
 					while(key_start_index < key_block_cache_.length){
@@ -1705,17 +1730,26 @@ public class mdict extends mdBase{
 		}
 	}
 
+
+
+
+
+
+
 	public String processKey(byte[] in){
 		return processMyText(new String(in,_charset));
 	}
 
+
+
+
 	public static int  binary_find_closest(long[] array,long val){
 		int middle;
-		int iLen ;
-		if(array==null || (iLen=array.length)<1){
+		int iLen = array.length;
+		int low=0,high=iLen-1;
+		if(array==null || iLen<1){
 			return -1;
 		}
-		int low=0,high=iLen-1;
 		if(iLen==1){
 			return 0;
 		}
@@ -1771,6 +1805,15 @@ public class mdict extends mdBase{
 				.append("Path: ").append(getPath()).toString();
 	}
 
+	private byte[][] SanLieZhi(String str) {
+		byte[][] res = new byte[str.length()][];
+		for(int i=0;i<str.length();i++){
+			String c = str.substring(i, i+1);
+			res[i] = c.getBytes(_charset);
+		}
+		return res;
+	}
+
 	static boolean bingStartWith(byte[] source, int sourceOffset,byte[] target, int targetOffset, int targetCount, int fromIndex) {
 		if (fromIndex >= source.length) {
 			return false;
@@ -1817,7 +1860,7 @@ public class mdict extends mdBase{
 			String now = m.group(1);
 			String[] nowArr = _stylesheet.get(now);
 			if(nowArr==null)
-				if("0".equals(now)) {
+				if(now.equals("0")) {
 					nowArr=new String[] {getCachedEntryAt(pos),""};
 				}
 			if(nowArr==null) {
