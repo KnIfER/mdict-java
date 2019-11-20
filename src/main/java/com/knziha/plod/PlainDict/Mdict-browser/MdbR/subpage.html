@@ -86,6 +86,41 @@ function wrappedClickFunc(e){
 		console.log("2! found link : "+cur.src);
 		return false;
 	}
+	if(e.srcElement!=document.documentElement){ // immunize blank area out of body ( in html )
+		//console.log(e.srcElement+'')
+		//console.log(e)
+		var s = window.getSelection();
+		if(s.isCollapsed && s.anchorNode){ // don't bother with user selection
+			s.modify('extend', 'forward', 'word'); // first attempt
+			var an=s.anchorNode;
+			//console.log(s.anchorNode); console.log(s);
+			//if(true) return;
+			
+			if(s.baseNode != document.body) {// immunize blank area
+				var text=s.toString(); // for word made up of just one character
+				var range = s.getRangeAt(0);
+				
+				s.collapseToStart();
+				s.modify('extend', 'forward', 'lineboundary');
+				
+				if(s.toString().length>=text.length){
+					s.empty();
+					s.addRange(range);
+					
+					s.modify('move', 'backward', 'word'); // could be next line
+					s.modify('extend', 'forward', 'word');
+					
+					if(s.getRangeAt(0).endContainer===range.endContainer&&s.getRangeAt(0).endOffset===range.endOffset){
+						// 字未央
+						text=s.toString();
+					}
+					
+					console.log(text); // final output
+				}
+			}
+			s.empty();
+		}
+	}
 	return true;
 };
 
