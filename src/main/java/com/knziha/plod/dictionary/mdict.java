@@ -1838,7 +1838,7 @@ public class mdict extends mdBase{
 							_key_block_compressed_many=null;
 						}
 						catch (Exception e1) {
-							e1.printStackTrace();
+							SU.Log(e1);
 							if(e1 instanceof SyntaxException){
 								SearchLauncher.IsInterrupted =true;
 								SearchLauncher.ErrorMessage=e1.getMessage();
