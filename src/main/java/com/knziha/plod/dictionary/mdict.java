@@ -2666,6 +2666,7 @@ public class mdict extends mdBase{
 		}
 	}
 
+	/* watch debug definition file (dictname.0.txt) */
 	public void handleDebugLines() {
 		if(ftd!=null) {
 			long _fZero_LPT = fZero.lastModified();
