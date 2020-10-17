@@ -22,17 +22,16 @@ https://github.com/KnIfER/PlainDictionaryAPP
 String key = "happy";
 mdict md = new mdict(path);
 int search_result = md.lookUp(key, true);//true means to match strictly  
-if(search_result!=-1){
+if(search_result>=0){
   String html_contents = md.getRecordAt(search_result);
   String entry_name = md.getEntryAt(search_result);
 }
 ```
 ### 2.Search in a bunch of dicts:
 ```
-String key = "happy";
-ArrayList<mdict> mdxs = new ArrayList<mdict>();
-mdxs.add(path1);
-mdxs.add(path2);
+key = "happy";
+ArrayList<mdict> mdxs = new ArrayList<>();
+...
 RBTree_additive combining_search_tree = new RBTree_additive();
 for(int i=0;i<mdxs.size();i++)
 {
@@ -40,12 +39,10 @@ for(int i=0;i<mdxs.size();i++)
 }  	
 combining_search_tree.inOrder();//print results stored in the RBTree
 
-/*printed results looks like 【happy____@398825@0@16905@1@16906@1】...【other results】...
+/*printed results looks like 【happy____@111@0@222@1@16906@1】...【other results】...
 how to handle:
-String 
-html_contents0 = mdxs.get(0).getRecordAt(398825),
-html_contents1 = mdxs.get(1).getRecordAt(16905),
-html_contents2 = mdxs.get(1).getRecordAt(16906);
+String html_contents0 = mdxs.get(0).getRecordAt(111);
+...
 ...  
 ...
 */
@@ -83,3 +80,7 @@ MDX File Format
 MDD File Format
 ===============
 <img src="https://rawgit.com/csarron/mdict-analysis/master/MDD.svg">
+
+Source Code License: 
+Apache2.0 for the core part, specifically anything under the package of com.knziha.plod.dictionary.*; GPL3.0 for everything else including the mdictBuilder, UI part, and the android application. 
+As for the License of mdx file format itself, well, you know, mdict is an open dictionary platform.

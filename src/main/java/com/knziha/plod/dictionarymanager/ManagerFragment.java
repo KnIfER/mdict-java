@@ -1,16 +1,12 @@
 package com.knziha.plod.dictionarymanager;
 
-import com.knziha.plod.PlainDict.MdictServer;
-import com.knziha.plod.PlainDict.PU;
-import com.knziha.plod.PlainDict.PlainDictAppOptions;
-import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
+import com.knziha.plod.PlainDict.*;
 import com.knziha.plod.dictionarymodels.mdict;
 import com.knziha.plod.dictionarymodels.mdict_nonexist;
 import com.knziha.plod.dictionarymodels.mdict_preempter;
 import com.knziha.plod.widgets.DragSortTableView;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -63,7 +59,7 @@ public class ManagerFragment extends VBox {
 	}
 
 	@SuppressWarnings("unchecked")
-	public ManagerFragment(PlainDictionaryPcJFX app, MdictServer server, PlainDictAppOptions _opt){
+	public ManagerFragment(PlainDictionaryPcJFX app, MdictServerOyster server, PlainDictAppOptions _opt){
 		super();
 		mainRegion=new HBox();
 		ResourceBundle bundle = ResourceBundle.getBundle("UIText", Locale.getDefault());
@@ -133,7 +129,7 @@ public class ManagerFragment extends VBox {
 								if(mdTmp instanceof mdict_nonexist || !mdTmp.f().exists()){
 									if(new_file.exists()) {
 										try {
-											tableView.getItems().set(index, new mdict_preempter(new_file.getAbsolutePath()));
+											tableView.getItems().set(index, new mdict_preempter(new_file));
 											renamed=true;
 										} catch (IOException e) {
 											e.printStackTrace();
@@ -192,16 +188,16 @@ public class ManagerFragment extends VBox {
         tableView.getColumns().add(createCol(bundle.getString("relpath"), propertyMapper_FilePath, -1, col.getCellFactory()));
         tableView.getColumns().add(createCol(bundle.getString("filesize"), mdict::getFileSizeProperty, -1, null));
         tableView.getColumns().add(createCol(bundle.getString("setasformation"), mdict::getFormationProperty, -1, null));
-        mdict_cache = new HashMap<>(server.md.size());
+        mdict_cache = new HashMap<>(server.a.md.size());
         HashMap<String,mdict> filter_cache = new HashMap<>(server.currentFilter.size());
 
-        for(mdict mdTmp:server.md) {
+        for(mdict mdTmp:server.a.md) {
 			mdict_cache.put(mdTmp.getPath(),mdTmp);
 		}
         for(mdict mdTmp:server.currentFilter) {
 			filter_cache.put(mdTmp.getPath(),mdTmp);
 		}
-		tableView.getItems().addAll(server.md);
+		tableView.getItems().addAll(server.a.md);
 
 		File def = app.getCurrentSetFile();
         try {
@@ -281,7 +277,7 @@ public class ManagerFragment extends VBox {
 					if(startPath==null || !startPath.exists())
 						startPath=lastOpenDir!=null?lastOpenDir:new File(opt.GetLastMdlibPath());
 					if(!startPath.exists())
-						startPath=new File(opt.projectPath);
+						startPath=opt.projectPath;
 					fileChooser.setInitialDirectory(startPath);
 					List<File> files = fileChooser.showOpenMultipleDialog(getScene().getWindow());
 					if(files!=null){
@@ -291,7 +287,7 @@ public class ManagerFragment extends VBox {
 							tableView.isDirty=true;
 							if(!mdict_cache.containsKey(fI.getAbsolutePath())){
 								try {
-									mdModifying.add(new mdict_preempter(fI.getAbsolutePath()));
+									mdModifying.add(new mdict_preempter(fI));
 								} catch (IOException e) {
 									e.printStackTrace();
 								}
@@ -423,10 +419,11 @@ public class ManagerFragment extends VBox {
 
 	public static mdict new_mdict_prempter(String line, boolean isFilter) throws IOException {
 		mdict mdTmp;
-		if(!new File(line).exists())
-			mdTmp=new mdict_nonexist(line);
+		File f = new File(line);
+		if(!f.exists())
+			mdTmp=new mdict_nonexist(f);
 		else
-			mdTmp=new mdict_preempter(line);
+			mdTmp=new mdict_preempter(f);
 		mdTmp.tmpIsFilter=isFilter;
 		return mdTmp;
 	}

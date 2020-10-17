@@ -46,11 +46,19 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.squareup</groupId>
+            <artifactId>javapoet</artifactId>
+            <version>1.11.1</version>
+            <scope>system</scope>
+        </dependency>
+        
+        <dependency>
             <groupId>com.sun</groupId>
             <artifactId>tools</artifactId>
             <scope>system</scope>
             <systemPath>${java.home}/lib/tools.jar</systemPath>
         </dependency>
+        
 <!--        <dependency>-->
 <!--            <groupId>com.sun</groupId>-->
 <!--            <artifactId>tools</artifactId>-->

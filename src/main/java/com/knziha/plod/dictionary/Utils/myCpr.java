@@ -1,5 +1,6 @@
 package com.knziha.plod.dictionary.Utils;
 
+
 import com.knziha.plod.dictionary.mdict;
 
 public class myCpr<T1 extends Comparable<T1>,T2> implements Comparable<myCpr<T1,T2>>{

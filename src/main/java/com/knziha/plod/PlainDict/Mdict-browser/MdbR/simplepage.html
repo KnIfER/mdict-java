@@ -1,0 +1,62 @@
+<script>
+	window.addEventListener('mousedown',wrappedMouseDown);
+	var audio;
+	var regSound=new RegExp("^sound://");
+	var regEntry=new RegExp("^entry://");
+
+	function hiPlaySound(e){
+		var cur=e.ur1?e:e.srcElement;
+		//console.log("hijacked sound playing : "+cur.ur1);
+		if(audio)
+			audio.pause();
+		else
+			audio = new Audio();
+		audio.src = cur.ur1;
+		audio.play();
+	}
+
+	function wrappedMouseDown(e){
+		//console.log(e);
+		var cur=e.srcElement;
+		if(cur.href && (e.button==1||e.button==0)) {
+			console.log("01! found link : "+cur.href+" : "+regSound.test(cur.href));
+			var getRawLink=cur.href;
+			var patt1 = /\/base\/[0-9]*\/(#.*)/;
+			var m = getRawLink.match(patt1);
+			if(m && m[0].length>0){
+				console.log(m[1]);
+				getRawLink=m[1];
+				console.log(window.location.href);
+				cur.href=window.location.href+getRawLink;
+				return false;
+			}
+			if(regEntry.test(cur.href)){
+				cur.href=/* "entry/"+ */cur.href.substring(8);
+				console.log(111);
+			}else if(regSound.test(cur.href)){/*拦截 sound 连接*/
+				var link=/* "sound/"+ */cur.href.substring(8);
+				cur.href=link;
+				if(cur.onclick==undefined){
+					//console.log("1! found internal sound link : "+cur.href);
+					cur.ur1=cur.href;
+					cur.removeAttribute("href");
+					cur.onclick=hiPlaySound;
+					hiPlaySound(cur)
+					return false;
+				}
+			}
+			else if(parent.app && regHttp.test(cur.href)){/*拦截 http*/
+				parent.app.handleWebLink(cur.href);
+				return false;
+			}
+			else if(parent.app && regPdf.test(cur.href)){/*拦截 pdf*/
+				parent.app.handlePdfLink(cur.href);
+				return false;
+			}
+			return true;/*连接通行！*/
+		}
+	}
+</script>
+
+<base target="_self" />
+<base href='/

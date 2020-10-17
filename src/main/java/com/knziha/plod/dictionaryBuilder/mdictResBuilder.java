@@ -19,18 +19,19 @@ import com.knziha.rbtree.RBTree;
 
 public class mdictResBuilder extends mdictBuilderBase {
 	public void insert(String key, File inhtml) {
-		data_tree.insertNode(new myCpr_Strict(key,nullStr));
-		fileTree.put(key, inhtml);
+		myCpr_Strict keyNode = new myCpr_Strict(key, nullStr);
+		data_tree.insertNode(keyNode);
+		fileTree.put(keyNode, inhtml);
 	}
 	private final byte[] nullStr=null;
 
 	public mdictResBuilder(String Dictionary_Name, String about) {
 		perKeyBlockSize_IE_IndexBlockSize=16;
 		bAbortOldRecordBlockOnOverFlow=false;
-		globalCompressionType=2;
+		setCompressionType(2);
 		_encoding="UTF-16LE";
 		_charset=StandardCharsets.UTF_16LE;
-		data_tree= new RBTree<>();
+		data_tree = new RBTree<>();
 		_Dictionary_Name=Dictionary_Name;
 		_about=about;
 	}

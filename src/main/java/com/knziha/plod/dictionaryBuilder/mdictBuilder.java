@@ -2,6 +2,8 @@ package com.knziha.plod.dictionaryBuilder;
 
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.mdict;
+import com.knziha.rbtree.RBTree;
+import com.knziha.rbtree.RBTree_duplicative;
 import com.knziha.rbtree.myAbsCprKey;
 import org.apache.commons.text.StringEscapeUtils;
 
@@ -27,9 +29,13 @@ public class mdictBuilder extends mdictBuilderBase {
 	private boolean isStripKey=true;
 	String sharedMdd;
 	private final String nullStr=null;
+	private boolean hasSlavery;
+	private boolean debuggingVI;
+	private boolean bContentEditable;
 
 	public mdictBuilder(String Dictionary_Name, String about,String charset) {
 		data_tree= new ArrayListTree<>();
+		//data_tree = new RBTree_duplicative<>();
 		privateZone = new IntervalTree();
 		_Dictionary_Name=Dictionary_Name;
 		_about=StringEscapeUtils.escapeHtml4(about);
@@ -48,11 +54,9 @@ public class mdictBuilder extends mdictBuilderBase {
 
 
 	public void insert(String key, File file) {
-		data_tree.insertNode(new myCprKey(key,nullStr));
-		fileTree.put(key, file);
-	}
-	public void recordFile(String key,File file) {
-		fileTree.put(key, file);
+		myCprKey keyNode = new myCprKey(key, nullStr);
+		data_tree.insertNode(keyNode);
+		fileTree.put(keyNode, file);
 	}
 
 	public void insert(String key, ArrayList<myCprKey> bioc) {
@@ -60,12 +64,16 @@ public class mdictBuilder extends mdictBuilderBase {
 		bookTree.put(key, bioc);
 	}
 	public void append(String key, File inhtml) {
-		((ArrayListTree<myAbsCprKey>)data_tree).add(new myCprKey(key,nullStr));
-		fileTree.put(key, inhtml);
+		myCprKey keyNode = new myCprKey(key,nullStr);
+		((ArrayListTree<myAbsCprKey>)data_tree).add(keyNode);
+		fileTree.put(keyNode, inhtml);
 	}
 
 	@Override
 	String constructHeader() {
+		if(debuggingVI || WriteOffset>0){
+			return "<Dictionary PLODEXT=\"1\"/>";
+		}
 		String encoding = _encoding;
 		if(encoding.equals("UTF-16LE"))
 			encoding = "UTF-16"; //INCONGRUENT java charset
@@ -73,33 +81,48 @@ public class mdictBuilder extends mdictBuilderBase {
 			encoding = "UTF-8";
 		final float _version = 2.0f;
 		SimpleDateFormat timemachine = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-		StringBuilder sb = new StringBuilder().append(new String(new byte[] {(byte) 0xff,(byte) 0xfe}, StandardCharsets.UTF_16LE))
+		StringBuilder sb = new StringBuilder()//.append(new String(new byte[] {(byte) 0xff,(byte) 0xfe}, StandardCharsets.UTF_16LE))
 				.append("<Dictionary GeneratedByEngineVersion=")//v
 				.append("\"").append(_version).append("\"")
 				.append(" RequiredEngineVersion=")//v
 				.append("\"").append(_version).append("\"")
-				.append(" CreationDate=")
-				.append("\"").append(timemachine.format(new Date(System.currentTimeMillis()))).append("\"")
+				.append(" PLOD=")//v
+				.append("\"").append(1).append("\"")
 				.append(" Encrypted=")
 				.append("\"").append("0").append("\"")//is NO valid?
 				.append(" Encoding=")
 				.append("\"").append(encoding).append("\"")
 				.append(" Format=")//Format
 				.append("\"").append("Html").append("\"")
+				.append(" CreationDate=")
+				.append("\"").append(timemachine.format(new Date(System.currentTimeMillis()))).append("\"")
 				.append(" Compact=")//c
 				.append("\"").append("Yes").append("\"")
+				//.append(" Compat=")//c
+				//.append("\"").append("No").append("\"")
 				.append(" KeyCaseSensitive=")//k
 				.append("\"").append(isKeyCaseSensitive?"Yes":"No").append("\"")
-				.append(" StripKey=")//k
-				.append("\"").append(isStripKey?"Yes":"No").append("\"")
+				//.append(" StripKey=")//k
+				//.append("\"").append(isStripKey?"Yes":"No").append("\"")
 				.append(" Description=")
 				.append("\"").append(_about).append("\"")
 				.append(sharedMdd!=null?" SharedMdd='"+sharedMdd+"\"":"")
 				.append(" Title=")
 				.append("\"").append(_Dictionary_Name).append("\"")
+				//.append(" DataSourceFormat=")
+				//.append("\"").append(106).append("\"")
 				.append(" StyleSheet=")
 				.append("\"").append(_stylesheet).append("\"")
-				.append("/>");
+				//.append(" RegisterBy=")
+				//.append("\"").append("\"")
+				//.append(" RegCode=")
+				//.append("\"").append("\"")
+				;
+		if(hasSlavery)
+			sb.append(" hasSlavery=").append("\"").append("\"");
+		if(bContentEditable)
+			sb.append(" editable=").append("\"yes\"");
+		sb.append("/>");
 		return sb.toString();
 	}
 
@@ -156,6 +179,10 @@ public class mdictBuilder extends mdictBuilderBase {
 		return isKeyCaseSensitive?ret:ret.toLowerCase();
 	}
 
+	public void setContentEditable(boolean val) {
+		bContentEditable=val;
+	}
+
 	public class myCprKey extends myAbsCprKey {
 		public String value;
 		public myCprKey(String vk, String v) {
@@ -208,5 +235,20 @@ public class mdictBuilder extends mdictBuilderBase {
 			return value==null?null:value.getBytes(_charset);
 		}
 
+	}
+
+
+	public mdictBuilder setAppendAfter(long offset){
+		WriteOffset=offset;
+		return this;
+	}
+	public mdictBuilder setAppendDebug(){
+		WriteOffset=0;
+		debuggingVI=true;
+		return this;
+	}
+	public mdictBuilder setAsMaster(){
+		hasSlavery=true;
+		return this;
 	}
 }

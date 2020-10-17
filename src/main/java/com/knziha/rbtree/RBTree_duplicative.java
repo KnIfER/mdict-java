@@ -11,12 +11,13 @@ import java.util.ArrayList;
  * @date 2017/11/18
  */
 
-public class RBTree_duplicative<T extends Comparable<T>> {
+public class RBTree_duplicative<T extends Comparable<T>> implements InOrderTodoAble {
 
     private RBTNode<T> mRoot;    // 根结点
 
     private static final boolean RED   = false;
     private static final boolean BLACK = true;
+    int size=0;
 
 
 
@@ -95,14 +96,11 @@ public class RBTree_duplicative<T extends Comparable<T>> {
         inOrderDo(mRoot);
     }
     //![1]设置接口
-    public void SetInOrderDo(inOrderDo ido){
+    @Override
+    public void SetInOrderDo(RBTree.inOrderDo ido){
         mInOrderDo = ido;
     }
-    //![2]接口
-    public interface inOrderDo{
-        void dothis(RBTNode node);
-    }
-    private inOrderDo mInOrderDo;
+    private RBTree.inOrderDo mInOrderDo;
     //![3]中序递归
     private void inOrderDo(RBTNode<T> node) {
         if(node != null) {
@@ -115,6 +113,17 @@ public class RBTree_duplicative<T extends Comparable<T>> {
 
         }
     }
+
+    @Override
+    public void insertNode(Comparable node) {
+        insert((T) node);
+    }
+
+    @Override
+    public int size() {
+        return 0;
+    }
+
     //![4]
     //![5]此处放大招！!
     //下行wrap :find node x,so that x.key=<val and no node with key greater that x.key satisfies this condition.
@@ -526,7 +535,7 @@ public class RBTree_duplicative<T extends Comparable<T>> {
 
         // 2. 设置节点的颜色为红色
         node.color = RED;
-
+        size++;
         // 3. 将它重新修正为一颗二叉查找树
         insertFixUp(node);
     }
@@ -538,11 +547,7 @@ public class RBTree_duplicative<T extends Comparable<T>> {
      *     key 插入结点的键值
      */
     public void insert(T key) {
-        RBTNode<T> node=new RBTNode<T>(key,BLACK,null,null,null);
-
-        // 如果新建结点失败，则返回。
-        if (node != null)
-            insert(node);
+        insert(new RBTNode<T>(key,BLACK,null,null,null));
     }
 
 
@@ -758,6 +763,7 @@ public class RBTree_duplicative<T extends Comparable<T>> {
     public void clear() {
         destroy(mRoot);
         mRoot = null;
+        size=0;
     }
 
     /*

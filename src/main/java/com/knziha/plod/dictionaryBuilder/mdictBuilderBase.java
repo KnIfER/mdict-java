@@ -1,9 +1,7 @@
 package com.knziha.plod.dictionaryBuilder;
 
-import com.knziha.plod.dictionary.Utils.BU;
-import com.knziha.plod.dictionary.Utils.key_info_struct;
-import com.knziha.plod.dictionary.Utils.myCpr;
-import com.knziha.plod.dictionary.Utils.record_info_struct;
+import com.knziha.plod.dictionary.Utils.*;
+import com.knziha.plod.dictionaryBuilder.Utils.ByteDataOutputStream;
 import com.knziha.rbtree.InOrderTodoAble;
 import com.knziha.rbtree.myAbsCprKey;
 import org.anarres.lzo.LzoCompressor1x_1;
@@ -31,12 +29,11 @@ abstract class mdictBuilderBase {
 	String _Dictionary_Name;
 	String _about;
 	int _encrypt=0;
-	int globalCompressionType=1;
-	int keyblockCompressionType=-1;
-	int recordblockCompressionType=-1;
+	int keyblockCompressionType=1;
+	int recordblockCompressionType=1;
 
 	public InOrderTodoAble data_tree;
-	public HashMap<String,File> fileTree = new HashMap<>();
+	public HashMap<myAbsCprKey,File> fileTree = new HashMap<>();
 
 	public HashMap<String,ArrayList<mdictBuilder.myCprKey>> bookTree = new HashMap<>();
 	public IntervalTree privateZone;
@@ -58,14 +55,24 @@ abstract class mdictBuilderBase {
 	long record_block_decompressed_size_accumulator;
 	boolean bAbortOldRecordBlockOnOverFlow;
 
+	/** 分key缓存模式 0:no chache; 1: use cache file; 2: use memory*/
+	int bUseIndexTmpFile=2;
+
+	/** 分key缓存模式 0:no chache; 1: use cache file; 2: use memory*/
+	public void setBuilderIndexCacheMode(int chache_mode){
+		bUseIndexTmpFile=chache_mode;
+	}
+
 	int [] offsets;
-	ArrayList<byte[]> values;
-	String[] keys;
-	Integer[] blockDataInfo_L;
+	//ArrayList<byte[]> values;
+	ArrayList<myAbsCprKey> keys=new ArrayList<>();
+	//Integer[] blockDataInfo_L;
 	Integer[] blockInfo_L;
 
 	int RecordBlockZipLevel=-1;
 	byte[] mContentDelimiter;
+	protected long WriteOffset;
+
 	//final static byte[] contentDelimiterNormal=new byte[] {0x0d,0x0a,0};
 	//final static byte[] contentDelimiterUTF16=new byte[] {0x0d,0,0x0a,0,0,0};
 
@@ -83,10 +90,9 @@ abstract class mdictBuilderBase {
 		RecordBlockZipLevel=val;
 	}
 
+	/** 0=no compression; 1=lzo; 2=zip */
 	public void setCompressionType(int val) {
-		if(val>=0&&val<=2){
-			globalCompressionType=val;
-		}
+		setCompressionType(val, val);
 	}
 
 	/** 0=no compression; 1=lzo; 2=zip */
@@ -99,14 +105,17 @@ abstract class mdictBuilderBase {
 		}
 	}
 
-	public void write(String path) throws IOException {
+	public long write(String path) throws IOException {
 		File dirP = (f=new File(path)).getParentFile();
 		dirP.mkdirs();
-		f.delete();
 		if(!dirP.exists() && dirP.isDirectory())
 			throw new IOException("input path invalid");
-
-		RandomAccessFile fOut = new RandomAccessFile(path, "rw");
+		File outFn = new File(path);
+		RandomAccessFile fOut = new RandomAccessFile(outFn, "rw");
+		if(WriteOffset>0)
+			fOut.seek(WriteOffset);
+		else
+			f.delete();
 		//![1]write_header
 		byte[] header_bytes = constructHeader().getBytes(StandardCharsets.UTF_16LE);
 		fOut.writeInt(header_bytes.length);
@@ -114,14 +123,44 @@ abstract class mdictBuilderBase {
 		fOut.write(BU.toLH(BU.calcChecksum(header_bytes)));
 
 		//![2]split Keys
-		splitKeys(null);
+		File tmpFn=null;
+		ReusableByteOutputStream bos=null;
+		int mUseIndexTmpFile = bUseIndexTmpFile;
+		if(mUseIndexTmpFile==1){
+			tmpFn = new File(outFn.getParent(), outFn.getName()+".index_tmp");
+			RandomAccessFile indexTmp = new RandomAccessFile(tmpFn, "rw");
+			splitKeys(indexTmp);
+			indexTmp.close();
+			//tmpFn.delete();
+		}
+		else if(mUseIndexTmpFile==2){
+			bos = new ReusableByteOutputStream();
+			splitKeys(new ByteDataOutputStream(bos));
+		}
+		else{
+			splitKeys(null);
+		}
 
 		//![3] key block info
 		long current=fOut.getFilePointer();
 		writebBeforeKeyEntity(fOut);
 		fOut.write(KeyBlockInfoData);
 
-		splitKeys(fOut);
+		if(tmpFn!=null){
+			FileInputStream fin = new FileInputStream(tmpFn);
+			byte[] buffer = new byte[4096]; int len;
+			while((len=fin.read(buffer))>0){
+				fOut.write(buffer, 0, len);
+			}
+			fin.close();
+			tmpFn.delete();
+		}
+		else if(bos!=null){
+			fOut.write(bos.data(), 0, bos.size());
+		}
+		else{
+			splitKeys(fOut);
+		}
 
 		long next=fOut.getFilePointer();
 		fOut.seek(current);
@@ -130,43 +169,42 @@ abstract class mdictBuilderBase {
 
 		//![4] Encoding_record_block_header
 		/*numer of record blocks*/
-		fOut.writeLong(blockDataInfo_L.length);
+		fOut.writeLong(blockInfo_L.length);
 		fOut.writeLong(_num_entries);
 		/*numer of record blocks' info size*/
-		long num_rinfo = 16*blockDataInfo_L.length;
+		long num_rinfo = 16*blockInfo_L.length;
 		fOut.writeLong(num_rinfo);
+
+		//![5] 跳过info部分
 		current = fOut.getFilePointer();
 		fOut.seek(num_rinfo=(current+num_rinfo+8));
 
-		//![5] 写入内容
+		//![6] 写入内容
 		ArrayList<record_info_struct> eu_RecordblockInfo = new ArrayList<>(blockInfo_L.length);
 		int baseCounter=0;
 		int cc=0;
 		for(int blockInfo_L_I:blockInfo_L) {
 			CMN.show("writing recording block No."+(cc++));
 			//写入记录块
-			record_info_struct RinfoI = new record_info_struct();
+			record_info_struct RinfoI = new record_info_struct(0,0,0,0);
 			ByteArrayOutputStream data_raw = new ByteArrayOutputStream();
 			//CMN.show(blockInfo_L[i]+":"+values.length);
 			for(int entryC=0;entryC<blockInfo_L_I;entryC++) {//压入内容
-				byte[] byteContent;
-				if(values.get(baseCounter+entryC)==null) {
-					File inhtml = fileTree.get(keys[baseCounter+entryC]);
+				byte[] byteContent=keys.get(baseCounter+entryC).getBinVals();
+				if(byteContent==null) {
+					File inhtml = fileTree.get(keys.get(baseCounter+entryC));
 					FileInputStream FIN = new FileInputStream(inhtml);
 					byteContent = new byte[(int) inhtml.length()];
 					FIN.read(byteContent);
 					FIN.close();
-				}else
-					byteContent = values.get(baseCounter+entryC);
+				}
 				data_raw.write(byteContent);
 				if(mContentDelimiter!=null)data_raw.write(mContentDelimiter);
 			}
 
 			byte[] data_raw_out = data_raw.toByteArray();
 			RinfoI.decompressed_size = data_raw_out.length;
-			int CompressionType = globalCompressionType;
-			if(recordblockCompressionType!=-1)
-				CompressionType=recordblockCompressionType;
+			int CompressionType = recordblockCompressionType;
 			if(CompressionType==0){
 				fOut.write(new byte[]{0,0,0,0});
 				fOut.writeInt(BU.calcChecksum(data_raw_out,0,(int) (RinfoI.compressed_size = RinfoI.decompressed_size)));
@@ -192,14 +230,19 @@ abstract class mdictBuilderBase {
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				Deflater df = new Deflater();
 				df.setInput(data_raw_out, 0, (int) RinfoI.decompressed_size);
-
 				df.finish();
-				//ripemd128.printBytes(raw_data.array(),0, raw_data.position());
-				//KeyBlockInfoDataLN = df.deflate(KeyBlockInfoData);
 				while (!df.finished()) {
 					int n1 = df.deflate(buffer);
 					baos.write(buffer, 0, n1);
 				}
+
+//				GZIPOutputStream gzip;
+//				gzip = new GZIPOutputStream(baos);
+//				gzip.write(data_raw_out);
+//				gzip.close();
+
+				//ripemd128.printBytes(raw_data.array(),0, raw_data.position());
+				//KeyBlockInfoDataLN = df.deflate(KeyBlockInfoData);
 				RinfoI.compressed_size = baos.size();
 				fOut.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
 				fOut.write(baos.toByteArray());
@@ -210,6 +253,7 @@ abstract class mdictBuilderBase {
 
 		next = fOut.getFilePointer();
 
+		//![7] 写入 info 部分。
 		fOut.seek(current);
 		/*numer of record blocks' size*/
 		fOut.writeLong(next-num_rinfo);
@@ -219,9 +263,10 @@ abstract class mdictBuilderBase {
 			fOut.writeLong(RinfoI.decompressed_size);//!!!INCONGRUNENTSVG unmarked
 		}
 
-		//![5] 完成
+		//![8] 完成
 		fOut.setLength(next);
 		fOut.close();
+		return next;
 	}
 
 	byte[] _111_long=new byte[]{1,1,1,1, 1,1,1,1};
@@ -260,7 +305,7 @@ abstract class mdictBuilderBase {
 			raw_data.putLong(infoI.num_entries);
 			byte[] hTextArray = infoI.headerKeyText;
 			//CMN.show(hTextArray.length+"");
-			raw_data.putChar((char) (_encoding.startsWith("UTF-16")?hTextArray.length/2:hTextArray.length));//TODO recollate
+			raw_data.putChar((char) (_encoding.startsWith("UTF-16")?hTextArray.length/2:hTextArray.length));//TODO
 			raw_data.put(hTextArray);
 			hTextArray = infoI.tailerKeyText;
 			if(!_encoding.startsWith("UTF-16")){
@@ -302,109 +347,120 @@ abstract class mdictBuilderBase {
 
 	abstract String constructHeader();
 
-	private void splitKeys(RandomAccessFile fOutTmp) throws IOException {
-		final ArrayList<String> keyslist = new ArrayList<>();
-		final ArrayList<byte[]> valslist = new ArrayList<>();
+	private void splitKeys(DataOutput fOutTmp) throws IOException {
+		CMN.rt();
+		keys.ensureCapacity(data_tree.size());
+		keys.clear();
+		//final ArrayList<byte[]> valslist = new ArrayList<>(data_tree.size());
 		data_tree.SetInOrderDo(node -> {
-			keyslist.add(((myAbsCprKey)node.getKey()).key);
-			valslist.add(((myAbsCprKey)node.getKey()).getBinVals());
+			keys.add(((myAbsCprKey)node.getKey()));
+			//valslist.add(((myAbsCprKey)node.getKey()).getBinVals());
 		});
 		data_tree.inOrderDo();
-		if(bookTree!=null) {
-			for (int i = 0; i < keyslist.size(); i++) {//扩充
-				String key = keyslist.get(i);
-				if (key.endsWith("[<>]")) {
-					keyslist.remove(i);
-					valslist.remove(i);
-					int start = i;
-					String name = key.substring(0, key.length() - 4);
-					ArrayList<mdictBuilder.myCprKey> bookc = bookTree.get(name);
-					for (mdictBuilder.myCprKey xx : bookc) {
-						keyslist.add(i, xx.key);
-						valslist.add(i++, xx.value.getBytes(_charset));
-					}
-					if (bookc.size() > 0) {
-						i--;
-						privateZone.addInterval(start, i, name);
-						CMN.show(name + " added  " + start + " :: " + i);
-					}
-				}
-			}
-		}
-		long counter=_num_entries=keyslist.size();
+		CMN.pt("splitKeys 拷贝耗时"); CMN.rt();
+//		if(bookTree!=null) {
+//			for (int i = 0; i < keyslist.size(); i++) {//扩充
+//				myAbsCprKey keyNode = keyslist.get(i);
+//				String key = keyNode.key;
+//				if (key.endsWith("[<>]")) {
+//					keyslist.remove(i);
+//					valslist.remove(i);
+//					int start = i;
+//					String name = key.substring(0, key.length() - 4);
+//					ArrayList<mdictBuilder.myCprKey> bookc = bookTree.get(name);
+//					for (mdictBuilder.myCprKey xx : bookc) {
+//						keyslist.add(i, createKVPair(xx.key, xx.value.getBytes(_charset)));
+//					}
+//					if (bookc.size() > 0) {
+//						i--;
+//						privateZone.addInterval(start, i, name);
+//						CMN.show(name + " added  " + start + " :: " + i);
+//					}
+//				}
+//			}
+//		}
+		long counter=_num_entries=keys.size();
 		record_block_decompressed_size_accumulator=0;
 
 		//calc record split
 		offsets = new int[(int) _num_entries];
-		values = valslist;
-		keys = keyslist.toArray(new String[] {});
+		//values = valslist;
+		//keys = keyslist.toArray(new myAbsCprKey[] {});
 
 		//todo::more precise estimate
-		ArrayList<Integer> blockInfo = new ArrayList<>((int)(_num_entries/2000));// number of bytes of all rec-blocks
-		ArrayList<Integer> blockDataInfo = new ArrayList<>((int)(_num_entries/2000));// number of entries of all rec-blocks
-		while(counter>0) {
-			int idx = blockInfo.size();
-			blockDataInfo.add(0);//byte数量
-			blockInfo.add(0);//条目数量
-			while(true) {
-				if(counter<=0) break;
-				int recordLen;
-				int preJudge;
-				//1st, pull data.
-				if(values.get((int) (_num_entries-counter))!=null) {
-					//从内存
-					/* fetching record data from memory */
-					byte[] record_data = values.get((int) (_num_entries-counter));
-					recordLen = record_data.length;
-					preJudge = blockDataInfo.get(idx)+recordLen;
-				}else {
-					/* fetching record data from file */
-					File inhtml = fileTree.get(keys[(int) (_num_entries-counter)]);
-					recordLen = (int) inhtml.length();
-					preJudge = blockDataInfo.get(idx)+recordLen;
-				}
-
-				//2nd, judge & save data.
-				if(preJudge<1024*perRecordBlockSize) {
-					/* PASSING */
-					offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+(mContentDelimiter==null?0:mContentDelimiter.length)*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
-					record_block_decompressed_size_accumulator+=recordLen;
-					blockDataInfo.set(idx, preJudge);/*offset+=preJudge*/
-					blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
-					counter-=1;
-				}
-				else if(recordLen>=1024*perRecordBlockSize) {
-					/* MONO OCCUPYING */
-					offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+(mContentDelimiter==null?0:mContentDelimiter.length)*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
-					record_block_decompressed_size_accumulator+=recordLen;
-					if(bAbortOldRecordBlockOnOverFlow) {
-						if (blockDataInfo.get(idx)!=0) {//新开一个recblock
-							blockDataInfo.add(0);
-							blockInfo.add(0);
-							idx++;
-						}
+		if(fOutTmp!=null){
+			ArrayList<Integer> blockInfo = new ArrayList<>((int)(_num_entries/5));// number of bytes of all rec-blocks
+			ArrayList<Integer> blockDataInfo = new ArrayList<>((int)(_num_entries/5));// number of entries of all rec-blocks
+			while(counter>0) {
+				int idx = blockInfo.size();
+				blockDataInfo.add(0);//byte数量
+				blockInfo.add(0);//条目数量
+				while(true) {
+					if(counter<=0) break;
+					int recordLen;
+					int preJudge;
+					//1st, pull data.
+					myAbsCprKey keyNode = keys.get((int) (_num_entries-counter));
+					if(keyNode.getBinVals()!=null) {
+						//从内存
+						/* fetching record data from memory */
+						byte[] record_data = keyNode.getBinVals();
+						recordLen = record_data.length;
+						preJudge = blockDataInfo.get(idx)+recordLen;
+					}else {
+						/* fetching record data from file */
+						File inhtml = fileTree.get(keyNode);
+						CMN.Log(inhtml, keyNode);
+						recordLen = (int) inhtml.length();
+						preJudge = blockDataInfo.get(idx)+recordLen;
 					}
-					blockDataInfo.set(idx, recordLen);/*offset+=preJudge*/  //+3*((int) (_num_entries-counter))
-					blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
-					counter-=1;
-					break;
+
+					//2nd, judge & save data.
+					if(preJudge<1024*perRecordBlockSize) {
+						/* PASSING */
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+(mContentDelimiter==null?0:mContentDelimiter.length)*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
+						record_block_decompressed_size_accumulator+=recordLen;
+						blockDataInfo.set(idx, preJudge);/*offset+=preJudge*/
+						blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
+						counter-=1;
+					}
+					else if(recordLen>=1024*perRecordBlockSize) {
+						/* MONO OCCUPYING */
+						offsets[(int) (_num_entries-counter)] = (int) record_block_decompressed_size_accumulator+(mContentDelimiter==null?0:mContentDelimiter.length)*((int) (_num_entries-counter));//xxx+3*((int) (_num_entries-counter));
+						record_block_decompressed_size_accumulator+=recordLen;
+						if(bAbortOldRecordBlockOnOverFlow) {
+							if (blockDataInfo.get(idx)!=0) {//新开一个recblock
+								blockDataInfo.add(0);
+								blockInfo.add(0);
+								idx++;
+							}
+						}
+						blockDataInfo.set(idx, recordLen);/*offset+=preJudge*/  //+3*((int) (_num_entries-counter))
+						blockInfo.set(idx, blockInfo.get(idx)+1);/*entry++*/
+						counter-=1;
+						break;
+					}
+					else/* NOT PASSING */ break;
 				}
-				else/* NOT PASSING */ break;
 			}
+
+			//blockDataInfo_L = blockDataInfo.toArray(new Integer[] {});
+			blockInfo_L = blockInfo.toArray(new Integer[] {});
 		}
-		blockDataInfo_L = blockDataInfo.toArray(new Integer[] {});
-		blockInfo_L = blockInfo.toArray(new Integer[] {});
+
+		CMN.pt_mins("splitKeys record 分组耗时"); CMN.rt();
 
 		//calc index split
 		counter=_num_entries;
-		ArrayList<key_info_struct> list = new ArrayList<>();
+		ArrayList<key_info_struct> list = new ArrayList<>((int) (_num_entries / 2000));
 		key_block_compressed_size_accumulator=0;
 		int sizeLimit = 1024 * perKeyBlockSize_IE_IndexBlockSize;
 		ByteBuffer key_block_data_wrap = ByteBuffer.wrap(new byte[sizeLimit]);
 		while(counter>0) {//总循环
 			key_block_data_wrap.clear();
-			if(globalCompressionType==0)
-				key_block_data_wrap.putLong(0);
+			//TODO WTF???
+			//if(globalCompressionType==0)
+			//	key_block_data_wrap.putLong(0);
 			key_info_struct infoI = new key_info_struct();
 			//dict = new int[102400];//TODO reuse
 			long number_entries_counter = 0;
@@ -415,7 +471,8 @@ abstract class mdictBuilderBase {
 				for(int i=interval.key;i<=interval.value;i++) {
 					//CMN.show("putting!.."+(_num_entries-counter));
 					key_block_data_wrap.putLong(offsets[i]);//占位 offsets i.e. keyid
-					key_block_data_wrap.put(keys[i].getBytes(_charset));
+					myAbsCprKey keyNode = keys.get(i);
+					key_block_data_wrap.put(keyNode.key.getBytes(_charset));
 					//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
 					if(_encoding.startsWith("UTF-16")){
 						key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
@@ -439,7 +496,8 @@ abstract class mdictBuilderBase {
 					try {//必定抛出，除非最后一个block.
 						if(privateZone!=null && privateZone.container((int) (_num_entries-counter))!=null) throw new BufferOverflowException();
 						key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
-						key_block_data_wrap.put(keys[(int) (_num_entries-counter)].getBytes(_charset));
+						myAbsCprKey keyNode = keys.get((int) (_num_entries-counter));
+						key_block_data_wrap.put(keyNode.key.getBytes(_charset));
 						//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
 						if(_encoding.startsWith("UTF-16")){
 							key_block_data_wrap.put(new byte[]{0,0});//INCONGRUENTSVG
@@ -455,21 +513,19 @@ abstract class mdictBuilderBase {
 				}
 				infoI.num_entries = number_entries_counter;
 				//CMN.show(baseCounter+":"+number_entries_counter+":"+keyslist.size());
-				infoI.headerKeyText = bakeMarginKey(keyslist.get((int) baseCounter));
-				infoI.tailerKeyText = bakeMarginKey(keyslist.get((int) (baseCounter+number_entries_counter-1)));
+				infoI.headerKeyText = bakeMarginKey(keys.get((int) baseCounter).key);
+				infoI.tailerKeyText = bakeMarginKey(keys.get((int) (baseCounter+number_entries_counter-1)).key);
 			}
 			infoI.key_block_decompressed_size = key_block_data_wrap.position();
 			int in_len = (int) infoI.key_block_decompressed_size;
 			byte[] key_block_data = key_block_data_wrap.array();
 
-			int CompressionType = globalCompressionType;
-			if(keyblockCompressionType!=-1)
-				CompressionType=keyblockCompressionType;
+			int CompressionType = keyblockCompressionType;
 			//CompressionType=1;
 			if(CompressionType==0){
 				infoI.key_block_compressed_size=infoI.key_block_decompressed_size;
 				if(fOutTmp!=null) {
-					CMN.Log(fOutTmp.getFilePointer(), "key_pos");
+					//CMN.Log(fOutTmp.getFilePointer(), "key_pos");
 					fOutTmp.write(new byte[]{0,0,0,0});
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0, in_len));
 					fOutTmp.write(key_block_data,0, in_len);
@@ -530,6 +586,9 @@ abstract class mdictBuilderBase {
 			key_block_compressed_size_accumulator += infoI.key_block_compressed_size;
 		}
 		//CMN.show("le"+list.size());
+
+		CMN.pt_mins("splitKeys index 分组(写入)耗时");
+
 		_key_block_info_list = list.toArray(new key_info_struct[] {});
 	}
 

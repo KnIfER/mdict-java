@@ -207,7 +207,7 @@ public class PdfFoldersFragment extends VBox {
 					DirectoryChooser fileChooser = new DirectoryChooser();
 					File startPath=lastOpenDir!=null?lastOpenDir:new File(opt.GetLastMdlibPath());
 					if(!startPath.exists())
-						startPath=new File(opt.projectPath);
+						startPath=opt.projectPath;
 					fileChooser.setInitialDirectory(startPath);
 					File files = fileChooser.showDialog(getScene().getWindow());
 					if(files!=null)

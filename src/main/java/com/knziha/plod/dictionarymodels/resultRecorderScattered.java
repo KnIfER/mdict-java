@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
+import com.knziha.plod.dictionary.Utils.IU;
 import javafx.scene.web.WebEngine;
 
 public class resultRecorderScattered extends resultRecorderDiscrete {
@@ -18,7 +19,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			return;
 		if(firstLookUpTable.length<md.size())
 			firstLookUpTable = new int[md.size()];
-		
+
 		int resCount=0;
 		for(int i=0;i<md.size();i++){//遍历所有词典
 			mdict mdtmp = md.get(i);
@@ -107,7 +108,13 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			if(max==0)
 				continue;
 			if(pos-idxCount<max) {
-				return mdtmp.getEntryAt(_combining_search_tree[ti].get(pos-idxCount),mflag);
+				String tmp=mdtmp.getEntryAt(_combining_search_tree[ti].get(pos-idxCount),mflag);
+				if(mdtmp.hasVirtualIndex()){
+					int tailIdx=tmp.lastIndexOf(":");
+					if(tailIdx>0)
+						tmp=tmp.substring(0, tailIdx);
+				}
+				return tmp;
 			}
 			idxCount+=max;
 		}
@@ -159,7 +166,19 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 				int renderIdx = _combining_search_tree[ti].get(pos-idxCount);
 				StringBuilder basic = new StringBuilder();
 				if(post) basic.append("postInit=function(){");
-				basic.append("setDictAndPos(").append(selfAtIdx == -1 ? Rgn : selfAtIdx).append(",").append(renderIdx).append(");ClearAllPages();processContents('\\r").append(Rgn).append("@").append(renderIdx).append("');pendingHL='").append(currentSearchTerm).append("'").toString();
+				basic.append("setDictAndPos(").append(selfAtIdx == -1 ? Rgn : selfAtIdx).append(",").append(renderIdx).append(");ClearAllPages();processContents('\\r").append(Rgn).append("@");
+				if(mdtmp.hasVirtualIndex()){
+					String tmp = mdtmp.getEntryAt(renderIdx);
+					int tailIdx=tmp.lastIndexOf(":");
+					if(tailIdx>0)
+						basic.append(IU.parsint(tmp.substring(tailIdx+1),0));
+					else
+						basic.append(0);
+					basic.append(":").append(renderIdx);// 0@0:16@17@18
+				}else{
+					basic.append(renderIdx);
+				}
+				basic.append("');pendingHL='").append(currentSearchTerm).append("'");
 				if(post) basic.append("}; ScanInDicts();");
 				engine.executeScript(basic.toString());
 				return;

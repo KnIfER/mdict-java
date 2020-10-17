@@ -18,6 +18,8 @@
 package com.knziha.plod.dictionary.Utils;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.Adler32;
 import java.util.zip.InflaterOutputStream;
 
@@ -31,14 +33,12 @@ public class  BU{//byteUtils
 	public static int calcChecksum(byte[] bytes) {
         Adler32 a32 = new Adler32();
         a32.update(bytes);
-        int sum = (int) a32.getValue();
-        return sum;
+		return (int) a32.getValue();
     }
 	public static int calcChecksum(byte[] bytes,int off,int len) {
         Adler32 a32 = new Adler32();
         a32.update(bytes,off,len);
-        int sum = (int) a32.getValue();
-        return sum;
+		return (int) a32.getValue();
     }
     //解压等utils
     @Deprecated
@@ -116,22 +116,45 @@ public class  BU{//byteUtils
     		System.out.print((int)(b[i]&0xff)+",");
     	System.out.println();
 	}
+	public static void printBytes3(byte[] b){
+		String val="";
+		for(int i=0;i<b.length;i++)
+			val+="0x"+byteTo16(b[i])+",";
+		SU.Log(val);
+	}
     @Deprecated
     public static void printBytes(byte[] b){
     	for(int i=0;i<b.length;i++)
     		System.out.print("0x"+byteTo16(b[i])+",");
     	System.out.println();
     }
+
+	public static void LogBytes(byte[] b){
+		LogBytes(b, 0, b.length);
+	}
+
+	public static void LogBytes(byte[] b,int off,int ln){
+		String val="";
+		ln+=off;
+		for(int i=off;i<ln;i++)
+			val+="0x"+byteTo16(b[i])+",";
+		SU.Log(val);
+	}
     @Deprecated
     public static void printBytes(byte[] b,int off,int ln){
     	for(int i=off;i<off+ln;i++)
     		System.out.print("0x"+byteTo16(b[i])+",");
     	System.out.println();
     }
+	public static void printFile(byte[] b,int off,int ln,String path){
+		printFile(b, off, ln, new File(path));
+	}
     @Deprecated
-    public static void printFile(byte[] b,int off,int ln,String path){
+    public static void printFile(byte[] b,int off,int ln,File path){
     	try {
-			FileOutputStream fo = new FileOutputStream(new File(path));
+			File p = path.getParentFile();
+			if(!p.exists()) p.mkdirs();
+			FileOutputStream fo = new FileOutputStream(path);
 			fo.write(b);
 			fo.flush();
 			fo.close();
@@ -141,8 +164,43 @@ public class  BU{//byteUtils
     }
     @Deprecated
     public static void printFile(byte[] b, String path){
+		printFile(b,0,b.length,new File(path));
+    }
+
+    @Deprecated
+    public static void printFile(byte[] b, File path){
 		printFile(b,0,b.length,path);
     }
+
+    @Deprecated
+    public static void printFileStream(InputStream b, File path){
+		try {
+			printStreamToFile(b,0,b.available(),path);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+    @Deprecated
+    public static void printStreamToFile(InputStream b, int start, int end,  File path){
+		try {
+			if(start>0)
+				b.skip(start);
+			File p = path.getParentFile();
+			if(!p.exists()) p.mkdirs();
+			FileOutputStream fo = new FileOutputStream(path);
+			byte[] data = new byte[4096];
+			int len;
+			while ((len=b.read(data))>0){
+				fo.write(data, 0, len);
+			}
+			fo.flush();
+			fo.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    }
+
     public static String byteTo16(byte bt){
         String[] strHex={"0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f"};
         String resStr="";
@@ -165,8 +223,8 @@ public class  BU{//byteUtils
     }
 
 
-	public static ByteArrayInputStream fileToBytes(File f) {
-		return new ByteArrayInputStream(fileToByteArr(f));
+	public static ReusableByteInputStream fileToBytes(File f) {
+		return new ReusableByteInputStream(fileToByteArr(f));
 	}
 
 	public static byte[] fileToByteArr(File f) {
@@ -186,11 +244,39 @@ public class  BU{//byteUtils
 			FileInputStream fin = new FileInputStream(f);
 			byte[] data = new byte[(int) f.length()];
 			fin.read(data);
+			fin.close();
 			return new String(data, "utf8");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+
+	public static String fileToString(String path, byte[] buffer, ReusableByteOutputStream bo, Charset charset) {
+		try {
+			FileInputStream fin = new FileInputStream(path);
+			bo.reset();
+			int len;
+			while((len = fin.read(buffer))>0)
+				bo.write(buffer, 0, len);
+			return new String(bo.data(),0, bo.size(), charset);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public static String transStream(InputStream in) {
+		byte[] data = new byte[4096];
+		ReusableByteOutputStream bout = new ReusableByteOutputStream(8192);
+		try{
+			int len;
+			while ((len=in.read(data))>0) {
+				bout.write(data, 0 ,len);
+			}
+		} catch (Exception ignored) {  }
+		return new String(bout.data(), 0, bout.size());
 	}
 
 
@@ -220,6 +306,112 @@ public class  BU{//byteUtils
     		return in.substring(0,in.length()-4);
     	return in;
     }
+
+	public static int bit_length(long num) {
+		int res = 1;
+		num >>= 1;
+		while(num != 0) {
+			res += 1;
+			num >>= 1;
+		}
+		return res;
+	}
+
+	public static int readInt(InputStream bin) throws IOException {
+		int ch1 = bin.read();
+		int ch2 = bin.read();
+		int ch3 = bin.read();
+		int ch4 = bin.read();
+		if ((ch1 | ch2 | ch3 | ch4) < 0)
+			throw new EOFException();
+		return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
+	}
+
+	public static int readShort(InputStream bin) throws IOException {
+		int ch1 = bin.read();
+		int ch2 = bin.read();
+		if ((ch1 | ch2) < 0)
+			throw new EOFException();
+		return (short)((ch1 << 8) + (ch2 << 0));
+	}
+
+	public static String parseFontName(ReusableBufferedInputStream bin) throws IOException {
+		bin.skip(4);
+		int numOfTables = readShort(bin);
+		bin.skip(6);
+		boolean found = false;
+		byte[] buff = new byte[4];
+		for (int i = 0; i < numOfTables; i++) {
+			bin.read(buff,0,4);
+			int checkSum = readInt(bin);
+			int offset = readInt(bin);
+			int length = readInt(bin);
+			String tname = new String(buff, StandardCharsets.UTF_8);
+			if ("name".equalsIgnoreCase(tname)) {
+				int now = 12+16*(i+1);
+				int toSkip=offset-now;
+				//CMN.Log("name table found!!!", offset, now, toSkip);
+				if(toSkip>=0){
+					while(toSkip>0){
+						toSkip-=bin.skip(toSkip);
+					}
+					//now=offset;
+					int fSelector = readShort(bin);
+					int nRCount = readShort(bin);
+					int storageOffset = readShort(bin);
+					//ArrayList<Integer> arr = new ArrayList<>(6);
+					for (int j = 0; j < nRCount; j++) {
+						int platformID = readShort(bin);
+						int encodingID = readShort(bin);
+						int languageID = readShort(bin);
+						int nameID = readShort(bin);
+						int stringLength = readShort(bin);
+						int stringOffset = readShort(bin);
+						//1 says that this is font name. 0 for example determines copyright info
+						if(nameID==1){
+							//arr.add(stringOffset);
+							//arr.add(stringLength);
+							//byte[] bf = bin.getBytes();
+							byte[] bf = new byte[stringLength];
+							offset =  now + stringOffset + storageOffset;
+							now = now + 3*2 + 6*2*(j+1);
+							toSkip=offset-now;
+							//CMN.Log("font name found!!!", stringLength, offset, now, toSkip);
+							if(toSkip>=0){
+								while(toSkip>0){
+									toSkip-=bin.skip(toSkip);
+								}
+								bin.read(bf, 0, stringLength);
+								boolean utf8 = platformID==3 && (encodingID==0||encodingID==1||encodingID==10) || platformID==0 && encodingID>=0 && encodingID<=4;
+								//CMN.Log(platformID, encodingID, utf8);
+								return new String(bf, 0, stringLength, utf8?StandardCharsets.UTF_16:StandardCharsets.UTF_8);
+							}
+							break;
+						}
+					}
+				}
+				break;
+			} else if (tname.length() == 0) {
+				break;
+			}
+		}
+		return null;
+	}
+
+	public static InputStream SafeSkipReam(InputStream fin, long toSkip) throws IOException {
+		//CMN.Log("SafeSkipReam::", toSkip);
+		int tryCount=0;long skipped;
+		while(toSkip>0){
+			skipped=fin.skip(toSkip);
+			if(false && skipped==0&&tryCount>=3){
+				break;
+			} else {
+				toSkip-=skipped;
+				tryCount++;
+			}
+		}
+		return fin;
+	}
 }
 	
 

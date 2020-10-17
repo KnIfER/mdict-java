@@ -2,12 +2,12 @@ package com.knziha.plod.PlainDict;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.io.File;
 
 @XmlRootElement(name = "opt")
-public class PlainDictAppOptions
+public class PlainDictAppOptions implements MdictServer.AppOptions
 {
-	public static String projectPath;
-	public static String userPath;
+	public static File projectPath;
 	private long FirstFlag=0;
 	private double searchBoxPercent=61;
 	private int mScreenW=1250;
@@ -338,7 +338,7 @@ public class PlainDictAppOptions
 	}
 	public String GetLastMdlibPath(){
 		if(lastMdlibPath==null)
-			return projectPath;
+			return projectPath.getPath();
 		return lastMdlibPath;
 	}
 	public void setLastMdlibPath(String val){
@@ -423,5 +423,10 @@ public class PlainDictAppOptions
 	}
 	public void setBrowserArgs(String val){
 		BsrArgs=val;
+	}
+
+	@Override
+	public boolean isCombinedSearching() {
+		return GetCombinedSearching();
 	}
 }

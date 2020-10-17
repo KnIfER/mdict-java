@@ -18,6 +18,7 @@ public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
 
     protected static final boolean RED   = false;
     protected static final boolean BLACK = true;
+    int size=0;
 
 
     public RBTree() {
@@ -98,6 +99,11 @@ public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
     @Override
     public void insertNode(Comparable node) {
          insert((T) node);
+    }
+
+    @Override
+    public int size() {
+        return 0;
     }
 
     //![1]设置接口
@@ -593,6 +599,8 @@ public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
         // 2. 设置节点的颜色为红色
         node.color = RED;
 
+        size++;
+
         // 3. 将它重新修正为一颗二叉查找树
         insertFixUp(node);
     }
@@ -604,11 +612,7 @@ public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
      *     key 插入结点的键值
      */
     public void insert(T key) {
-        RBTNode<T> node=new RBTNode<T>(key,BLACK,null,null,null);
-
-        // 如果新建结点失败，则返回。
-        if (node != null)
-            insert(node);
+        insert(new RBTNode<T>(key,BLACK,null,null,null));
     }
 
 
@@ -789,6 +793,7 @@ public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
 
         if (color == BLACK)
             removeFixUp(child, parent);
+        size--;
         node = null;
     }
 
@@ -824,6 +829,7 @@ public class RBTree<T extends Comparable<T>> implements InOrderTodoAble {
     public void clear() {
         destroy(mRoot);
         mRoot = null;
+        size=0;
     }
 
     /*

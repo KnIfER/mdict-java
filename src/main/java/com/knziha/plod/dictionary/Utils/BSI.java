@@ -6,10 +6,6 @@
 package com.knziha.plod.dictionary.Utils;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 
 public class BSI extends ByteArrayInputStream {
 	public BSI(byte[] buf, int offset, int length) {

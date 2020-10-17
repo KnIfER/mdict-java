@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+mark {background: yellow; }
+mark.current {
+	background: orange;
+	border:1px solid #FF0000
+}
+.highlight { background-color: yellow; }
+	html, body {
+	-moz-user-select:text;
+	-webkit-user-select:text;
+	-ms-user-select:text;
+	-khtml-user-select:text;
+	user-select:text;
+}
+</style>
+
+<script>
+if(window.addEventListener){
+	window.addEventListener('load',wrappedOnLoadFunc,false);
+	window.addEventListener('click',wrappedClickFunc);
+}else if(window.attachEvent){ //ie
+	window.addEventListener('onload',wrappedOnLoadFunc);
+	window.addEventListener('onclick',wrappedClickFunc);
+}else{
+	window.onload=wrappedOnLoadFunction;
+	window.onclick=wrappedClickFunc;
+}
+function wrappedOnLoadFunc(){
+	console.log('mdpage loaded');
+	//document.body.style.fontSize=35+'px';
+	highlight(null);
+	//console.log('frameAt !! '+frameAt);
+	if(_onloadchecks && _onloadchecks.length)
+	for(var i=0;i<_onloadchecks.length;i++){
+		_onloadchecks[i]();
+	}
+}
+
+function loadVI(pos){
+	//111
+	console.log('hi !! loadVI/'+pos);
+	var req=new XMLHttpRequest();
+	req.open('POST','VI/'+pos);
+	req.responseType='text';
+	req.onreadystatechange=function(e) {
+		if(req.readyState == 4 && req.status==200) {
+			console.log(req.responseText);
+			var vc = JSON.parse(req.responseText);
+			if(vc.JS){
+				eval(vc.JS)
+			}
+		}
+	};
+	req.send(null);
+}
+var _onloadchecks;
+var frameAt;
+var audio;
+var regHttp=new RegExp("^https?://");
+var regEntry=new RegExp("^entry://");
+var regPdf=new RegExp("^pdf://");
+var regSound=new RegExp("^sound://");
+
+function hiPlaySound(e){
+	var cur=e.ur1?e:e.srcElement;
+	//console.log("hijacked sound playing : "+cur.ur1);
+	if(audio)
+		audio.pause();
+	else
+		audio = new Audio();
+	audio.src = cur.ur1;
+	audio.play();
+}
+
+function wrappedClickFunc(e){
+	if(1)return;
+	parent.window.dismiss_menu();
+	var cur=e.srcElement;
+	parent.dismiss_menu();
+	if(cur.href){
+		//console.log("1! found link : "+cur.href+" : "+regSound.test(cur.href));
+		if(regEntry.test(cur.href))
+			cur.href="entry/"+cur.href.substring(8);
+		else if(regSound.test(cur.href)){/*拦截 sound 连接*/
+			var link="sound/"+cur.href.substring(8);
+			cur.href=link;
+			if(cur.onclick==undefined){
+				//console.log("1! found internal sound link : "+cur.href);
+				cur.ur1=cur.href;
+				cur.removeAttribute("href");
+				cur.onclick=hiPlaySound;
+				hiPlaySound(cur)
+				return false;
+			}
+		}
+		else if(parent.app && regHttp.test(cur.href)){/*拦截 http*/
+			parent.app.handleWebLink(cur.href);
+			return false;
+		}
+		else if(parent.app && regPdf.test(cur.href)){/*拦截 pdf*/
+			parent.app.handlePdfLink(cur.href);
+			return false;
+		}
+		return true;/*连接通行！*/
+	}
+	else if(cur.src && regEntry.test(cur.src)){
+		console.log("2! found link : "+cur.src);
+		return false;
+	}
+	else if(e.srcElement!=document.documentElement && e.srcElement.nodeName!='INPUT'){ // immunize blank area out of body ( in html )
+		//console.log(e.srcElement+'')
+		//console.log(e);
+		var s = window.getSelection();
+		if(s.isCollapsed && s.anchorNode){ // don't bother with user selection
+			s.modify('extend', 'forward', 'word'); // first attempt
+			var an=s.anchorNode;
+			console.log(s.anchorNode); console.log(s); console.log(s+'');
+			//if(1) return;
+			
+			if(s.baseNode != document.body) {// immunize blank area
+				var text=s.toString(); // for word made up of just one character
+				if(text.length>0){
+					var range = s.getRangeAt(0);
+					
+					s.collapseToStart();
+					s.modify('extend', 'forward', 'lineboundary');
+				
+					
+					if(s.toString().length>=text.length){
+						s.empty();
+						s.addRange(range);
+						
+						s.modify('move', 'backward', 'word'); // could be next line
+						s.modify('extend', 'forward', 'word');
+						
+						if(s.getRangeAt(0).endContainer===range.endContainer&&s.getRangeAt(0).endOffset===range.endOffset){
+							// 字未央
+							text=s.toString();
+						}
+						
+						console.log(text); // final output
+					}
+				}
+			}
+			//s.empty();
+		}
+	}
+	return false;
+};
+
+/*!!!高亮开始*/
+var bOnceHighlighted;
+var MarkLoad,MarkInst;
+var results=[], current,currentIndex = 0;
+var currentClass = "current";
+
+function jumpTo(d) {
+    if (results.length) {
+		console.log('jumpTo received '+frameAt+'->'+parent.window.HlightIdx+' '+(currentIndex+d)+'/'+(results.length)+' dir='+d);
+		var np=currentIndex+d;
+		var max=results.length - 1;
+		if (currentIndex > max) currentIndex=0;
+		var pw=parent.window;
+		if(pw.desiredOffset>=0){
+			np=0;
+			if(frameAt<pw.HlightIdx) return d;
+			var baseOffset=pw.topOffset(frameAt);
+			for(;np>=0&&np<=max;np+=d){
+				console.log(frameAt+'->'+pw.HlightIdx+' npnpnpnp ? '+np+'/'+max+' ? '+(baseOffset+pw.topOffset(results[np])+' >= '+pw.desiredOffset));
+				if(baseOffset+pw.topOffset(results[np])>=pw.desiredOffset)
+					break;
+			}
+			pw.desiredOffset=-1;
+		}
+		if (np < 0) return -1;
+		if (np > max) return 1;
+		currentIndex=np;
+        if(current) removeClass(current, currentClass);
+        current = results[currentIndex];
+        if(current){
+			addClass(current, currentClass);
+			var position = topOffset(current);
+			pw.scrollHighlight(position, d);
+			return 0;
+        }
+    }
+	return d;
+}
+
+function topOffset(elem){
+    var top=0;
+    var add=1;
+    while(elem && elem!=document.body){
+    console.log(""+(elem.style.display==""))
+        if(elem.style.display=='none'){
+        	elem.style.display='block';
+		}
+		else if(elem.style.display==''){
+        	elem.style.display='inline';
+		}
+        if(add){
+			top+=elem.offsetTop;
+			var tmp = elem.offsetParent;
+        	if(!tmp) add=0;
+        	else elem=tmp;
+		}
+		if(!add) elem=elem.parentNode;
+    }
+    return !add&&top==0?-1:top;
+}
+
+function quenchLight(){
+    if(current) removeClass(current, currentClass);
+}
+
+function resetLight(d){
+	if(d==1) currentIndex=-1;
+	else if(d==-1) currentIndex=results.length;
+	quenchLight();
+}
+
+function setAsEndLight(){
+	currentIndex=results.length-1;
+}
+
+function setAsStartLight(){
+	currentIndex=0;
+}
+
+function addClass(elem, className) {
+    if (!className) return;
+    const els = Array.isArray(elem) ? elem : [elem];
+    for(var i=0;i<els.length;i++){
+    	els[i].className+=className;
+    }
+}
+
+function removeClass(elem, className) {
+    if (!className) return;
+    const els = Array.isArray(elem) ? elem : [elem];
+    for(var i=0;i<els.length;i++){
+		els[i].className=els[i].className.replace(className, '');
+	}
+}
+
+function clearHighlights(){
+	if(bOnceHighlighted && MarkInst && MarkLoad)
+	MarkInst.unmark({
+		done: function() {
+			results=[];
+			bOnceHighlighted=false;
+		}
+	});
+}
+
+function highlight(keyword){
+	var b1=keyword==null;
+	var rcsp;
+	if(b1 && parent.window.app){
+		keyword=parent.window.app.getCurrentPageKey(true);
+	}
+	if(keyword==null)
+		return;
+	var index=keyword.indexOf('x');
+	if(index>=0){
+		rcsp=parseInt(keyword.substring(0, index));
+		keyword=keyword.substring(index+1);
+	}
+	if(b1&&keyword.trim().length==0)
+		return;
+	if(!MarkLoad){
+		loadJs('/MdbR/mark.js', function(){
+			MarkLoad=true;
+			do_highlight(keyword,rcsp);
+		});
+	}else
+		do_highlight(keyword,rcsp);
+}
+
+function do_highlight(keyword,rcsp){
+	if(!MarkInst)
+		MarkInst = new Mark(document);
+	MarkInst.unmark({
+		done: function() {
+			bOnceHighlighted=false;
+			if(keyword){
+				keyword=decodeURIComponent(keyword);
+				console.log('keyword='+keyword+', rcsp='+rcsp);
+				if(rcsp&0x1)
+				MarkInst.markRegExp(new RegExp(keyword, (rcsp&0x2)?'m':'im'), {
+					done: done_highlight
+				});
+				else
+				MarkInst.mark(keyword, {
+					separateWordSearch:(rcsp&0x4)!=0,wildcards:(rcsp&0x8)?'enabled':'withSpaces',done: done_highlight,
+					caseSensitive:(rcsp&0x2)!=0
+				});
+			}
+		}
+	});
+}
+
+function done_highlight(){
+	bOnceHighlighted=true;
+	results = document.getElementsByTagName("mark");
+	currentIndex=-1;
+	if(frameAt==0&&parent.window.desiredOffset<=0)
+		jumpTo(1);
+}
+
+function loadJs(url,callback){
+	var script=document.createElement('script');
+	script.type="text/javascript";
+	if(typeof(callback)!="undefined"){
+		if(script.readyState){
+			script.onreadystatechange=function(){
+				if(script.readyState == "loaded" || script.readyState == "complete"){
+					script.onreadystatechange=null;
+					callback();
+				}
+			}
+		}else{
+			script.onload=function(){
+				callback();
+			}
+		}
+	}
+	script.src=url;
+	document.body.appendChild(script);
+}
+</script>
+
+<base href='/base//'/>
+<base target="_self" />

@@ -7,11 +7,8 @@ package com.knziha.plod.dictionary.Utils;
              decompressed_size_accumulator=    _decompressed_size_accumulator;
         
     	}
-    	public record_info_struct() {}
         public long compressed_size;
         public long compressed_size_accumulator;
     	public long decompressed_size;
     	public long decompressed_size_accumulator;
-        public void ini(){
-        }
     }

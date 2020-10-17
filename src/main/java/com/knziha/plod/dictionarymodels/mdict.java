@@ -5,10 +5,7 @@ import javafx.beans.property.*;
 import org.apache.commons.text.StringEscapeUtils;
 import org.joni.Option;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,11 +21,15 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 		System.setProperty("file.encoding", "UTF-8");
 	}
 	public boolean tmpIsFilter;
-	PlainDictAppOptions opt;
+	protected PlainDictAppOptions opt;
 	//构造
-	public mdict(String fn, PlainDictAppOptions _opt) throws IOException {
-		super(fn);
+	public mdict(File f, PlainDictAppOptions _opt) throws IOException {
+		super(f, _opt==null?1:0, null, null);
 		opt=_opt;
+	}
+
+	public mdict(File fn, int pseudoInit, StringBuilder buffer, Object tag) throws IOException {
+		super(fn, pseudoInit, buffer, tag);
 	}
 
 	public String getAboutHtml() {
@@ -48,16 +49,10 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 			_Dictionary_fName = f.getName();
 			int tmpIdx = _Dictionary_fName.lastIndexOf(".");
 			if(tmpIdx!=-1) {
-				_Dictionary_fSuffix = _Dictionary_fName.substring(tmpIdx+1);
 				_Dictionary_fName = _Dictionary_fName.substring(0, tmpIdx);
 			}
 		}
 		return ret;
-	}
-
-	@Override
-	protected boolean getUseJoniRegex(int mode){
-		return opt.GetRegexSearchEngineEnabled();
 	}
 
 	@Override
@@ -71,11 +66,6 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 		if(!opt.GetRegexSearchEngineCaseSensitive())
 			ret|=Option.IGNORECASE;
 		return ret;
-	}
-
-	@Override
-	public boolean getIsDedicatedFilter() {
-		return tmpIsFilter;
 	}
 
 	@Override
@@ -104,7 +94,7 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 			}
 		}else {
 			FileOutputStream out = new FileOutputStream(file);
-			out.write(getRecordsAt(position).getBytes(StandardCharsets.UTF_8));
+			out.write(getRecordsAt(position).getBytes(_charset));
 			out.close();
 		}
 	}

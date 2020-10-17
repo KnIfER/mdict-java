@@ -1,13 +1,12 @@
 package com.knziha.plod.PlainDict;
 
- 
+
+import java.io.File;
 
 public class PU {
 
-    public static String getProjectPath() {
-
- 
-
+    public static File getProjectPath() {
+        
        java.net.URL url = PU.class.getProtectionDomain().getCodeSource().getLocation();
 
        String filePath = null ;
@@ -21,16 +20,14 @@ public class PU {
            e.printStackTrace();
 
        }
-
-    if (filePath.endsWith(".jar"))
-
-       filePath = filePath.substring(0, filePath.lastIndexOf("/") + 1);
-
+       
     java.io.File file = new java.io.File(filePath);
+    
+    while(file!=null && !file.isDirectory()) {
+        file = file.getParentFile();
+    }
 
-    filePath = file.getAbsolutePath();
-
-    return filePath;
+    return file;
 
 }
 

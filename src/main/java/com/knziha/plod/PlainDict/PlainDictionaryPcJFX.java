@@ -1,10 +1,10 @@
 package com.knziha.plod.PlainDict;
 
-import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.dictionarymanager.DictPickerDialog;
 import com.knziha.plod.dictionarymanager.ManagerFragment;
 import com.knziha.plod.dictionarymodels.*;
+import com.knziha.plod.ebook.MobiBook;
 import com.knziha.plod.settings.SettingsDialog;
 import com.knziha.plod.widgets.*;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
@@ -16,7 +16,6 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Worker.State;
 import javafx.css.Styleable;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
@@ -65,7 +64,7 @@ import java.util.regex.Pattern;
 
 import static javafx.concurrent.Worker.State.FAILED;
 
-public class PlainDictionaryPcJFX extends Application {
+public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	GridPane topGrid;
 	SearchBox searchBox;
 	TextField etSearch;
@@ -100,7 +99,40 @@ public class PlainDictionaryPcJFX extends Application {
 	WeakReference<SettingsDialog> settingDialog;
 	WeakReference<Stage> managerDialog;
 	private Clipboard clipboard;
-	private String record_for_mirror;
+	String record_for_mirror;
+	
+	Map<String, mdict> md_table = Collections.synchronizedMap(new HashMap<>());
+
+	@Override
+	public String md_getName(int i) {
+		return md.get(i).getDictionaryName();
+	}
+
+	@Override
+	public mdict md_get(int i) {
+		return md.get(i);
+	}
+	
+	@Override
+	public int md_get(String name) {
+		//return md_table.get(i);
+		//todo cache the result
+		//CMN.Log("getMdxIdForName::", name);
+		int len = md.size();
+		name = name+".";
+		for (int j = 0; j < len; j++) { 
+			mdict mdTmp = md.get(j);
+			if(mdTmp.f().getName().replace("+", " ").startsWith(name)) {
+				return j;
+			}
+		}
+		return -1;
+	}
+
+	@Override
+	public int md_getSize() {
+		return md.size();
+	}
 
 	public class AppHandle {
 		int flag;
@@ -164,7 +196,7 @@ public class PlainDictionaryPcJFX extends Application {
 			fileChooser.getExtensionFilters().addAll(
 				new ExtensionFilter("Html file", "*.html")
 			);
-			fileChooser.setInitialDirectory(new File(opt.projectPath));
+			fileChooser.setInitialDirectory(opt.projectPath);
 			String[] arr = val.split("@");
 			int len=arr.length;
 			if(len>1){
@@ -274,7 +306,7 @@ public class PlainDictionaryPcJFX extends Application {
 		public void reloadDict(int idx){
 			mdict mdTmp = md.get(idx);
 			try {
-				mdict mdNew = new mdict(mdTmp.f().getAbsolutePath(), opt);
+				mdict mdNew = new mdict(mdTmp.f(), opt);
 				md.set(idx, mdNew);
 				if(currentDictionary==mdTmp)
 					currentDictionary=mdNew;
@@ -288,6 +320,14 @@ public class PlainDictionaryPcJFX extends Application {
 			try {
 				Desktop.getDesktop().open(md.get(idx).f().getParentFile());// what a shame
 			} catch (Exception e) { e.printStackTrace(); }
+		}
+
+		Object Runtime = new Object(){
+			int id;
+		};
+		
+		public String getUILanguage() {
+			return "en";
 		}
 	}
 
@@ -316,7 +356,7 @@ public class PlainDictionaryPcJFX extends Application {
 	private void getPdfFolders() {
 		if(DocumentIncludePaths==null){
 			DocumentIncludePaths=new ArrayList<>(12);
-			File def = new File(PU.getProjectPath(),"CONFIG/PDFolders.lst");
+			File def = new File(PlainDictAppOptions.projectPath, "CONFIG/PDFolders.lst");
 			if(def.exists())
 				try {
 					BufferedReader in = new BufferedReader(new FileReader(def));
@@ -397,16 +437,8 @@ public class PlainDictionaryPcJFX extends Application {
 	public PlainDictionaryPcJFX() {
 		super();
 		bundle = ResourceBundle.getBundle("UIText" , Locale.getDefault());
-		if(!new File(PlainDictAppOptions.projectPath).exists()) {
-
-		}
-		if(PlainDictAppOptions.userPath==null || !new File(PlainDictAppOptions.userPath).exists()) {
-			PlainDictAppOptions.userPath=PlainDictAppOptions.projectPath;
-		}
-		PlainDictAppOptions.userPath=null;
 		SU.debug=true;
 	}
-
 
 	public static class UI{
 		public final static String open="open";
@@ -437,11 +469,12 @@ public class PlainDictionaryPcJFX extends Application {
 
 	Scene scene;
 	WebView view;
+	static int port=8080;
 	@Override
 	public void start(javafx.stage.Stage stage_) throws Exception {
+		//sun.net.http.allowRestrictedHeaders=true;
 		ScanSettings(new File(PlainDictAppOptions.projectPath,"settings.xml"));
-		server = new MdictServer(8080, opt);
-		md = server.md;
+		server = new MdictServerOyster(port, this, opt);
 		scanInFiles();
 		toolBar = new MenuBar();
 		stage = stage_;
@@ -465,6 +498,14 @@ public class PlainDictionaryPcJFX extends Application {
 				}
 				if(opt.GetAutoPaste()){
 					checkClipBoard();
+				}
+				boolean refreshAllDicts=true;
+				if(refreshAllDicts) {
+					for(mdict mdTmp:md) {
+						mdTmp.handleDebugLines();
+					}
+				} else {
+					currentDictionary.handleDebugLines();
 				}
 			}
 		});
@@ -544,7 +585,6 @@ public class PlainDictionaryPcJFX extends Application {
 		browser.setAccelerator(KeyCombination.valueOf("CTRL+B"));
 		searchpage.setAccelerator(KeyCombination.valueOf("CTRL+F"));
 
-
 		EventHandler clicker1 =  event -> {
 			switch(((Styleable)event.getSource()).getId()){
 				case UI.open:{
@@ -559,10 +599,10 @@ public class PlainDictionaryPcJFX extends Application {
 						HashSet<String> mdict_cache = new HashSet<>(md.size());
 						for(mdict mdTmp:md) mdict_cache.add(mdTmp.getPath());
 						for(File fI:files) {
-							String fileNameKey=fI.getAbsolutePath();
+							String fileNameKey=fI.getPath();
 							if(!mdict_cache.contains(fileNameKey))
 								try {
-									server.md.add(new mdict(fileNameKey, opt));
+									md.add(new mdict(fI, opt));
 									mdict_cache.add(fileNameKey);
 								} catch (Exception e) { e.printStackTrace(); }
 						}
@@ -605,7 +645,7 @@ public class PlainDictionaryPcJFX extends Application {
 										continue;
 									if(mdTmp instanceof mdict_preempter){
 										try {
-											mdTmp=new mdict(mdTmp.getPath(), opt);
+											mdTmp=new mdict(mdTmp.f(), opt);
 											mdTmp.tmpIsFilter=isFiler;
 										} catch (IOException ignored) { CMN.Log(e); continue; }
 									}
@@ -635,7 +675,7 @@ public class PlainDictionaryPcJFX extends Application {
 				} break;
 				case UI.browser:{
 					try {
-						AppMessenger.handleWebLink("http://127.0.0.1:8080/MIRROR.jsp?DX=" + adapter_idx + "&POS=" + currentDisplaying + "&KEY=" + URLEncoder.encode(etSearch.getText(), "UTF-8"));
+						AppMessenger.handleWebLink("http://127.0.0.1:"+port+"/MIRROR.jsp?DX=" + adapter_idx + "&POS=" + currentDisplaying + "&KEY=" + URLEncoder.encode(etSearch.getText(), "UTF-8"));
 					} catch (UnsupportedEncodingException e1) {
 						e1.printStackTrace();
 					}
@@ -741,7 +781,7 @@ public class PlainDictionaryPcJFX extends Application {
 		view.setZoom(1.25f);
 		engine = view.getEngine();
 		engine.setJavaScriptEnabled(true);
-		loadURL("http://127.0.0.1:8080");
+		loadURL("http://127.0.0.1:"+port);
 		//engine.setUserAgent("");
 		engine.titleProperty().addListener((observable, oldValue, newValue) -> SwingUtilities.invokeLater(() -> {
 			//PlaneDictionaryPc.this.setTitle(newValue);
@@ -768,15 +808,23 @@ public class PlainDictionaryPcJFX extends Application {
 					}
 				});
 		com.sun.javafx.webkit.WebConsoleListener.setDefaultListener((webView, message, lineNumber, sourceId) -> {
-			if(!message.startsWith("http://127.0.0.1:8080/"))
-				CMN.Log("Console: ",message," [" + (sourceId==null?sourceId:sourceId.replace("http://127.0.0.1:8080/", "host")),":",lineNumber, "] ");
+			//LogCorsPolicy();
+			if(!message.startsWith("http://127.0.0.1:"+port+"/"))
+				CMN.Log("Console: ",message," [" + (sourceId==null?sourceId:sourceId.replace("http://127.0.0.1:"+port+"/", "host")),":",lineNumber, "] ");
 		});
 		engine.getLoadWorker().stateProperty()
 				.addListener(
 						(ov, oldState, newState) -> {
 							if (newState == State.SUCCEEDED) {
+								CMN.Log("添加了！！！");
 								JSObject win = (JSObject) engine.executeScript("window");
 								win.setMember("app", AppMessenger);
+								//win.setMember("chrome", AppMessenger);
+
+								win = (JSObject)engine.executeScript("window.chrome");
+								
+								win.setMember("Runtime", AppMessenger);
+								
 							}
 						}
 				);
@@ -790,8 +838,9 @@ public class PlainDictionaryPcJFX extends Application {
 		etSearch.clear();
 		etSearch.setOnKeyPressed(event -> {
 			//executeJavaScript("lookup('"+etSearch.getText()+"')");
-			if(event.getCode()==KeyCode.ENTER)
-				executeJavaScript("enter=1;lookup('"+etSearch.getText()+"')");
+			if(event.getCode()==KeyCode.ENTER) {
+				executeJavaScript("enter=1;lookup(\""+etSearch.getText().replace("\"", "\\\"")+"\")");
+			}
 		});
 		//etSearch.setOnKeyReleased(new EventHandler<KeyEvent>() {
 		//	@Override
@@ -801,7 +850,7 @@ public class PlainDictionaryPcJFX extends Application {
 		final ChangeListener<String> textListener =
 				(ObservableValue<? extends String> observable,
 				 String oldValue, String newValue) -> {
-					executeJavaScript("lookup('"+newValue+"')");
+					executeJavaScript("lookup(\""+newValue.replace("\"", "\\\"")+"\")");
 					searchBox.clearButton.setVisible(newValue.length() != 0);
 				};
 		etSearch.textProperty().addListener(textListener);
@@ -859,6 +908,7 @@ public class PlainDictionaryPcJFX extends Application {
 		if(opt.GetShowAdvanced())
 			Platform.runLater(() -> clicker1.handle(new ActionEvent(advancedSearchLabel,null)));
 
+		//server.md.add(new MobiBook("D:\\Downloads\\编码_隐匿在计算机软硬件背后的语言.azw_BR7KQB23ROBNK5RQIY6KHTHSP46SFR34.azw", opt));
 		if(SU.debug){
 			//tg
 			//Platform.runLater(() -> clicker1.handle(new ActionEvent(settings,null)));
@@ -866,11 +916,12 @@ public class PlainDictionaryPcJFX extends Application {
 				@Override
 				public void run() {
 					Platform.runLater(() -> {
+						//etSearch.setText("we're");
 						if(searchInPageBox!=null)searchInPageBox.textBox.setText("happy");
-						if(advancedSearchDialog!=null) advancedSearchDialog.etSearch.setText("happy");
-						etSearch.setText("happiness");
+						if(advancedSearchDialog!=null) advancedSearchDialog.etSearch.setText("人");
+						//etSearch.setText("happiness");
 						try {
-							final Socket socket = new Socket("localhost", 8080);
+							final Socket socket = new Socket("localhost", port);
 							socket.getOutputStream();
 							socket.getOutputStream().write("GET / HTTP/1.1".getBytes());
 							socket.close();
@@ -881,41 +932,7 @@ public class PlainDictionaryPcJFX extends Application {
 				}
 			},800);
 		}
-
-
-		server.setOnMirrorRequestListener((uri, mirror) -> {
-			if(uri==null)uri="";
-			String[] arr = uri.split("&");
-			HashMap<String, String> args = new HashMap<>(arr.length);
-			for (int i = 0; i < arr.length; i++) {
-				try {
-					String[] lst = arr[i].split("=");
-					args.put(lst[0], lst[1]);
-				} catch (Exception ignored) { }
-			}
-			int pos=IU.parsint(args.get("POS"), currentDisplaying);
-			int dx=IU.parsint(args.get("DX"), adapter_idx);
-			String key=etSearch.getText();
-			try {
-				key=URLDecoder.decode(args.get("KEY"),"UTF-8");
-			}catch(Exception ignored) {}
-			String records=null;
-			if(!mirror)
-				records=args.get("CT");
-			if(mirror||records==null)
-				records=record_for_mirror;
-			CMN.Log("sending1..."+records);
-			 {
-				try {
-					records=URLDecoder.decode(records, "UTF-8");
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-			CMN.Log("sending2...");
-			CMN.Log("sending2..."+records);
-			return newFixedLengthResponse(server.constructDerivedHtml(key, pos, dx,records));
-		});
+		
 	}
 
 	String lastPasteItem;
@@ -972,13 +989,13 @@ public class PlainDictionaryPcJFX extends Application {
 						//CMN.Log("???setOnCloseRequest");
 						if(pickDictDialog.dirtyFlag!=0){
 							adapter_idx=pickDictDialog.adapter_idx;
-							currentDictionary=server.md.get(adapter_idx);
+							currentDictionary=md.get(adapter_idx);
 							if(!opt.GetDirectSetLoad() && (pickDictDialog.dirtyFlag&0x1)!=0){
 								File from;
 								if((from=new File(opt.projectPath,"CONFIG/"+opt.getCurrentPlanName()+".set")).exists()){
 									try {
 										FileChannel inChannel =new FileInputStream(from).getChannel();
-										FileChannel outChannel=new FileOutputStream(new File(PU.getProjectPath(),"default.txt")).getChannel();
+										FileChannel outChannel=new FileOutputStream(new File(PlainDictAppOptions.projectPath,"default.txt")).getChannel();
 										inChannel.transferTo(0, inChannel.size(), outChannel);
 										inChannel.close();
 										outChannel.close();
@@ -1086,14 +1103,40 @@ public class PlainDictionaryPcJFX extends Application {
 			e2.printStackTrace();
 		}
 	}
+	
+	static{
+		System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
+	}
 
 	public static void main(String[] args) {
 		//CMN.show(System.getProperty("java.version"));
 		//1.8.0_171
 		//10.0.2
+		LogCorsPolicy();
+		
 		Locale.setDefault(Locale.CHINA);
-		PlainDictAppOptions.projectPath = PU.getProjectPath();
-		PlainDictAppOptions.userPath = System.getProperty("user.home");
+		File projectPath = PU.getProjectPath();
+		if(projectPath==null) {
+			projectPath = new File(System.getProperty("user.home"));
+		}
+		if(!projectPath.isDirectory()) {
+			try {
+				projectPath = new File("").getCanonicalFile();
+			} catch (IOException ignored) { }
+		}
+		File installPath = new File(projectPath, "PDInstall");
+		if(installPath.isFile()) {
+			try {
+				BufferedReader fin = new BufferedReader(new FileReader(installPath));
+				installPath = new File(fin.readLine());
+				if(installPath.isDirectory()) {
+					projectPath = installPath;
+				}
+				fin.close();
+			} catch (IOException ignored) { }
+		}
+		
+		PlainDictAppOptions.projectPath = projectPath;
 		String VersionCode = System.getProperty("java.version");
 		CMN.Log("projectPath", PlainDictAppOptions.projectPath);
 		CMN.Log("usrHome", System.getProperty("user.home"));
@@ -1102,13 +1145,18 @@ public class PlainDictionaryPcJFX extends Application {
 		launch(args);
 	}
 
+	private static void LogCorsPolicy() {
+		String message = System.getProperty("sun.net.http.allowRestrictedHeaders");
+		CMN.Log("message", message);
+	}
+
 	public static boolean isNeoJRE=false;
 
 	//HashSet<String> mdlibsCon;
 
 
 
-	ArrayList<mdict> md;
+	public final ArrayList<mdict> md = new ArrayList<>();
 	private void scanInFiles() {
 		//![] start loading dictionaries
 		File def = getCurrentSetFile();      //!!!原配置
@@ -1142,20 +1190,20 @@ public class PlainDictionaryPcJFX extends Application {
 					}
 					//CMN.Log("?",opt.GetLastMdlibPath(), line, !windowPath.matcher(line).matches() , !line.startsWith("/"));
 					if(!windowPath.matcher(line).matches() && !line.startsWith("/"))
-					line=opt.GetLastMdlibPath()+File.separator+line;
+						line=opt.GetLastMdlibPath()+File.separator+line;
 					try {
-						mdict mdtmp = new mdict(line, opt);
+						mdict mdtmp = new_mdict(line, opt);
 						if(isFilter){
 							mdtmp.tmpIsFilter=true;
 							server.currentFilter.add(mdtmp);
 						}else{
-							server.md.add(mdtmp);
+							md.add(mdtmp);
 						}
 						//if(mdtmp._Dictionary_fName.equals(opt.getLastMdFn()))
 						//	adapter_idx = md.size();
 					} catch (Exception e) {
 						cc++;
-						CMN.Log(e);
+						CMN.Log(line, e);
 					}
 				}
 				in.close();
@@ -1174,9 +1222,14 @@ public class PlainDictionaryPcJFX extends Application {
 			currentDictionary = md.get(0);
 	}
 
+	private mdict new_mdict(String line, PlainDictAppOptions opt) throws IOException {
+		if(com.knziha.plod.dictionary.mdict.mobiReg.matcher(line).find())
+			return new MobiBook(new File(line), opt);
+		return new mdict(new File(line), opt);
+	}
 
 
-	public MdictServer server;
+	public MdictServerOyster server;
 	public static class AdvancedSearchLogicLayer extends com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer {
 		final Tab chiefAmbassador;
 		final Text statusBar;
@@ -1215,18 +1268,28 @@ public class PlainDictionaryPcJFX extends Application {
 		}
 
 		@Override
+		public boolean getEnableFanjnConversion() {
+			return false;
+		}
+
+		@Override
 		public Pattern getBakedPattern() {
 			return null;
 		}
 
 		@Override
-		public void bakePattern(String currentSearchText) {
+		public String getPagePattern() {
+			return null;
+		}
+
+		@Override
+		public void setCurrentPhrase(String currentPhrase) {
 
 		}
 
 		@Override
-		public String getBakedPatternStr() {
-			return null;
+		public int getSearchType() {
+			return 0;
 		}
 
 		ObservableListmy adapter;

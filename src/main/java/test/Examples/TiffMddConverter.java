@@ -15,6 +15,8 @@ import test.CMN;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 
 /** test.privateTest.tiff is small but unsupported by most browsers. */
@@ -104,7 +106,7 @@ public class TiffMddConverter {
 	}
 
 
-	static void UnpackMdd(String startPath, mdictRes mdd, boolean overWrite) throws IOException {
+	public static void UnpackMdd(String startPath, mdictRes mdd, boolean overWrite) throws IOException {
 		final String SepWindows = "\\";
 		File spf=new File(startPath);
 		spf.mkdirs();
@@ -125,17 +127,23 @@ public class TiffMddConverter {
 		}
 	}
 
-	interface ProcessAllFilesLogicLayer{
+	public interface ProcessAllFilesLogicLayer{
 		void process(File fI);
 	}
 
-	static void ProcessAllFiles(File startPath, ProcessAllFilesLogicLayer processor) throws IOException {
+	public static void ProcessAllFiles(File startPath, ProcessAllFilesLogicLayer processor) throws IOException {
+		ProcessAllFiles(startPath, null, processor);
+	}
+
+	public static void ProcessAllFiles(File startPath, HashSet<String> exemption, ProcessAllFilesLogicLayer processor) throws IOException {
 		int foldeNum = 0;
 		int fileNum = 0, folderNum = 0;
+		int baseLen=startPath.getAbsolutePath().length()+1;
 		if (startPath.exists()) {
 			LinkedList<File> list = new LinkedList<>();
 			File[] files = startPath.listFiles();
 			for (File fI : files) {
+				if(exemption==null || !exemption.contains(fI.getAbsolutePath().substring(baseLen)))
 				if (fI.isDirectory()) {
 					list.add(fI);
 					foldeNum++;
@@ -150,6 +158,7 @@ public class TiffMddConverter {
 				temp_file = list.removeFirst();
 				files = temp_file.listFiles();
 				for (File fI : files) {
+					if(exemption==null || !exemption.contains(fI.getAbsolutePath().substring(baseLen)))
 					if (fI.isDirectory()) {
 						list.add(fI);
 						folderNum++;

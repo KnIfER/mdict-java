@@ -363,7 +363,7 @@ public class SettingsDialog extends javafx.stage.Stage implements ChangeListener
 			);
 			File f=null;
 			f=val==null?null:(f=new File(val)).isDirectory()?f:f.getParentFile();
-			if(f==null || !f.exists()) f=new File(opt.projectPath);
+			if(f==null || !f.exists()) f=opt.projectPath;
 			fileChooser.setInitialDirectory(f);
 			File file = fileChooser.showOpenDialog(getScene().getWindow());
 			if(file!=null)

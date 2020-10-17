@@ -14,7 +14,10 @@ import java.util.concurrent.Executors;
  */
 public class RBTree_additive {
 
-    private RBTNode<additiveMyCpr1> mRoot;public RBTNode<additiveMyCpr1> getRoot(){return mRoot;}
+    private RBTNode<additiveMyCpr1> mRoot;
+    public boolean bUniqueVals;
+
+    public RBTNode<additiveMyCpr1> getRoot(){return mRoot;}
     
     private static final boolean RED   = false;
     private static final boolean BLACK = true;
@@ -128,20 +131,19 @@ public class RBTree_additive {
      ///情况二///cur///情况一/
     private RBTNode<additiveMyCpr1> downwardNeighbour(RBTNode<additiveMyCpr1> du,additiveMyCpr1 val) {
         int cmp;
-        RBTNode<additiveMyCpr1> x = du;
-        RBTNode<additiveMyCpr1> tmpnode = null;
+		RBTNode<additiveMyCpr1> tmpnode;
         
-        if (x==null)
+        if (du ==null)
             return null;
 
-        cmp = val.compareTo(x.key);
+        cmp = val.compareTo(du.key);
         if (cmp < 0)//情况一
-            return downwardNeighbour(x.left, val);
+            return downwardNeighbour(du.left, val);
         else// if (cmp >= 0)//情况二
         	{
-        	if(x.right==null ) return x;
-        	tmpnode = downwardNeighbour(x.right, val);
-        	if (tmpnode==null) return x;
+        	if(du.right==null ) return du;
+        	tmpnode = downwardNeighbour(du.right, val);
+        	if (tmpnode==null) return du;
         	else return tmpnode;
         	}
     }
@@ -154,20 +156,19 @@ public class RBTree_additive {
      ///情况一////cur///////情况二//
     private RBTNode<additiveMyCpr1> upwardNeighbour(RBTNode<additiveMyCpr1> du,additiveMyCpr1 val) {
         int cmp;
-        RBTNode<additiveMyCpr1> x = du;
-        RBTNode<additiveMyCpr1> tmpnode = null;
+		RBTNode<additiveMyCpr1> tmpnode;
         
-        if (x==null)
+        if (du ==null)
             return null;
 
-        cmp = val.compareTo(x.key); 
+        cmp = val.compareTo(du.key);
         if (cmp > 0)//情况一
-            return upwardNeighbour(x.right, val);
+            return upwardNeighbour(du.right, val);
         else// if (cmp =< 0)//情况二
         	{
-        	if(x.left==null ) return x;
-        	tmpnode = upwardNeighbour(x.left, val);
-        	if (tmpnode==null) return x;
+        	if(du.left==null ) return du;
+        	tmpnode = upwardNeighbour(du.left, val);
+        	if (tmpnode==null) return du;
         	else return tmpnode;
         	}
     }  
@@ -218,6 +219,29 @@ public class RBTree_additive {
             return search(x.right, key);
         else
             return x;
+    }
+
+    /*
+     * (递归实现)查找"红黑树x"中键值为key的节点
+     */
+    private RBTNode<additiveMyCpr1> searchByString(RBTNode<additiveMyCpr1> x, String key) {
+        if (x==null)
+            return x;
+
+        int cmp = key.compareToIgnoreCase(x.key.key);
+        if (cmp < 0)
+            return searchByString(x.left, key);
+        else if (cmp > 0)
+            return searchByString(x.right, key);
+        else
+            return x;
+    }
+
+    /*
+     * (递归实现)查找"红黑树x"中键值为key的节点
+     */
+	public RBTNode<additiveMyCpr1> searchByString(String key) {
+		return searchByString(mRoot, key);
     }
 
     public RBTNode<additiveMyCpr1> search(additiveMyCpr1 key) {
@@ -542,7 +566,7 @@ public class RBTree_additive {
 			}
     	});
     }
-    public void insert(String key,int...val) {
+    public void insert(String key,Object...val) {
         int cmp;
         //key=key.toLowerCase().replaceAll(replaceReg,emptyStr);
         RBTNode<additiveMyCpr1> y = null;
@@ -559,13 +583,15 @@ public class RBTree_additive {
             else if(cmp > 0)
                 x = x.right;
             else{//key 相等，value数组叠加
-        		for(int i:val) ((ArrayList<Integer>) x.key.value).add(i);
+                ArrayList vals = ((ArrayList) x.key.value);
+        		for(Object i:val) if(!bUniqueVals||!vals.contains(i)) vals.add(i);
             	return;//here
             }
         }
 
-        additiveMyCpr1 node_key = new additiveMyCpr1(key,new ArrayList<Integer>());
-        for(int i:val) ((ArrayList<Integer>) node_key.value).add(i);//here
+        additiveMyCpr1 node_key = new additiveMyCpr1(key,new ArrayList());
+        ArrayList vals = ((ArrayList) node_key.value);
+        for(Object i:val) if(!bUniqueVals||!vals.contains(i))vals.add(i);//here
         RBTNode<additiveMyCpr1> node = new RBTNode<additiveMyCpr1>(node_key,BLACK,null,null,null);
 
         // 如果新建结点失败，则返回。

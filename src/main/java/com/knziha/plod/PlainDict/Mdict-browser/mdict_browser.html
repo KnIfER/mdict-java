@@ -673,8 +673,8 @@
 				rePopulateByData(MultiSearchResult);
 			}
 			else if(currentDict){//请求数据
-				$("#jsonid").load("/MdbRGetEntries/"+encodeURIComponent(currentDict)+"/"+pos+"/"+capacity,
-					function(data){ rePopulateByData(data.split('\n')); }
+				$("#jsonid").load("/MdbRGetEntries/"+encodeURIComponent(currentDict.name)+"/"+pos+"/"+capacity,
+					function(data){rePopulateByData(data.split('\n'));}
 				);
 			}
 			else{//demo items
@@ -718,6 +718,13 @@
 					item.id = pos+i;
 					item.onclick = p;
 					item.innerText = isCombinedView?data[pos+i].split("\r")[0]:data[i];
+					if(!isCombinedView && currentDict.VI){
+						var lid=item.innerText.lastIndexOf(":");
+						if(lid) try{
+							item.VI=parseInt(item.innerText.substring(lid+1));
+							item.innerText = item.innerText.substring(0, lid);
+						}catch(e){}
+					}
 					item.style.display='block';
 					if(lastSelection==item.id){
 						lastTarget = item;
@@ -777,12 +784,6 @@
 		function ClearAllPages(){
 			iframes.length=0;
 			HlightIdx=0;
-			if(defP.hasChildNodes()) {
-				var childs = defP.childNodes, ln = childs.length;
-				for (var i = 0; i < ln; i++) {
-					defP.removeChild(childs[0]);
-				}
-			}
 		}
 		
 		function p(e){//列表点击
@@ -795,7 +796,7 @@
 			lastTarget.style.setProperty("background-color",AC);
 			var logicalPos=lastTarget.id;
 			lastSelection=logicalPos;
-			onItemClick(logicalPos);
+			onItemClick(logicalPos, e.target.VI);
 		}
 		
 		function EnterContent(newPos){
@@ -804,14 +805,15 @@
 			enter=0;
 		}
 		
-		function onItemClick(logicalPos){
+		function onItemClick(logicalPos, VI){
 			//一框一典多释义并列
 			var contents;
 			ClearAllPages();
 			if(isMultiSearchView()){
 				processContents(contents=MultiSearchResult[logicalPos]);
 			}else if(currentDict){
-				processContent(contents=lastDingX+"@"+logicalPos);
+				contents=lastDingX+"@"+(VI!=undefined?VI:logicalPos);
+				processContent(contents, lastDingX, logicalPos);
 			}
 			history.pushState(null,null,'READ.jsp?FL='+flag+'&DX='+lastDingX+'&POS='+pos+'&AT='+lastSelection+'&CT='+encodeURIComponent(contents));
 			if(app && contents){
@@ -823,41 +825,98 @@
 			where 0@1@2 means contents at position entry#( 1 and 2 ) of dict#( 0 ) */
 		function processContents(e){
 			var arr = e.split("\r")[1].split("&");
+			var childs = defP.childNodes, ln = childs?childs.length:0;
+			for (var i = 0; i < ln; i++) {
+				childs[i].rendering=0;
+			}
 			for (var i = 0; i < arr.length; i++) {
 				var currentDing=parseInt(arr[i].split("")[0]);
-				var title = document.createElement('div');
-				title.innerHTML=currentDicts[currentDing];
-				title.className='cp3';
-				title.onclick=p3;
-				title.onselectstart=function(){return false;};
-				defP.appendChild(title);
+				var CDI=currentDicts[currentDing];
 				
-				var item = document.createElement('iframe');
-				item.id='md_'+(item.frameAt=currentDing);
-				item.src="\\content\\"+arr[i];
-				item.innerHTML=arr[i];
-				item.width="100%";
-				item.frameBorder=0;
+				var item;
+				if(!CDI.item){
+					CDI.item=document.createElement('iframe');
+					item=CDI.item;
+					item.id='md_'+(item.frameAt=lastDingX);
+					item.width="100%";
+					item.frameBorder=0;
+					item.className='contents';
+				}
+				item=CDI.item;
 				item.height=100;
-				item.className='contents';
 				item.scrollExpandAll=true;
-				defP.appendChild(item);
+				item.rendering=true;
+				
+				// 不移不改，缺一不可
+				if(!item.parentNode || !CDI.title.parentNode){
+					if(!CDI.title){
+						CDI.title = document.createElement('div');
+						CDI.title.innerHTML=CDI.name;
+						CDI.title.className='cp3';
+						CDI.title.onclick=p3;
+						CDI.title.onselectstart=function(){return false;};
+					}
+					defP.appendChild(CDI.title);
+					defP.appendChild(item);
+				}
+				CDI.title.rendering=true;
+				e=arr[i];
+				if(CDI.VI){
+					e=e.substring(0, e.indexOf(":"));
+				}
+				if(item.innerHTML!=e){
+					item.innerHTML=e;
+					item.src="\\content\\"+arr[i];
+				}
+				
+
 				item.contentWindow.frameAt=i;
 				iframes.push(item);
 			}
+			childs = defP.childNodes, ln = childs?childs.length:0;
+			for (var i = ln-1; i >=0 ; i--) {
+				if(!childs[i].rendering){
+					defP.removeChild(childs[i]);
+				}
+			}
 		}
 
-		function processContent(e){
-			var item = document.createElement('iframe');
-			item.id='md_'+(item.frameAt=lastDingX);
-			item.innerHTML=e;
-			item.src="\\content\\"+item.innerHTML;
-			item.width="100%";
+		function processContent(e, DX, LP){
+			var item;
+			if(!currentDict.item){
+				currentDict.item=document.createElement('iframe');
+				item=currentDict.item;
+				item.id='md_'+(item.frameAt=lastDingX);
+				item.width="100%";
+				item.frameBorder=0;
+				item.className='contents';
+			}
+			item=currentDict.item;
 			item.height="100%";
-			item.className='contents';
-			item.frameBorder=0;
-			defP.appendChild(item);
+			item.scrollExpandAll=0;
+			if(defP.hasChildNodes()) {
+				var childs = defP.childNodes, ln = childs.length;
+				for (var i = 0; i < ln; i++) {
+					if(childs[0]!=item) defP.removeChild(childs[0]);
+				}
+			}
+			// 不移不改，缺一不可
+			if(!item.parentNode)defP.appendChild(item);
+			if(item.innerHTML!=e){
+				item.innerHTML=e;
+				item.src="\\content\\"+item.innerHTML+(currentDict.VI?(":"+LP):"");
+			}
+			else if(currentDict.VI){
+				//console.log("VIVIVI");
+				//var fv=arr[1];
+				//item.contentWindow._onloadchecks=[];
+				//item.contentWindow._onloadchecks.push(function(){loadVI(fv);});
+				if(item.contentWindow.loadVI){
+					item.contentWindow.loadVI(LP);
+				}
+			}
 			item.contentWindow.frameAt=0;
+			item.contentWindow.framed=1;
 			iframes.push(item);
 		}
 		
@@ -893,7 +952,7 @@
 					}
 					if(currentDict.OldSel){
 						lastSelection_ = currentDict.OldSel;
-						currentDict.renderDef(currentDict.OldSel)
+						//currentDict.renderDef(currentDict.OldSel)
 					} else $(".def").html("");
 					
 					if(currentDict.OldPos)
@@ -902,8 +961,8 @@
 	
 					if(pengDingPos!=-1)
 						pos = pengDingPos;
-					setListSize(currentDict);
-					$("#fileName").html(currentDict);
+					setListSize(currentDict.name);
+					$("#fileName").html(currentDict.name);
 				}
 			}
 			try{
@@ -934,7 +993,7 @@
 			tmpText = document.getElementById("tmpText");
 			toastHolder = document.getElementById("toastview");
 			aboutPage = document.getElementById("about");
-			rePopulate();
+			//rePopulate();
 			seekBarmy = new Seekbar.Seekbar({
 					renderTo: "#seekbar_container",
 					minValue: 0, maxValue: 255,
@@ -1232,11 +1291,25 @@
 				if(data){
 					currentDicts.length=0;
 					dictsP.innerHTML="";
-					var e = [];
+					var e = [], argSep;
 					e.id=lastDingX;
 					var arr=data.split('\n');
 					for(var i=0;i<arr.length;i++){
-						currentDicts.push(arr[i]);
+						argSep=arr[i].indexOf(':');
+						console.log(argSep);
+						console.log(arr[i].substring(0, argSep));
+						var CDI={};
+						if(argSep>=0){
+							CDI.name=arr[i].substring(0, argSep);
+							var args = arr[i].substring(argSep+1).split('&');
+							args.forEach(function(item, index){
+								if(item=='VI')
+									CDI.VI=1;
+							});
+						}else{
+							CDI.name=arr[i];
+						}
+						currentDicts.push(CDI);
 						var item = document.createElement('p');
 						var itemi = document.createElement('span');
 						itemi.style.setProperty("background-color","#4296FA");
@@ -1244,7 +1317,7 @@
 						itemi.id=item.id=i;
 						item.className="cp2";
 						item.onclick=itemi.onclick = p2;
-						itemi.innerText = arr[i];
+						itemi.innerText = CDI.name;
 						itemi.cover=1;
 						item.cover=1;
 	
@@ -1255,6 +1328,7 @@
 					p2(e);
 					if(postInit)
 						postInit();
+					rePopulate();
 				}
 			});
 		}
@@ -1358,7 +1432,7 @@
 			var tp=$(aboutP)[0];
 			if(tp.style.display!='block')
 				tp=0;
-			toast(tp,currentDicts[idx]+" 已重载!", 0, 1000);
+			toast(tp,currentDicts[idx].name+" 已重载!", 0, 1000);
 		}
 		function closeAbout(){
 			$('#aboutP')[0].style.display="none";

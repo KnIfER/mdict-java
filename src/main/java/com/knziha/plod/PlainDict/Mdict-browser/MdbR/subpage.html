@@ -21,19 +21,45 @@ mark.current {
 if(window.addEventListener){
 	window.addEventListener('load',wrappedOnLoadFunc,false);
 	window.addEventListener('click',wrappedClickFunc);
+	window.addEventListener('mousedown',wrappedMouseDown);
 }else if(window.attachEvent){ //ie
 	window.addEventListener('onload',wrappedOnLoadFunc);
 	window.addEventListener('onclick',wrappedClickFunc);
+	window.addEventListener('onmousedown',wrappedMouseDown);
 }else{
 	window.onload=wrappedOnLoadFunction;
 	window.onclick=wrappedClickFunc;
+	window.onmousedown=wrappedMouseDown;
 }
 function wrappedOnLoadFunc(){
 	console.log('mdpage loaded');
 	//document.body.style.fontSize=35+'px';
 	highlight(null);
+	//console.log('frameAt !! '+frameAt);
+	if(_onloadchecks && _onloadchecks.length)
+	for(var i=0;i<_onloadchecks.length;i++){
+		_onloadchecks[i]();
+	}
 }
 
+function loadVI(pos){
+	//111
+	console.log('hi !! loadVI/'+pos);
+	var req=new XMLHttpRequest();
+	req.open('POST','VI/'+pos);
+	req.responseType='text';
+	req.onreadystatechange=function(e) {
+		if(req.readyState == 4 && req.status==200) {
+			console.log(req.responseText);
+			var vc = JSON.parse(req.responseText);
+			if(vc.JS){
+				eval(vc.JS)
+			}
+		}
+	};
+	req.send(null);
+}
+var _onloadchecks;
 var frameAt;
 var audio;
 var regHttp=new RegExp("^https?://");
@@ -52,16 +78,70 @@ function hiPlaySound(e){
 	audio.play();
 }
 
-function wrappedClickFunc(e){
-	parent.window.dismiss_menu();
+function wrappedMouseDown(e){
+	//console.log(e);
 	var cur=e.srcElement;
-	parent.dismiss_menu();
+	if(cur.href && (e.button==1||e.button==0)) {
+		console.log("01! found link : "+cur.href+" : "+regSound.test(cur.href));
+		var getRawLink=cur.href;
+		var patt1 = /\/base\/[0-9]*\/(#.*)/;
+		var m = getRawLink.match(patt1);
+		if(m && m[0].length>0){
+			console.log(m[1]);
+			getRawLink=m[1];
+			console.log(window.location.href);
+			cur.href=window.location.href+getRawLink;
+			return false;
+		}
+		if(regEntry.test(cur.href)){
+			cur.href=/* "entry/"+ */cur.href.substring(8);
+			console.log(111);
+		}else if(regSound.test(cur.href)){/*拦截 sound 连接*/
+			var link=/* "sound/"+ */cur.href.substring(8);
+			cur.href=link;
+			if(cur.onclick==undefined){
+				//console.log("1! found internal sound link : "+cur.href);
+				cur.ur1=cur.href;
+				cur.removeAttribute("href");
+				cur.onclick=hiPlaySound;
+				hiPlaySound(cur)
+				return false;
+			}
+		}
+		else if(parent.app && regHttp.test(cur.href)){/*拦截 http*/
+			parent.app.handleWebLink(cur.href);
+			return false;
+		}
+		else if(parent.app && regPdf.test(cur.href)){/*拦截 pdf*/
+			parent.app.handlePdfLink(cur.href);
+			return false;
+		}
+		return true;/*连接通行！*/
+	}
+}
+function wrappedClickFunc(e){
+	//if(1)return;
+	//parent.window.dismiss_menu();
+	//parent.dismiss_menu();
+	var cur=e.srcElement;
+	if(0)
 	if(cur.href){
-		//console.log("1! found link : "+cur.href+" : "+regSound.test(cur.href));
-		if(regEntry.test(cur.href))
+		console.log("1! found link : "+cur.href+" : "+regSound.test(cur.href));
+		var getRawLink=cur.href;
+		var patt1 = /\/base\/[0-9]*\/(#.*)/;
+		var m = getRawLink.match(patt1);
+		if(m && m[0].length>0){
+			console.log(m[1]);
+			getRawLink=m[1];
+			console.log(window.location.href);
+			cur.href=window.location.href+getRawLink;
+			return false;
+		}
+		if(regEntry.test(cur.href)){
 			cur.href="entry/"+cur.href.substring(8);
-		else if(regSound.test(cur.href)){/*拦截 sound 连接*/
-			var link="sound/"+cur.href.substring(8);
+			console.log(111);
+		}else if(regSound.test(cur.href)){/*拦截 sound 连接*/
+			var link=/* "sound/"+ */cur.href.substring(8);
 			cur.href=link;
 			if(cur.onclick==undefined){
 				//console.log("1! found internal sound link : "+cur.href);
@@ -86,43 +166,113 @@ function wrappedClickFunc(e){
 		console.log("2! found link : "+cur.src);
 		return false;
 	}
-	if(e.srcElement!=document.documentElement){ // immunize blank area out of body ( in html )
+	else if(e.srcElement!=document.documentElement && e.srcElement.nodeName!='INPUT'){ // immunize blank area out of body ( in html )
 		//console.log(e.srcElement+'')
-		//console.log(e)
+		//console.log(e);
 		var s = window.getSelection();
 		if(s.isCollapsed && s.anchorNode){ // don't bother with user selection
 			s.modify('extend', 'forward', 'word'); // first attempt
+			//if(1) return;
 			var an=s.anchorNode;
-			//console.log(s.anchorNode); console.log(s);
-			//if(true) return;
-			
+			//console.log(s.anchorNode); console.log(s);  console.log(s.getRangeAt(0)); console.log(s+'');
+			fixPdfForword(s);
 			if(s.baseNode != document.body) {// immunize blank area
-				var text=s.toString(); // for word made up of just one character
-				var range = s.getRangeAt(0);
-				
-				s.collapseToStart();
-				s.modify('extend', 'forward', 'lineboundary');
-				
-				if(s.toString().length>=text.length){
-					s.empty();
-					s.addRange(range);
-					
-					s.modify('move', 'backward', 'word'); // could be next line
-					s.modify('extend', 'forward', 'word');
-					
-					if(s.getRangeAt(0).endContainer===range.endContainer&&s.getRangeAt(0).endOffset===range.endOffset){
-						// 字未央
-						text=s.toString();
+				var scer=s.getRangeAt(0);
+				if(scer.startOffset==0){
+					scer=scer.startContainer;
+					if(scer.nodeType==3){
+						scer=scer.parentNode;
 					}
-					
-					console.log(text); // final output
+					if(scer.previousSibling==null){
+						console.log(e.clientX-scer.offsetLeft, e.clientY-scer.offsetTop);
+						if(Math.abs(e.clientX-scer.offsetLeft)>50||Math.abs(e.clientY-scer.offsetTop)>50){
+							s.empty();
+							scer=null;
+						}
+					}
+				}
+				if(scer){
+					scer=0;
+					var text=s.toString(); // for word made up of just one character
+					if(text.length>0){
+						var re=/[\u4e00-\u9fa5]/g;
+						tillNext=text;
+						if(re.test(text.trim())){
+							scer=1;
+						}else{
+							var range = s.getRangeAt(0);  // first attempt, forward range
+							//console.log(range);
+							var lb='lineboundary';
+							s.collapseToStart();
+							s.modify('extend', 'forward', lb);
+							tillNextLine=s.toString();
+							var eN='word';
+							var eB='word';
+							if(tillNextLine.trim()!="") {
+								s.collapseToStart();
+								s.modify('extend', 'backward', 'word');
+								tillNext=s.toString();
+								s.collapseToEnd();
+								s.modify('extend', 'backward', lb);
+								tillNextLine=s.toString();
+								
+								// !!!  !!! sometime in the pdf
+								// a lot of tags till be wrongly treated as in one line.
+								if(tillNextLine.length<tillNext.length){
+									var code=tillNextLine.charAt(0);
+									if(code.toUpperCase()===code && code.toLowerCase!=code) eB=lb;
+								}
+							
+								s.empty(); s.addRange(range);
+								s.collapseToStart();
+								
+								
+								s.modify('move', 'backward', eB);
+								
+								s.modify('extend', 'forward', 'word');
+								tillNext=s.toString();
+								s.collapseToStart();
+								s.modify('extend', 'forward', lb);
+								tillNextLine=s.toString();
+								
+								// !!!  !!! sometime in the pdf
+								// a lot of tags till be wrongly treated as in one line.
+								if(tillNextLine.length<tillNext.length){
+									var code=tillNext.charAt(tillNextLine.length);
+									if(code.toUpperCase()==code && code.toLowerCase()!=code) eN=lb;
+								}
+								s.collapseToStart();
+								
+								s.modify('extend', 'forward', eN);
+								
+								text=s.toString();
+								scer=1;
+							}
+						}
+						if(scer){
+							console.log(text); // final output
+						}
+					}
 				}
 			}
-			s.empty();
+			//s.empty();
 		}
 	}
-	return true;
+	return false;
 };
+
+function fixPdfForword(s){
+	var r = s.getRangeAt(0);
+	if(r.startContainer!=r.endContainer){
+		r.setEndAfter(r.startContainer);
+	}
+}
+function fixPdfBackword(s){
+	var r = s.getRangeAt(0);
+	if(r.startContainer!=r.endContainer){
+		r.setStartBefore(r.endContainer);
+	}
+}
 
 /*!!!高亮开始*/
 var bOnceHighlighted;

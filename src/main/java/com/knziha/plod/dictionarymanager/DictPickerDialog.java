@@ -24,6 +24,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import test.CMN;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -72,7 +73,7 @@ public class DictPickerDialog extends Stage {
 		tv1.getColumns().add(createCol(tv1, "配置", propertyMapper_FilePath, -1, null));
 		tv2.getColumns().add(createCol(tv2, "词典", mdict::getFileNameProperty, -1, null));
 		tv1.getItems().addAll(_sets);
-		tv2.getItems().addAll(md=app.server.md);
+		tv2.getItems().addAll(md=app.md);
 		for(mdict mdTmp:md){
 			mdict_cache.put(mdTmp.getPath(), mdTmp);
 		}
@@ -111,7 +112,7 @@ public class DictPickerDialog extends Stage {
 			tv1.getItems().clear();
 			tv1.getItems().addAll(_sets);
 			tv2.getItems().clear();
-			tv2.getItems().addAll(md=app.server.md);
+			tv2.getItems().addAll(md=app.md);
 			for(mdict mdTmp:md){
 				mdict_cache.put(mdTmp.getPath(), mdTmp);
 			}
@@ -219,10 +220,15 @@ public class DictPickerDialog extends Stage {
 					if(!PlainDictionaryPcJFX.windowPath.matcher(line).matches() && !line.startsWith("/"))
 						line=opt.GetLastMdlibPath()+File.separator+line;
 					if(!disabled){
-						mdict mdTmp = mdict_cache.get(line);
-						if(mdTmp==null)
-							mdTmp=new mdict(line, opt);
-						((mdTmp.tmpIsFilter=isFilter)?currentFilter:md).add(mdTmp);
+						try {
+							mdict mdTmp = mdict_cache.get(line);
+							if(mdTmp==null)
+								mdTmp=new mdict(new File(line), opt);
+							((mdTmp.tmpIsFilter=isFilter)?currentFilter:md).add(mdTmp);
+						} catch (IOException e) {
+							e.printStackTrace();
+							CMN.Log(line, "加载失败");
+						}
 					}
 					idx++;
 				}

@@ -10,9 +10,9 @@ public class ArrayListTree<T extends Comparable<T>> implements InOrderTodoAble {
 	//wonderful!
 	
 	protected final ArrayList<T> data;
-	
-	
-	ArrayListTree(){
+
+
+	public ArrayListTree(){
 		data = new  ArrayList<>();
 	}
 	
@@ -82,14 +82,14 @@ public class ArrayListTree<T extends Comparable<T>> implements InOrderTodoAble {
 		return cc;
 	}
 
-	public Integer size() {
+	public int size() {
 		return data.size();
 	}
 
 	public void add(T val) {
 		data.add(val);
 	}
-	
-	
-	
+
+
+
 }

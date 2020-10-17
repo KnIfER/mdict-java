@@ -12,7 +12,6 @@ import java.util.List;
 
 //common
 public class CMN{
-    public static String UniversalObject;
 	public static void show(String val){System.out.println(val);}
     public final static String replaceReg = " |:|\\.|,|-|\'";
     public final static String emptyStr = "";
@@ -103,6 +102,10 @@ public class CMN{
         CMN.Log(args,(System.currentTimeMillis()-stst));
     }
 
+    public static void pt_mins(String...args) {
+        CMN.Log(args,((System.currentTimeMillis()-stst)/1000.f/60)+"m");
+    }
+
     public static HashSet<String> AdaptivelyGetAllLines(String path, HashSet<String> proessed) {
         if(proessed==null) proessed=new HashSet<>();
         try {
@@ -159,4 +162,7 @@ public class CMN{
     }
 
 
+    public static void inline(Object val) {
+        System.out.print(val+", ");
+    }
 }

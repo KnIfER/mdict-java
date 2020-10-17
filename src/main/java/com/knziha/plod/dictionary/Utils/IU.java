@@ -1,5 +1,6 @@
 package com.knziha.plod.dictionary.Utils;
 
+import java.io.IOException;
 import java.util.regex.Pattern;
 
 public class IU {
@@ -138,10 +139,10 @@ the valueOf method.
             return phrase.compareTo(numOrder[start])==0?start:-1;
         }
     }
-    static final Pattern hanziDelimeter = Pattern.compile("[十|百|千|万]",Pattern.DOTALL);
-    public static final Pattern hanshuzi = Pattern.compile("[一七三两九二五八六四零十百千万]{1,}",Pattern.DOTALL);
-    public static final Pattern shuzi = Pattern.compile("[0-9]{1,}",Pattern.DOTALL);
-    static final Pattern supportedHanShuZi = Pattern.compile("[十|百|千|万]",Pattern.DOTALL);
+    static final Pattern hanziDelimeter = Pattern.compile("[十百千万]",Pattern.DOTALL);
+    public static final Pattern hanshuzi = Pattern.compile("[一七三两九二五八六四零十百千万]+",Pattern.DOTALL);
+    public static final Pattern shuzi = Pattern.compile("[0-9]+",Pattern.DOTALL);
+    static final Pattern supportedHanShuZi = Pattern.compile("[十百千万]",Pattern.DOTALL);
     static final String[] numOrder = {"一","七","三","两","九","二","五","八","六","四","零"};
     static final int[] Numbers = {1,7,3,2,9,2,5,8,6,4,0};
     static final int[] Levels = {1,10,100,1000,10000};
@@ -187,5 +188,49 @@ the valueOf method.
         return ret;
     }
 
-
+	/**
+	 * 把阿拉伯数字转换为罗马数字
+	 *
+	 * @param number
+	 * @return
+	 */
+	public static String a2r(int number) {
+		String rNumber = "";
+		int[] aArray = { 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1 };
+		String[] rArray = { "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X",
+				"IX", "V", "IV", "I" };
+		if (number < 1 || number > 3999) {
+			rNumber = "0x"+Integer.toHexString(number);
+		} else {
+			for (int i = 0; i < aArray.length; i++) {
+				while (number >= aArray[i]) {
+					rNumber += rArray[i];
+					number -= aArray[i];
+				}
+			}
+		}
+		return rNumber;
+	}
+	
+	public static long readLong(byte[] readBuffer, int start) {
+		return  (((long)readBuffer[start+0] << 56) +
+				((long)(readBuffer[start+1] & 255) << 48) +
+				((long)(readBuffer[start+2] & 255) << 40) +
+				((long)(readBuffer[start+3] & 255) << 32) +
+				((long)(readBuffer[start+4] & 255) << 24) +
+					  ((readBuffer[start+5] & 255) << 16) +
+					  ((readBuffer[start+6] & 255) <<  8) +
+					  ((readBuffer[start+7] & 255) <<  0));
+	}
+	
+	public static final void writeLong(byte[] writeBuffer, int pad, long v) {
+		writeBuffer[pad+0] = (byte)(v >>> 56);
+		writeBuffer[pad+1] = (byte)(v >>> 48);
+		writeBuffer[pad+2] = (byte)(v >>> 40);
+		writeBuffer[pad+3] = (byte)(v >>> 32);
+		writeBuffer[pad+4] = (byte)(v >>> 24);
+		writeBuffer[pad+5] = (byte)(v >>> 16);
+		writeBuffer[pad+6] = (byte)(v >>>  8);
+		writeBuffer[pad+7] = (byte)(v >>>  0);
+	}
 }
