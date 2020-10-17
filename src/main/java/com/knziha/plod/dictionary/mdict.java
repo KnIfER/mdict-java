@@ -2167,7 +2167,8 @@ public class mdict extends mdBase{
 							int len = matcher[j][k].length;
 							int[] jumpMap = (int[]) mParallelKeys.get(len);
 							try_idx = flowerIndexOf(key_block, key_start_index+_number_width, key_end_index-(key_start_index+_number_width), matcher[j][k], 0, 0, SearchLauncher, flag, mParallelKeys, jumpMap);
-							//SU.Log("and_group>>"+j, "or_group#"+k, try_idx, nna);
+							//SU.Log("and_group>>"+j, "or_group#"+k, try_idx);
+							//BU.printBytes3(matcher[j][k]);
 							if (try_idx < 0 ^ (jumpMap[len] & 4) == 0) break;
 						}
 						if (try_idx < 0) {
@@ -2179,7 +2180,7 @@ public class mdict extends mdBase{
 				}
 
 				if(try_idx!=-1){
-					//复核 re-collate
+					//SU.Log("复核 re-collate");
 					if(false)
 					if (keyPattern != null){
 						String LexicalEntry = new String(key_block, key_start_index + _number_width, key_end_index - (key_start_index + _number_width), _charset);
@@ -2504,7 +2505,7 @@ public class mdict extends mdBase{
 	}
 
 	static boolean bingStartWith(byte[] source, int sourceOffset, int sourceCount,byte[] target, int targetOffset, int targetCount, int fromIndex) {
-		if (fromIndex >= sourceCount || targetCount+fromIndex >= sourceCount) { // || targetCount+fromIndex>=sourceCount || fromIndex>=sourceCount
+		if (fromIndex >= sourceCount || targetCount+fromIndex > sourceCount) { // || targetCount+fromIndex>=sourceCount || fromIndex>=sourceCount
 			return false;
 		}
 		//if(targetCount<=-1)
