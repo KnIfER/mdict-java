@@ -19,6 +19,9 @@ package com.knziha.plod.dictionary;
 
 import com.knziha.plod.dictionary.Utils.*;
 import com.knziha.rbtree.RBTree;
+import io.airlift.compress.zstd.ZstdDecompressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
 import org.anarres.lzo.*;
 
 import java.io.*;
@@ -506,6 +509,11 @@ public abstract class mdBase {
 					key_block_info = zlib_decompress(key_block_info_compressed,8);
 					BlockLen=key_block_info.length;
 				break;
+//				case 3:
+//					key_block_info = new byte[BlockLen];
+//					ZstdDecompressor zstdDecompressor = new ZstdDecompressor();
+//					zstdDecompressor.decompress(key_block_info_compressed, 8, key_block_info_compressed.length-8, key_block_info, 0, BlockLen);
+//				break;
 			}
 			//assert(adler32 == (BU.calcChecksum(key_block_info) ));
 			//ripemd128.printBytes(key_block_info,0, key_block_info.length);
@@ -784,6 +792,17 @@ public abstract class mdBase {
 					//SU.Log(e);
 				}
 			break;
+			case 3:
+				RinfoI_cache.record_block_ = new byte[decompressed_size];
+				ZstdDecompressor zstdDecompressor = new ZstdDecompressor();
+				zstdDecompressor.decompress(record_block_compressed, 8, compressed_size-8, RinfoI_cache.record_block_, 0, decompressed_size);
+			break;
+			case 4:
+				RinfoI_cache.record_block_ = new byte[decompressed_size];
+				LZ4Factory factory = LZ4Factory.fastestInstance();
+				LZ4FastDecompressor decompressor = factory.fastDecompressor();
+				decompressor.decompress(record_block_compressed, 8, RinfoI_cache.record_block_, 0, decompressed_size);
+			break;
 		}
 
 
@@ -897,6 +916,8 @@ public abstract class mdBase {
 
 	static class cached_key_block{
 		byte[][] keys;
+		byte[] raw_keys;
+		int[] raw_keys_splits;
 		long[] key_offsets;
 		byte[] hearderText=null;
 		byte[] tailerKeyText=null;
@@ -956,8 +977,19 @@ public abstract class mdBase {
 					Inflater inf = new Inflater();
 					inf.setInput(_key_block_compressed, +8,(int)(compressedSize-8));
 					try {
-						int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
+						int ret = inf.inflate(key_block,0,BlockLen);
 					} catch (DataFormatException e) {e.printStackTrace();}
+				break;
+				case 3:
+					key_block = new byte[BlockLen];
+					ZstdDecompressor zstdDecompressor = new ZstdDecompressor();
+					zstdDecompressor.decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block, 0, BlockLen);
+				break;
+				case 4:
+					key_block = new byte[BlockLen];
+					LZ4Factory factory = LZ4Factory.fastestInstance();
+					LZ4FastDecompressor decompressor = factory.fastDecompressor();
+					decompressor.decompress(_key_block_compressed, 8, key_block, 0, BlockLen);
 				break;
 			}
 			/*spliting current Key block*/
