@@ -6,12 +6,12 @@ import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionaryBuilder.ArrayListTree;
 import com.knziha.plod.dictionaryBuilder.mdictBuilder;
 import javafx.util.Pair;
-import org.adrianwalker.multilinestring.Multiline;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.knziha.metaline.Metaline;
 import test.CMN;
 
 import java.io.File;
@@ -129,7 +129,7 @@ public class Rebuild_jianming {
 		font-style:italic;
 	}</style>
 	 */
-	@Multiline
+	@Metaline
 	static final String styles="ST";
     static int d=0;
     public static void main(String[] args) throws IOException{
@@ -190,7 +190,8 @@ public class Rebuild_jianming {
 			EI = BU.fileToString(path+i, buffer, bos, _charset);
 			doc = Jsoup.parseBodyFragment(EI);
 			for (String aClass : classes) {
-				doc.getElementsByClass(aClass).tagName("div");
+				//doc.getElementsByClass(aClass).tagName("div");
+				throw new RuntimeException();
 			}
 			doc.getElementsByClass("entryNum").remove();
 			doc.getElementsByClass("DC").remove();
