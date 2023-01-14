@@ -141,7 +141,7 @@ public class BuildWebx {
 		
 		HashSet<String> 检查 = new HashSet<>();
 		
-		HashSet<String> files = new HashSet<>() {};
+		HashSet<String> files = new HashSet<>();
 		ArrayList<File> filesArr = new ArrayList<File>() {};
 		files.add("supportedLanguages");
 		files.add("cleardot.gif");
@@ -179,7 +179,7 @@ public class BuildWebx {
 								Pattern p = Pattern.compile("<script>(.*?)</script>");
 								if (string.contains("<script>")) {
 									Matcher m = p.matcher(string);
-									StringBuilder sb = new StringBuilder(string.length());
+									StringBuffer sb = new StringBuffer(string.length());
 									while (m.find()) {
 										String js = m.group(1);
 										js = compileJs(js, n, key);

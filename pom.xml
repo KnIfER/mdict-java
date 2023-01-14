@@ -4,10 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>11</maven.compiler.release>
-        <javafx.version>16</javafx.version>
-        <javafx.maven.plugin.version>0.0.6</javafx.maven.plugin.version>
+<!--        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>-->
+<!--        <maven.compiler.release>11</maven.compiler.release>-->
+<!--        <javafx.version>16</javafx.version>-->
+<!--        <javafx.maven.plugin.version>0.0.6</javafx.maven.plugin.version>-->
         <lucent.ver>4.7.0</lucent.ver>
 <!--        <maven.compiler.source>8</maven.compiler.source>-->
 <!--        <maven.compiler.target>8</maven.compiler.target>-->
@@ -25,23 +25,6 @@
                 <version>3.8.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
-<!--                    <source>9</source>-->
-<!--                    <target>9</target>-->
-<!--                    <fork>true</fork>-->
-<!--                    <compilerArgs>-->
-<!--                        <arg>-Xlint:all</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>-->
-<!--                        <arg>-J&#45;&#45;add-opens=javafx.web/com.sun.webkit=ALL-UNNAMED</arg>-->
-<!--                    </compilerArgs>-->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.appxmod.metaline</groupId>
@@ -62,30 +45,6 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>-->
-
-            <plugin>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.8</version>
-                <executions>
-                    <execution>
-                        <!-- Default configuration for running with: mvn clean javafx:run -->
-                        <id>default-cli</id>
-                        <configuration>
-                            <mainClass>com.knziha.plod.PlainDict/com.knziha.plod.PlainDict.PlainDictionaryPcJFX</mainClass>
-                            <launcher>app</launcher>
-                            <jlinkZipName>app</jlinkZipName>
-                            <jlinkImageName>app</jlinkImageName>
-                            <noManPages>true</noManPages>
-                            <stripDebug>true</stripDebug>
-                            <noHeaderFiles>true</noHeaderFiles>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            
-            
-            
         </plugins>
 
 
@@ -105,24 +64,6 @@
     </build>
 
     <dependencies>
-
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>11.0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>11.0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-web</artifactId>
-            <version>11.0.2</version>
-        </dependency>
-
-        
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
