@@ -567,6 +567,14 @@ public class HTTPSession implements IHTTPSession {
         return this.parms;
     }
 
+    public final String getParameter(String key) {
+        List<String> ret = parms.get(key);
+        if (ret!=null && ret.size()>0) {
+            return ret.get(0);
+        }
+        return null;
+    }
+    
     @Override
     public String getQueryParameterString() {
         return this.queryParameterString;

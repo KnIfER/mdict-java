@@ -16,6 +16,10 @@
 */
 package com.knziha.plod.PlainDict;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.knziha.plod.PlainDict.db.FFDB;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.dictionary.mdBase;
@@ -23,12 +27,13 @@ import com.knziha.plod.dictionarymodels.mdict;
 import com.knziha.rbtree.RBTree_additive;
 import com.knziha.rbtree.additiveMyCpr1;
 
-import org.adrianwalker.multilinestring.Multiline;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
+import org.knziha.metaline.Metaline;
 import org.nanohttpd.protocols.http.IHTTPSession;
 import org.nanohttpd.protocols.http.NanoHTTPD;
+import org.nanohttpd.protocols.http.request.Method;
 import org.nanohttpd.protocols.http.response.Response;
 import org.nanohttpd.protocols.http.response.Status;
 import org.xiph.speex.ByteArrayRandomOutputStream;
@@ -37,10 +42,7 @@ import test.CMN;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -180,6 +182,10 @@ public abstract class MdictServer extends NanoHTTPD {
 		
 
 		String[] list = null;
+
+		if(key.equals("\\DB.jsp")) {
+			return FFDB.handleRequest(session);
+		}
 		
 		/* block::internal */
 		if(key.equals("\\dicts.json")) {
@@ -413,6 +419,9 @@ public abstract class MdictServer extends NanoHTTPD {
 				key = key.substring(0, key.length()-5);
 				EntrySchema = "application/x-javascript";
 				isEntryPage = true;
+				if(key.equals("update")) {
+					return newFixedLengthResponse(Status.OK, "text/plain", mdTmp.checkForUpdate()?"update":"");
+				}
 			}
 			
 			if(isEntryPage) {
@@ -733,12 +742,12 @@ public abstract class MdictServer extends NanoHTTPD {
 	 </script>
 
 	 <base href='/base/*/
-	@Multiline(trim = false)
-	String SimplestInjection=StringUtils.EMPTY;
+	@Metaline(trim = false)
+	public static String SimplestInjection="ERROR!!!";
 	/** /'/>
 	 <base target="_self" />
 	 */
-	@Multiline(trim=false)
+	@Metaline(trim=false)
 	String SimplestInjectionEnd=StringUtils.EMPTY;
 
 	int MdPageBaseLen=-1;
@@ -830,7 +839,7 @@ public abstract class MdictServer extends NanoHTTPD {
 			return MdPageBuilder.toString();
 		}
 	}
-	Response emptyResponse = newFixedLengthResponse(Status.NOT_FOUND,"*/*", "");
+	public static Response emptyResponse = newFixedLengthResponse(Status.NOT_FOUND,"*/*", "");
 	
 	/**<html lang="en" style="">
 <head>
@@ -909,7 +918,7 @@ center {
 <center>-&nbsp;平典服务器 2020/07/03&nbsp;-</center>
 </body></html>
 	 */
-	@Multiline
+	@Metaline
 	byte[] baseGuildResponseByteArr = ArrayUtils.EMPTY_BYTE_ARRAY;
 	
 	interface OnMirrorRequestListener{
@@ -961,6 +970,7 @@ center {
 		if(true || baseHtml==null) {//rrr
 			try {
 				SU.Log("iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii");
+				SU.Log(MdictServer.SimplestInjection);
 				InputStream fin = OpenMdbResourceByName("\\mdict_browser.html");
 				byte[] data = new byte[fin.available()];
 				fin.read(data);
