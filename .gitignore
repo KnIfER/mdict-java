@@ -1,0 +1,21 @@
+epublib
+epubtools
+
+/bin/
+/.settings/
+/.classpath
+/.project
+**/.idea/
+**/META-INF/
+**/out/
+**/target/
+**/elonen/
+**/privateTest/
+*.rar
+*.zip
+*.iml
+#git rm FILE --cached
+MIJI
+*.log
+src/test/resources/1000.txt
+src/test/resources/greek-earthquakes-1964-2000.txt.gz
