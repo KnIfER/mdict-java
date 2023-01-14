@@ -7,6 +7,8 @@ import org.joni.Option;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,6 +22,8 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 	static{
 		System.setProperty("file.encoding", "UTF-8");
 	}
+	List<Long> fileTimeRecords;
+	
 	public boolean tmpIsFilter;
 	protected PlainDictAppOptions opt;
 	//构造
@@ -97,6 +101,29 @@ public class mdict extends com.knziha.plod.dictionary.mdict {
 			out.write(getRecordsAt(position).getBytes(_charset));
 			out.close();
 		}
+	}
+	
+	public boolean checkForUpdate() {
+		boolean ret=false;
+		if(ftd!=null) {
+			if(fileTimeRecords==null||fileTimeRecords.size()!=ftd.size()) {
+				fileTimeRecords = new ArrayList<>();
+				for (File f:ftd) {
+					fileTimeRecords.add(f.lastModified());
+				}
+			} else {
+				int cc=0;
+				for (File f:ftd) {
+					long l = f.lastModified();
+					if(l != fileTimeRecords.get(cc)) {
+						fileTimeRecords.set(cc, l);
+						ret = true;
+					}
+					cc++;
+				}
+			}
+		}
+		return ret;
 	}
 
 	@Override

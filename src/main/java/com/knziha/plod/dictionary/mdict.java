@@ -21,7 +21,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.knziha.plod.dictionary.Utils.*;
 import com.knziha.rbtree.RBTree_additive;
 
-import org.adrianwalker.multilinestring.Multiline;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 import org.apache.commons.text.StringEscapeUtils;
@@ -69,6 +68,7 @@ import org.jcodings.specific.Windows_31JEncoding;
 import org.joni.Option;
 import org.joni.Regex;
 import org.joni.exception.SyntaxException;
+import org.knziha.metaline.Metaline;
 import test.CMN;
 
 import java.io.BufferedReader;
@@ -129,6 +129,9 @@ public class mdict extends mdBase{
 	//public int KeycaseStrategy=0;//0:global 1:Java API 2:classical
 	public int getCaseStrategy(){
 		return 0;
+	}
+	public boolean getKeyCaseSensitive(){
+		return isKeyCaseSensitive;
 	}
 	public void setCaseStrategy(int val){
 	}
@@ -649,7 +652,7 @@ public class mdict extends mdBase{
 	}
 	</style>
 	 */
-	@Multiline
+	@Metaline
 	String logicalPageHeader="SUBPAGE";
 
 	/** Construct Logical Page For mdd resource file. */

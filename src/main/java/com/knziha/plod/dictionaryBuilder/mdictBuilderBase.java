@@ -1,9 +1,13 @@
 package com.knziha.plod.dictionaryBuilder;
 
+import com.github.luben.zstd.Zstd;
 import com.knziha.plod.dictionary.Utils.*;
 import com.knziha.plod.dictionaryBuilder.Utils.ByteDataOutputStream;
 import com.knziha.rbtree.InOrderTodoAble;
 import com.knziha.rbtree.myAbsCprKey;
+import io.airlift.compress.zstd.ZstdCompressor;
+//import net.jpountz.lz4.LZ4Compressor;
+//import net.jpountz.lz4.LZ4Factory;
 import org.anarres.lzo.LzoCompressor1x_1;
 import org.anarres.lzo.lzo_uintp;
 import test.CMN;
@@ -34,6 +38,8 @@ abstract class mdictBuilderBase {
 
 	public InOrderTodoAble data_tree;
 	public HashMap<myAbsCprKey,File> fileTree = new HashMap<>();
+	/** hard_coded record index */
+	public HashMap<myAbsCprKey,myCpr<Long, Long>> indexTree = new HashMap<>();
 
 	public HashMap<String,ArrayList<mdictBuilder.myCprKey>> bookTree = new HashMap<>();
 	public IntervalTree privateZone;
@@ -64,11 +70,14 @@ abstract class mdictBuilderBase {
 	}
 
 	int [] offsets;
+	int [] offsets1;
 	//ArrayList<byte[]> values;
 	ArrayList<myAbsCprKey> keys=new ArrayList<>();
 	//Integer[] blockDataInfo_L;
 	Integer[] blockInfo_L;
 
+	private int zstdLevel = 7;
+	
 	int RecordBlockZipLevel=-1;
 	byte[] mContentDelimiter;
 	protected long WriteOffset;
@@ -95,12 +104,12 @@ abstract class mdictBuilderBase {
 		setCompressionType(val, val);
 	}
 
-	/** 0=no compression; 1=lzo; 2=zip */
+	/** 0=no compression; 1=lzo; 2=zip; 3=zstd */
 	public void setCompressionType(int keyBlock, int recordBlock) {
-		if(keyBlock>=0&&keyBlock<=2){
+		if(keyBlock>=0&&keyBlock<=4){
 			keyblockCompressionType=keyBlock;
 		}
-		if(recordBlock>=0&&recordBlock<=2){
+		if(recordBlock>=0&&recordBlock<=4){
 			recordblockCompressionType=recordBlock;
 		}
 	}
@@ -247,6 +256,26 @@ abstract class mdictBuilderBase {
 				fOut.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
 				fOut.write(baos.toByteArray());
 			}
+			else if(CompressionType==3) {
+				fOut.write(new byte[]{3,0,0,0});
+				ZstdCompressor zstdCompressor = new ZstdCompressor();
+				int maxCompressedLen = zstdCompressor.maxCompressedLength((int) RinfoI.decompressed_size);
+				byte[] buffer = new byte[maxCompressedLen];
+				//RinfoI.compressed_size = zstdCompressor.compress(data_raw_out, 0, (int) RinfoI.decompressed_size, buffer, 0, maxCompressedLen);
+				RinfoI.compressed_size = Zstd.compressByteArray(buffer, 0, maxCompressedLen, data_raw_out, 0, (int) RinfoI.decompressed_size, zstdLevel, false);
+				fOut.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
+				fOut.write(buffer, 0, (int) RinfoI.compressed_size);
+			}
+			else if(CompressionType==4) {//lz4
+//				fOut.write(new byte[]{4,0,0,0});
+//				LZ4Factory factory = LZ4Factory.fastestInstance();
+//				LZ4Compressor compressor = factory.highCompressor(1);
+//				int maxCompressedLen = compressor.maxCompressedLength((int) RinfoI.decompressed_size);
+//				byte[] buffer = new byte[maxCompressedLen];
+//				RinfoI.compressed_size = compressor.compress(data_raw_out, 0, (int) RinfoI.decompressed_size, buffer, 0, maxCompressedLen);
+//				fOut.writeInt(BU.calcChecksum(data_raw_out,0,(int) RinfoI.decompressed_size));
+//				fOut.write(buffer, 0, (int) RinfoI.compressed_size);
+			}
 			baseCounter+=blockInfo_L_I;
 			eu_RecordblockInfo.add(RinfoI);
 		}
@@ -386,8 +415,23 @@ abstract class mdictBuilderBase {
 		offsets = new int[(int) _num_entries];
 		//values = valslist;
 		//keys = keyslist.toArray(new myAbsCprKey[] {});
+		
+		boolean hasHardcodedKeyId = indexTree.size()>0;
 
 		//todo::more precise estimate
+
+		if(hasHardcodedKeyId) {
+			if(offsets1==null) offsets1 = new int[(int) _num_entries];
+			while(counter>0) {
+				myAbsCprKey keyNode = keys.get((int) (_num_entries-counter));
+				myCpr<Long, Long> keyid = indexTree.get(keyNode);
+				if(keyid!=null) {
+					offsets[(int) (_num_entries-counter)] = Math.toIntExact(keyid.key);
+					offsets1[(int) (_num_entries-counter)] = Math.toIntExact(keyid.value);
+				}
+				counter-=1;
+			}
+		} else 
 		if(fOutTmp!=null){
 			ArrayList<Integer> blockInfo = new ArrayList<>((int)(_num_entries/5));// number of bytes of all rec-blocks
 			ArrayList<Integer> blockDataInfo = new ArrayList<>((int)(_num_entries/5));// number of entries of all rec-blocks
@@ -407,7 +451,7 @@ abstract class mdictBuilderBase {
 						byte[] record_data = keyNode.getBinVals();
 						recordLen = record_data.length;
 						preJudge = blockDataInfo.get(idx)+recordLen;
-					}else {
+					} else {
 						/* fetching record data from file */
 						File inhtml = fileTree.get(keyNode);
 						CMN.Log(inhtml, keyNode);
@@ -446,7 +490,8 @@ abstract class mdictBuilderBase {
 
 			//blockDataInfo_L = blockDataInfo.toArray(new Integer[] {});
 			blockInfo_L = blockInfo.toArray(new Integer[] {});
-		}
+		} 
+		
 
 		CMN.pt_mins("splitKeys record 分组耗时"); CMN.rt();
 
@@ -471,6 +516,7 @@ abstract class mdictBuilderBase {
 				for(int i=interval.key;i<=interval.value;i++) {
 					//CMN.show("putting!.."+(_num_entries-counter));
 					key_block_data_wrap.putLong(offsets[i]);//占位 offsets i.e. keyid
+					if(hasHardcodedKeyId) key_block_data_wrap.putLong(offsets1[i]);
 					myAbsCprKey keyNode = keys.get(i);
 					key_block_data_wrap.put(keyNode.key.getBytes(_charset));
 					//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
@@ -496,6 +542,7 @@ abstract class mdictBuilderBase {
 					try {//必定抛出，除非最后一个block.
 						if(privateZone!=null && privateZone.container((int) (_num_entries-counter))!=null) throw new BufferOverflowException();
 						key_block_data_wrap.putLong(offsets[(int) (_num_entries-counter)]);//占位 offsets i.e. keyid
+						if(hasHardcodedKeyId) key_block_data_wrap.putLong(offsets1[(int) (_num_entries-counter)]);
 						myAbsCprKey keyNode = keys.get((int) (_num_entries-counter));
 						key_block_data_wrap.put(keyNode.key.getBytes(_charset));
 						//CMN.show(number_entries_counter+":"+keyslist.get((int) (_num_entries-counter)));
@@ -568,6 +615,31 @@ abstract class mdictBuilderBase {
 					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,in_len));
 					fOutTmp.write(baos.toByteArray());
 				}
+			}
+			else if(CompressionType==3) {//zstd
+				ZstdCompressor zstdCompressor = new ZstdCompressor();
+				int maxCompressedLen = zstdCompressor.maxCompressedLength(in_len);
+				byte[] buffer = new byte[maxCompressedLen];
+				//infoI.key_block_compressed_size = zstdCompressor.compress(key_block_data, 0, in_len, buffer, 0, maxCompressedLen);
+				infoI.key_block_compressed_size = Zstd.compressByteArray(buffer, 0, maxCompressedLen, key_block_data, 0, in_len, zstdLevel, false);
+				if(fOutTmp!=null){
+					fOutTmp.write(new byte[]{3,0,0,0});
+					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,in_len));
+					fOutTmp.write(buffer, 0, (int) infoI.key_block_compressed_size);
+				}
+			}
+			else if(CompressionType==4) {//lz4
+//				// compress data
+//				LZ4Factory factory = LZ4Factory.fastestInstance();
+//				LZ4Compressor compressor = factory.fastCompressor();
+//				int maxCompressedLen = compressor.maxCompressedLength(in_len);
+//				byte[] buffer = new byte[maxCompressedLen];
+//				infoI.key_block_compressed_size = compressor.compress(key_block_data, 0, in_len, buffer, 0, maxCompressedLen);
+//				if(fOutTmp!=null){
+//					fOutTmp.write(new byte[]{4,0,0,0});
+//					fOutTmp.writeInt(BU.calcChecksum(key_block_data,0,in_len));
+//					fOutTmp.write(buffer, 0, (int) infoI.key_block_compressed_size);
+//				}
 			}
 
 			//CMN.show("infoI key_block_data raw");

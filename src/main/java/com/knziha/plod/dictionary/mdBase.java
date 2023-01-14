@@ -20,9 +20,8 @@ package com.knziha.plod.dictionary;
 import com.knziha.plod.dictionary.Utils.*;
 import com.knziha.rbtree.RBTree;
 import io.airlift.compress.zstd.ZstdDecompressor;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
 import org.anarres.lzo.*;
+import test.CMN;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -799,9 +798,9 @@ public abstract class mdBase {
 			break;
 			case 4:
 				RinfoI_cache.record_block_ = new byte[decompressed_size];
-				LZ4Factory factory = LZ4Factory.fastestInstance();
-				LZ4FastDecompressor decompressor = factory.fastDecompressor();
-				decompressor.decompress(record_block_compressed, 8, RinfoI_cache.record_block_, 0, decompressed_size);
+//				LZ4Factory factory = LZ4Factory.fastestInstance();
+//				LZ4FastDecompressor decompressor = factory.fastDecompressor();
+//				decompressor.decompress(record_block_compressed, 8, RinfoI_cache.record_block_, 0, decompressed_size);
 			break;
 		}
 
@@ -843,6 +842,10 @@ public abstract class mdBase {
 		cached_rec_block RinfoI_cache = prepareRecordBlock(RinfoI,Rinfo_id);
 
 		// split record block according to the offset info from key block
+		for (int j = 0; j < infoI_cache.key_offsets.length; j++) {
+			CMN.Log(infoI_cache.key_offsets[j]);
+		}
+		SU.Log(rec_decompressed_size);
 		long record_start = infoI_cache.key_offsets[i]-RinfoI.decompressed_size_accumulator;
 		long record_end;
 		if (i < infoI.num_entries-1){
@@ -857,6 +860,7 @@ public abstract class mdBase {
 		}
 		retriever.ral=(int)record_start+RinfoI_cache.blockOff;
 		retriever.val=(int)record_end+RinfoI_cache.blockOff;
+		SU.Log("getRecordData::", record_start, record_end, RinfoI.decompressed_size_accumulator);
 		/* May have resource reroute target */
 		if(compareByteArrayIsPara(RinfoI_cache.record_block_, retriever.ral, linkRenderByt)){
 			int length = (int) (record_end-record_start-linkRenderByt.length);
@@ -987,9 +991,9 @@ public abstract class mdBase {
 				break;
 				case 4:
 					key_block = new byte[BlockLen];
-					LZ4Factory factory = LZ4Factory.fastestInstance();
-					LZ4FastDecompressor decompressor = factory.fastDecompressor();
-					decompressor.decompress(_key_block_compressed, 8, key_block, 0, BlockLen);
+//					LZ4Factory factory = LZ4Factory.fastestInstance();
+//					LZ4FastDecompressor decompressor = factory.fastDecompressor();
+//					decompressor.decompress(_key_block_compressed, 8, key_block, 0, BlockLen);
 				break;
 			}
 			/*spliting current Key block*/

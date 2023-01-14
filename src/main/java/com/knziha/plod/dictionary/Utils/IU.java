@@ -232,5 +232,61 @@ the valueOf method.
 		writeBuffer[pad+5] = (byte)(v >>> 16);
 		writeBuffer[pad+6] = (byte)(v >>>  8);
 		writeBuffer[pad+7] = (byte)(v >>>  0);
+	}	/** 将数字转为62进制。小端，个位数在前。 */
+	public static StringBuilder NumberToText_SIXTWO_LE(long number, StringBuilder sb)
+	{
+		//CMN.debug("NumberToText_SIXTWO_LE::", number);
+		final char[] NumberToText_SIXTWO_ARR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
+		final int scale = 62;
+		if(sb==null) sb = new StringBuilder(12);
+		if(number==0) {
+			sb.append("0");
+			return sb;
+		}
+		boolean negative=number<0;
+		if(negative) number=-number;
+		if(number<0) {
+			sb.append("8m85Y0n8LzA~");
+			return sb;
+		}
+		//SU.Log("NumberToText_SIXTWO_LE", number, -(number+1));
+		long remainder;
+		while (number != 0) {
+			remainder = number % scale;
+			sb.append(NumberToText_SIXTWO_ARR[(int) remainder]);
+			number = number / scale;
+		}
+		if(negative) sb.append('~');
+		return sb;
+	}
+
+	/** 62进制字符串转为数字。小端，个位数在前。 */
+	public static long TextToNumber_SIXTWO_LE(CharSequence text)
+	{
+		//CMN.debug("TextToNumber_SIXTWO_LE::", text);
+		if("8m85Y0n8LzA~".contentEquals(text)) return Long.MIN_VALUE;
+		final int scale = 62;
+		long num = 0;
+		int len=text.length(),i=len-1;
+		if(len>0) {
+			boolean negative=text.charAt(i)=='~';
+			if(negative) i--;
+			int index;
+			char c;
+			for(; i >= 0; i--)
+			{
+				c = text.charAt(i);
+				if(c>='A'&&c<='Z') {
+					index = c-'A'+10;
+				} else if(c>='a'&&c<='z'){
+					index = c-'a'+36;
+				} else {
+					index = (c-'0')%10;
+				}
+				num += (long)(index * (Math.pow(scale, i)));
+			}
+			if(negative) num=-num;
+		}
+		return num;
 	}
 }

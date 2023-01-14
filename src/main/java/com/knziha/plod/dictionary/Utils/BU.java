@@ -21,6 +21,8 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.Adler32;
+import java.util.zip.DeflaterInputStream;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterOutputStream;
 
 
@@ -46,6 +48,21 @@ public class  BU{//byteUtils
 	    try {
 			    ByteArrayOutputStream out = new ByteArrayOutputStream();
 			    InflaterOutputStream inf = new InflaterOutputStream(out); 
+				if(ln==-1) ln = encdata.length - offset;
+			    inf.write(encdata,offset, ln); 
+			    inf.close(); 
+			    return out.toByteArray(); 
+		    } catch (Exception ex) {
+		    	ex.printStackTrace(); 
+		    	return "ERR".getBytes(); 
+		    }
+    }
+    @Deprecated
+    public static byte[] zlib_compress(byte[] encdata,int offset,int ln) {
+	    try {
+			    ByteArrayOutputStream out = new ByteArrayOutputStream();
+			    DeflaterOutputStream inf = new DeflaterOutputStream(out); 
+				if(ln==-1) ln = encdata.length - offset;
 			    inf.write(encdata,offset, ln); 
 			    inf.close(); 
 			    return out.toByteArray(); 
@@ -74,12 +91,54 @@ public class  BU{//byteUtils
         }   
         return values;  
      } 
+    public static long toLongLE(byte[] buffer,int offset) {   
+        long  values = 0;   
+        for (int i = 7; i >= 0; i--) {    
+            values <<= 8; values|= (buffer[offset+i] & 0xff);   
+        }   
+        return values;  
+     } 
     public static int toInt(byte[] buffer,int offset) {   
         int  values = 0;   
         for (int i = 0; i < 4; i++) {    
             values <<= 8; values|= (buffer[offset+i] & 0xff);   
         }   
         return values;  
+     }     
+     
+    public static int toIntLE(byte[] buffer,int offset) {   
+        int  values = 0;   
+        for (int i = 3; i >= 0; i--) {    
+            values <<= 8; values|= (buffer[offset+i] & 0xff);   
+        }   
+        return values;  
+     }     
+    
+    public static short toShortLE(byte[] buffer,int offset) {   
+        short  values = 0;   
+        for (int i = 1; i >= 0; i--) {    
+            values <<= 8; values|= (buffer[offset+i] & 0xff);   
+        }   
+        return values;  
+     }   
+     
+    public static void putShortLE(byte[] buffer, int offset, short value) {   
+		buffer[offset] = (byte) (value&0xff);
+		buffer[offset+1] = (byte) (value>>8&0xff);
+     }     
+    
+    public static void putIntLE(byte[] buffer, int offset, int value) {   
+		buffer[offset] = (byte) (value&0xff);
+		buffer[offset+1] = (byte) (value>>8&0xff);
+		buffer[offset+2] = (byte) (value>>16&0xff);
+		buffer[offset+3] = (byte) (value>>24&0xff);
+     }     
+     
+    public static void putLongLE(byte[] buffer, int offset, long value) {
+		for (int i = 0; i < 8; i++) {
+			buffer[offset+i] = (byte) (value&0xff);
+			value>>=8;
+		}
      }     
     
     
@@ -278,7 +337,6 @@ public class  BU{//byteUtils
 		} catch (Exception ignored) {  }
 		return new String(bout.data(), 0, bout.size());
 	}
-
 
 	@Deprecated
     public long toLong1(byte[] b,int offset)

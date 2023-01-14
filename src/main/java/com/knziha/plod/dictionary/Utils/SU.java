@@ -72,7 +72,16 @@ public class  SU{
 			}
 		System.out.println(msg);
 	}
-	
+
+	public static String alter_file_suffix(String path, String h) {
+		int idx = path.indexOf(".");
+		if(idx>0) {
+			path = path.substring(0, idx);
+		}
+		path += h;
+		return path;
+	}
+
 	public boolean CharsequenceEqual(CharSequence cs1, CharSequence cs2) {
 		if(cs1!=null&&cs2!=null) {
 			int len1=cs1.length();
