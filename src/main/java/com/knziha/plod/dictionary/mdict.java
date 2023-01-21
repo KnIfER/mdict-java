@@ -71,13 +71,7 @@ import org.joni.exception.SyntaxException;
 import org.knziha.metaline.Metaline;
 import test.CMN;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
@@ -329,6 +323,19 @@ public class mdict extends mdBase{
 		if(virtualIndex!=null)
 			return virtualIndex.getEntryAt(position);
 		return super.getEntryAt(position);
+	}
+
+	public String test(int position) throws FileNotFoundException {
+		//Instantiating the PrintStream class
+		StringBuilder sb = new StringBuilder();
+		File file = new File("D:\\test.log");
+		PrintStream stream = new PrintStream(new FileOutputStream(file, true));
+		System.out.println("From now on "+file.getAbsolutePath()+" will be your console");
+		System.setOut(stream);
+		
+		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
+		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
+		return "123";
 	}
 
 	public int reduce_index2(byte[] phrase, int start, int end) {//via mdict-js
