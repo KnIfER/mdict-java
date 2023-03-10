@@ -69,7 +69,7 @@ import org.joni.Option;
 import org.joni.Regex;
 import org.joni.exception.SyntaxException;
 import org.knziha.metaline.Metaline;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.*;
 import java.nio.charset.Charset;

@@ -3,16 +3,14 @@ package test.Examples;
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.Utils.ReusableByteOutputStream;
 import com.knziha.plod.dictionary.mdict;
-import com.knziha.plod.dictionaryBuilder.ArrayListTree;
 import com.knziha.plod.dictionaryBuilder.mdictBuilder;
-import javafx.util.Pair;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.knziha.metaline.Metaline;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
-import static test.CMN.emptyStr;
+import static com.knziha.plod.plaindict.CMN.emptyStr;
 
 /**
  * TEsts

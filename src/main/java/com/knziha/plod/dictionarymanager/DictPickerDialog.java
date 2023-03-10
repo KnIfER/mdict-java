@@ -23,7 +23,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.BufferedReader;
 import java.io.File;

@@ -6,7 +6,6 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import test.CMN;
 
 public class DragResizeView extends Rectangle {
 	public ColumnConstraints col1;

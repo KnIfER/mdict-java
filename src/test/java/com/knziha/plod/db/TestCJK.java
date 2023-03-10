@@ -1,16 +1,9 @@
 package com.knziha.plod.db;
 
-import com.knziha.plod.dictionary.Utils.IU;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.HashMap;
-import java.util.zip.Deflater;
 
 public class TestCJK {
 	

@@ -10,7 +10,7 @@ import org.nanohttpd.protocols.http.IHTTPSession;
 import org.nanohttpd.protocols.http.request.Method;
 import org.nanohttpd.protocols.http.response.Response;
 import org.sqlite.SQLiteConfig;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 import test.privateTest.wget.WGet;
 import test.privateTest.wget.info.DownloadInfo;
 

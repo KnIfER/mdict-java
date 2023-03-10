@@ -18,9 +18,6 @@ package com.knziha.plod.db;
  */
 
 import java.io.IOException;
-import java.nio.CharBuffer;
-import java.util.AbstractList;
-import java.util.ArrayList;
 
 import com.ibm.icu.text.BreakIterator;
 import org.apache.lucene.analysis.TokenFilter;
@@ -32,7 +29,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.util.ArrayUtil;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 /**
  * Forms bigrams of CJK terms that are generated from StandardTokenizer

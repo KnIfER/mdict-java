@@ -1,13 +1,13 @@
-package com.knziha.plod.plaindict;
+package com.knziha.plod.dictionarymodels;
 
 import com.knziha.plod.dictionary.UniversalDictionaryInterface;
 import com.knziha.plod.dictionary.Utils.IU;
-import com.knziha.plod.dictionarymodels.DictionaryAdapter;
-import com.knziha.plod.dictionarymodels.PlainMdict;
+import com.knziha.plod.plaindict.PlainDictionary;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BookPresenter {
@@ -16,7 +16,7 @@ public class BookPresenter {
 	public final String idStr;
 	public final String idStr10;
 	public File placeHolder;
-	
+
 	private final DictionaryAdapter.PLAIN_BOOK_TYPE mType;
 	public /*final*/ UniversalDictionaryInterface bookImpl;
 
@@ -55,7 +55,7 @@ public class BookPresenter {
 		sb.setLength(0);
 		mBaseUrl = sb.append("http://mdbr.").append("d").append(idStr10).append("/base.html").toString();
 	}
-	
+
 	public final long getId() {
 		return bookImpl.getBooKID();
 	}
@@ -63,7 +63,7 @@ public class BookPresenter {
 	public int lookUp(String keyword) {
 		return bookImpl.lookUp(keyword);
 	}
-	
+
 	public static int hashCode(String toHash, int start) {
 		int h=0;
 		int len = toHash.length();
@@ -72,7 +72,7 @@ public class BookPresenter {
 		}
 		return h;
 	}
-	
+
 	public static UniversalDictionaryInterface getBookImpl(PlainDictionary THIS, File fullPath, int pseudoInit) throws IOException {
 		UniversalDictionaryInterface bookImpl = null;
 		String pathFull = fullPath.getPath();
@@ -105,7 +105,7 @@ public class BookPresenter {
 //					if (pathFull.startsWith("/ASSET"))
 //						bookImpl = new PlainMdictAsset(fullPath, pseudoInit&3, THIS==null?null:THIS.MainStringBuilder, THIS);
 //					else
-						bookImpl = new PlainMdict(fullPath, pseudoInit&3, null, null);
+					bookImpl = new PlainMdict(fullPath, pseudoInit&3, null, null);
 					break;
 //				case 117588:
 //					bookImpl = new PlainWeb(fullPath, THIS);
@@ -145,5 +145,34 @@ public class BookPresenter {
 	int getCount() {
 		return (int) bookImpl.getNumberEntries();
 	}
-	
+
+	public String getDictInfo(Object o) {
+	}
+
+	public String getDictionaryName() {
+	}
+
+	public boolean getIsWebx() {
+	}
+
+	public PlainWeb getWebx() {
+	}
+
+	public boolean isMergedBook() {
+	}
+
+	public boolean isHasExtStyle() {
+	}
+
+	public InputStream getDebuggingResource(String decoded) {
+	}
+
+	public String getPath() {
+	}
+
+	public void plugCssWithSameFileName(StringBuilder mdPageBuilder) {
+	}
+
+	public boolean padLeft() {
+	}
 }

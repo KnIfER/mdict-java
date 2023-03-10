@@ -1,7 +1,7 @@
 package com.knziha.plod.db;
 
 import com.knziha.plod.dictionary.Utils.IU;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

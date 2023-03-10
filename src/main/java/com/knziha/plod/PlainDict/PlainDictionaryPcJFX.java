@@ -42,7 +42,6 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import netscape.javascript.JSObject;
 import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
 //import static fi.iki.elonen.NanoHTTPD.newFixedLengthResponse;
-import test.CMN;
 
 import javax.swing.*;
 import javax.xml.bind.JAXBContext;

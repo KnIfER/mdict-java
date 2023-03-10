@@ -25,7 +25,7 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.awt.*;
 import java.io.*;

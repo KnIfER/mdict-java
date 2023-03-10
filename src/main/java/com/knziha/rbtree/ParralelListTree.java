@@ -2,7 +2,7 @@ package com.knziha.rbtree;
 
 import java.util.ArrayList;
 
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 public class ParralelListTree<T1 extends Comparable<T1>,T2 extends Comparable<T2>> {
 	//wonderful!

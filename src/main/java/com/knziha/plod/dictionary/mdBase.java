@@ -21,7 +21,7 @@ import com.knziha.plod.dictionary.Utils.*;
 import com.knziha.rbtree.RBTree;
 import io.airlift.compress.zstd.ZstdDecompressor;
 import org.anarres.lzo.*;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.*;
 import java.nio.ByteBuffer;

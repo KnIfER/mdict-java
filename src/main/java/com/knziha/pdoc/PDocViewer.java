@@ -1,8 +1,6 @@
 package com.knziha.pdoc;
 
 import com.knziha.plod.dictionary.Utils.*;
-import com.knziha.plod.dictionary.mdict;
-import test.CMN;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

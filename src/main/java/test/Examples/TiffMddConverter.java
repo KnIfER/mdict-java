@@ -11,7 +11,7 @@ import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.mdictRes;
 import com.knziha.plod.dictionaryBuilder.mdictBuilder;
 import com.knziha.plod.dictionaryBuilder.mdictResBuilder;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.awt.image.BufferedImage;
 import java.io.*;

@@ -3,9 +3,6 @@ package com.knziha.plod.db;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
-import org.apache.lucene.analysis.cjk.CJKAnalyzer;
-import org.apache.lucene.analysis.cjk.CJKTokenizer;
-import org.apache.lucene.analysis.cjk.CJKWidthFilter;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -34,7 +31,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.junit.jupiter.api.Test;
 import org.knziha.metaline.Metaline;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.File;
 import java.io.IOException;

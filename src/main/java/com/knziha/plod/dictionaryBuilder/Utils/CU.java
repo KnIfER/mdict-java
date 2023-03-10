@@ -1,10 +1,9 @@
 package com.knziha.plod.dictionaryBuilder.Utils;
 import java.io.IOException;
 import java.util.Random;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 public class  CU{//CharacterUtils
 	//static Pattern hanziDelimeter = Pattern.compile("[十|百|千|万]",Pattern.DOTALL);
 	static Pattern supportedHanShuZi = Pattern.compile("^[十 百 千 万 一 七 三 两 九 二 五 八 六 四 零]{1,}$",Pattern.DOTALL);

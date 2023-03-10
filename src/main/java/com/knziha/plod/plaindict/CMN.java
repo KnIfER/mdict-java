@@ -1,6 +1,4 @@
-package test;
-
-import com.knziha.plod.dictionaryBuilder.ArrayListTree;
+package com.knziha.plod.plaindict;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -166,7 +164,7 @@ public class CMN{
         System.out.print(val+", ");
     }
 
-    public static void debug(Exception e) {
+    public static void debug(Object... e) {
         CMN.Log(e);
     }
 

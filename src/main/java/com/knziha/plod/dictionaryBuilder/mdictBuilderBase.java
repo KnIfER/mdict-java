@@ -10,7 +10,7 @@ import io.airlift.compress.zstd.ZstdCompressor;
 //import net.jpountz.lz4.LZ4Factory;
 import org.anarres.lzo.LzoCompressor1x_1;
 import org.anarres.lzo.lzo_uintp;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.*;
 import java.nio.BufferOverflowException;

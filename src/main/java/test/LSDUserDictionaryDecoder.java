@@ -1,5 +1,6 @@
 package test;
 
+import com.knziha.plod.plaindict.CMN;
 import test.privateTest.BitsInputStream;
 
 import java.io.IOException;

@@ -1,5 +1,7 @@
 package test;
 
+import com.knziha.plod.plaindict.CMN;
+
 import java.io.*;
 
 public class BuilderTest2 {

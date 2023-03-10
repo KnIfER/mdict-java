@@ -1,7 +1,7 @@
 package com.knziha.plod.db;
 
 import com.knziha.plod.ebook.Utils.BU;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Random;

@@ -20,7 +20,6 @@ import com.knziha.plod.plaindict.utils.JAIConverter;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.mdict;
 import org.nanohttpd.protocols.http.IHTTPSession;
-import test.CMN;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

@@ -1,7 +1,7 @@
 package com.knziha.plod.plaindict.utils;
 
 import org.junit.Test;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 public class ColorUtils {
 

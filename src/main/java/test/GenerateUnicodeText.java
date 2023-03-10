@@ -1,10 +1,7 @@
 package test;
 
-import com.knziha.rbtree.ParralelListTree;
-import javafx.scene.control.MenuItem;
+import com.knziha.plod.plaindict.CMN;
 import org.apache.commons.text.StringEscapeUtils;
-
-import java.util.ArrayList;
 
 /**
  * 2019

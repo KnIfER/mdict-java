@@ -1,8 +1,6 @@
 package com.knziha.rbtree;
 
-import test.CMN;
-
-import java.util.ArrayList;
+import com.knziha.plod.plaindict.CMN;
 
 public class ParrallelCharMap {
 	//wonderful!

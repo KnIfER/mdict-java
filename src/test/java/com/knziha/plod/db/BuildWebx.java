@@ -9,7 +9,7 @@ import com.knziha.plod.dictionaryBuilder.mdictResBuilder;
 import com.knziha.plod.ebook.Utils.BU;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

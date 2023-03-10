@@ -4,7 +4,6 @@ import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.dictionary.mdict;
 import org.sqlite.SQLiteConfig;
-import test.CMN;
 
 import java.io.*;
 import java.sql.Connection;

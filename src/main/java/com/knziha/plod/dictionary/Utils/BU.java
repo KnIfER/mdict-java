@@ -205,6 +205,18 @@ public class  BU{//byteUtils
     		System.out.print("0x"+byteTo16(b[i])+",");
     	System.out.println();
     }
+	public static String StreamToString(InputStream input) throws IOException {
+		int bufferSize = 1024;
+		char[] buffer = new char[bufferSize];
+		StringBuilder out = new StringBuilder();
+		Reader in = new InputStreamReader(input, StandardCharsets.UTF_8);
+		for (int numRead; (numRead = in.read(buffer, 0, buffer.length)) > 0; ) {
+			out.append(buffer, 0, numRead);
+		}
+		input.close();
+		return out.toString();
+	}
+	
 	public static void printFile(byte[] b,int off,int ln,String path){
 		printFile(b, off, ln, new File(path));
 	}

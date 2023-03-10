@@ -1,13 +1,12 @@
 package test.Examples;
 
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionaryBuilder.mdictBuilder;
-import test.CMN;
+import com.knziha.plod.plaindict.CMN;
 
 /**
  * TEsts

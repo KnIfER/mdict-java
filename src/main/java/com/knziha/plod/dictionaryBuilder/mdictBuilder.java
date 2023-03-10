@@ -2,21 +2,18 @@ package com.knziha.plod.dictionaryBuilder;
 
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.mdict;
-import com.knziha.rbtree.RBTree;
-import com.knziha.rbtree.RBTree_duplicative;
 import com.knziha.rbtree.myAbsCprKey;
 import org.apache.commons.text.StringEscapeUtils;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
-import static test.CMN.emptyStr;
+import static com.knziha.plod.plaindict.CMN.emptyStr;
 
 /**
  * Author KnIfER
