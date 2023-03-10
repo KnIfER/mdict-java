@@ -165,4 +165,12 @@ public class CMN{
     public static void inline(Object val) {
         System.out.print(val+", ");
     }
+
+    public static void debug(Exception e) {
+        CMN.Log(e);
+    }
+
+    public static long now() {
+        return System.currentTimeMillis();
+    }
 }

@@ -33,6 +33,8 @@
 <!--                            <scope>provided</scope>-->
                         </path>
                     </annotationProcessorPaths>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <!--<plugin>
@@ -302,8 +304,13 @@
             <artifactId>ikanalyzer</artifactId>
             <version>2012_u6</version>
         </dependency>
+		<dependency>
+			<groupId>com.google.code.findbugs</groupId>
+			<artifactId>annotations</artifactId>
+			<version>1.3.9</version>
+		</dependency>
 
-    </dependencies>
+	</dependencies>
 
     <repositories>
         <repository>

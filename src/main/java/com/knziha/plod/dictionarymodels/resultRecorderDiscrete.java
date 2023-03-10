@@ -11,7 +11,7 @@ public abstract class resultRecorderDiscrete {
 	
 	public String getResAt(int pos) {return "";}
 
-	public abstract mdict getMdAt(int pos);
+	public abstract PlainMdict getMdAt(int pos);
 
 	public abstract int getIndexAt(int pos);
 

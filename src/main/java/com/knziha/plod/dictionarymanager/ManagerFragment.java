@@ -1,7 +1,7 @@
 package com.knziha.plod.dictionarymanager;
 
 import com.knziha.plod.PlainDict.*;
-import com.knziha.plod.dictionarymodels.mdict;
+import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.dictionarymodels.mdict_nonexist;
 import com.knziha.plod.dictionarymodels.mdict_preempter;
 import com.knziha.plod.widgets.DragSortTableView;
@@ -36,12 +36,12 @@ import java.util.function.Function;
 
 /** dictionary manager ui*/
 public class ManagerFragment extends VBox {
-	private final HashMap<String, mdict> mdict_cache;
+	private final HashMap<String, PlainMdict> mdict_cache;
 	private File lastOpenDir;
 	public HBox mainRegion;
 	public Region tableRegion;
 	public VBox toolsRegion;
-	public DragSortTableView<mdict> tableView;
+	public DragSortTableView<PlainMdict> tableView;
 	public HashSet<String> rejector = new HashSet<>();
 	PlainDictAppOptions opt;
 
@@ -91,15 +91,15 @@ public class ManagerFragment extends VBox {
 			id=id.substring(idx+3, id.indexOf(",",idx));
 			switch(id){
 				case disable:
-					ObservableList<mdict> selItems = tableView.getSelectionModel().getSelectedItems();
-					for(mdict mdTmp:selItems)
+					ObservableList<PlainMdict> selItems = tableView.getSelectionModel().getSelectedItems();
+					for(PlainMdict mdTmp:selItems)
 						rejector.add(mdTmp.getPath());
 					tableView.isDirty=true;
 					tableView.refresh();
 				break;
 				case enable:{
 					selItems = tableView.getSelectionModel().getSelectedItems();
-					for(mdict mdTmp:selItems)
+					for(PlainMdict mdTmp:selItems)
 						rejector.remove(mdTmp.getPath());
 					tableView.isDirty=true;
 					tableView.refresh();
@@ -108,7 +108,7 @@ public class ManagerFragment extends VBox {
 					selItems = tableView.getItems();
 					if(!tableView.contextMenuLauncher.isEmpty()){
 						int index=tableView.contextMenuLauncher.indexProperty().get();
-						mdict mdTmp = tableView.getItems().get(index);
+						PlainMdict mdTmp = tableView.getItems().get(index);
 						if(index<selItems.size()){
 							FileChooser fileChooser = new FileChooser();
 							fileChooser.getExtensionFilters().addAll(
@@ -163,7 +163,7 @@ public class ManagerFragment extends VBox {
 						if(index>selItems.size()) index=0;
 						boolean val=!selItems.get(index).tmpIsFilter;
 						selItems = tableView.getSelectionModel().getSelectedItems();
-						for(mdict mdTmp:selItems)
+						for(PlainMdict mdTmp:selItems)
 							mdTmp.tmpIsFilter=val;
 						tableView.isDirty=true;
 						tableView.refresh();
@@ -184,17 +184,17 @@ public class ManagerFragment extends VBox {
 		});
 		tableView.setItemContextMenu(contextMenu);
 		TableColumn col;
-        tableView.getColumns().add(col=createCol(bundle.getString("name"), mdict::getFileNameProperty, -1, null));
+        tableView.getColumns().add(col=createCol(bundle.getString("name"), PlainMdict::getFileNameProperty, -1, null));
         tableView.getColumns().add(createCol(bundle.getString("relpath"), propertyMapper_FilePath, -1, col.getCellFactory()));
-        tableView.getColumns().add(createCol(bundle.getString("filesize"), mdict::getFileSizeProperty, -1, null));
-        tableView.getColumns().add(createCol(bundle.getString("setasformation"), mdict::getFormationProperty, -1, null));
+        tableView.getColumns().add(createCol(bundle.getString("filesize"), PlainMdict::getFileSizeProperty, -1, null));
+        tableView.getColumns().add(createCol(bundle.getString("setasformation"), PlainMdict::getFormationProperty, -1, null));
         mdict_cache = new HashMap<>(server.a.md.size());
-        HashMap<String,mdict> filter_cache = new HashMap<>(server.currentFilter.size());
+        HashMap<String, PlainMdict> filter_cache = new HashMap<>(server.currentFilter.size());
 
-        for(mdict mdTmp:server.a.md) {
+        for(PlainMdict mdTmp:server.a.md) {
 			mdict_cache.put(mdTmp.getPath(),mdTmp);
 		}
-        for(mdict mdTmp:server.currentFilter) {
+        for(PlainMdict mdTmp:server.currentFilter) {
 			filter_cache.put(mdTmp.getPath(),mdTmp);
 		}
 		tableView.getItems().addAll(server.a.md);
@@ -204,7 +204,7 @@ public class ManagerFragment extends VBox {
 			BufferedReader in = new BufferedReader(new FileReader(def));
 	        String line;
 	        int idx=0;
-			ObservableList<mdict> mdModifying = tableView.getItems();
+			ObservableList<PlainMdict> mdModifying = tableView.getItems();
 			while((line = in.readLine())!=null){
         		if(line.length()>0){
 					boolean isFilter = false, disabled=false;
@@ -232,7 +232,7 @@ public class ManagerFragment extends VBox {
 						rejector.add(line);
 					}
 					if(!mdict_cache.containsKey(line)) {
-						mdict mdTmp=filter_cache.get(line);
+						PlainMdict mdTmp=filter_cache.get(line);
 						if(mdTmp==null)
 							mdTmp=new_mdict_prempter(line, isFilter);
 						mdModifying.add(Math.min(mdModifying.size(), idx), mdTmp);
@@ -271,7 +271,7 @@ public class ManagerFragment extends VBox {
 							new FileChooser.ExtensionFilter("mdict resource file", "*.mdd")
 					);
 					File startPath=null;
-					mdict mdTmp = tableView.getSelectionModel().getSelectedItem();
+					PlainMdict mdTmp = tableView.getSelectionModel().getSelectedItem();
 					if(mdTmp!=null)
 						startPath=mdTmp.f().getParentFile();
 					if(startPath==null || !startPath.exists())
@@ -281,7 +281,7 @@ public class ManagerFragment extends VBox {
 					fileChooser.setInitialDirectory(startPath);
 					List<File> files = fileChooser.showOpenMultipleDialog(getScene().getWindow());
 					if(files!=null){
-						ObservableList<mdict> mdModifying = tableView.getItems();
+						ObservableList<PlainMdict> mdModifying = tableView.getItems();
 						lastOpenDir = files.get(0).getParentFile();
 						for(File fI:files){
 							tableView.isDirty=true;
@@ -355,20 +355,20 @@ public class ManagerFragment extends VBox {
 				} break;
 				case s_disabled:{
 					//cannot detect ctrl-click
-					ObservableList<mdict> mdModifying = tableView.getItems();
+					ObservableList<PlainMdict> mdModifying = tableView.getItems();
 					tableView.getSelectionModel().clearSelection();
 					for(int i=0;i<mdModifying.size();i++){
-						mdict mdTmp = mdModifying.get(i);
+						PlainMdict mdTmp = mdModifying.get(i);
 						if(rejector.contains(mdTmp.getPath())){
 							tableView.getSelectionModel().select(i);
 						}
 					}
 				} break;
 				case s_invalid:{
-					ObservableList<mdict> mdModifying = tableView.getItems();
+					ObservableList<PlainMdict> mdModifying = tableView.getItems();
 					tableView.getSelectionModel().clearSelection();
 					for(int i=0;i<mdModifying.size();i++){
-						mdict mdTmp = mdModifying.get(i);
+						PlainMdict mdTmp = mdModifying.get(i);
 						if(mdTmp instanceof mdict_nonexist || !mdTmp.f().exists()){
 							tableView.getSelectionModel().select(i);
 						}
@@ -417,8 +417,8 @@ public class ManagerFragment extends VBox {
 		return btnTmp;
 	}
 
-	public static mdict new_mdict_prempter(String line, boolean isFilter) throws IOException {
-		mdict mdTmp;
+	public static PlainMdict new_mdict_prempter(String line, boolean isFilter) throws IOException {
+		PlainMdict mdTmp;
 		File f = new File(line);
 		if(!f.exists())
 			mdTmp=new mdict_nonexist(f);
@@ -428,9 +428,9 @@ public class ManagerFragment extends VBox {
 		return mdTmp;
 	}
 
-	Function<mdict, ObservableValue<String>> propertyMapper_FilePath=new Function<mdict, ObservableValue<String>>(){
+	Function<PlainMdict, ObservableValue<String>> propertyMapper_FilePath=new Function<PlainMdict, ObservableValue<String>>(){
 		@Override
-		public ObservableValue<String> apply(mdict m) {
+		public ObservableValue<String> apply(PlainMdict m) {
 			String ret = m.getPath();
 			if(ret.startsWith(opt.GetLastMdlibPath()+File.separator))
 				ret=ret.substring(opt.GetLastMdlibPath().length()+1);
@@ -439,21 +439,21 @@ public class ManagerFragment extends VBox {
 
 	DecimalFormat time_machine = new DecimalFormat("#.00");
 
-	<T> TableColumn<mdict, T> createCol(String title,
-						   Function<mdict, ObservableValue<T>> mapper, double prefSize,
-	Callback<TableColumn<mdict,T>, TableCell<mdict,T>> bindviewCallback) {
-    	TableColumn<mdict, T> col = new TableColumn<>(title);
+	<T> TableColumn<PlainMdict, T> createCol(String title,
+											 Function<PlainMdict, ObservableValue<T>> mapper, double prefSize,
+											 Callback<TableColumn<PlainMdict,T>, TableCell<PlainMdict,T>> bindviewCallback) {
+    	TableColumn<PlainMdict, T> col = new TableColumn<>(title);
         col.setCellValueFactory(cellData -> mapper.apply(cellData.getValue()));
         if(prefSize>0) col.setPrefWidth(prefSize);
         if(bindviewCallback==null)
 		bindviewCallback =
-			param -> new TableCell<mdict, T>() {
+			param -> new TableCell<PlainMdict, T>() {
 			@Override
 			protected void updateItem(T item, boolean empty) {
 				if (!empty) {
 					int currentIndex=indexProperty().getValue();
 					if(currentIndex<0) currentIndex=0;
-					mdict mdTmp = param.getTableView().getItems().get(currentIndex);
+					PlainMdict mdTmp = param.getTableView().getItems().get(currentIndex);
 					String clmPath = mdTmp.getPath();
 					if(mdTmp instanceof mdict_nonexist || !mdTmp.f().exists()){
 						setStyle("-fx-background-color: #ffb6c1ad");
@@ -483,7 +483,7 @@ public class ManagerFragment extends VBox {
 			BufferedReader in = new BufferedReader(new FileReader(newf));
 			String line;
 			int idx=0;
-			ObservableList<mdict> mdModifying = tableView.getItems();
+			ObservableList<PlainMdict> mdModifying = tableView.getItems();
 			mdModifying.clear();
 			while((line = in.readLine())!=null){
 				if(line.length()>0){
@@ -511,7 +511,7 @@ public class ManagerFragment extends VBox {
 					if(disabled){
 						rejector.add(line);
 					}
-					mdict mdTmp = mdict_cache.get(line);
+					PlainMdict mdTmp = mdict_cache.get(line);
 					if(mdTmp==null)
 						mdTmp=new_mdict_prempter(line, isFilter);
 					mdModifying.add(mdTmp);
@@ -528,10 +528,10 @@ public class ManagerFragment extends VBox {
 
 	public boolean try_write_configureLet(File newf) {
 		try {
-			ObservableList<mdict> mdModified = tableView.getItems();
+			ObservableList<PlainMdict> mdModified = tableView.getItems();
 			BufferedWriter out = new BufferedWriter(new FileWriter(newf,false));
 			String parent = new File(opt.GetLastMdlibPath()).getAbsolutePath()+File.separatorChar;
-			for(mdict mdTmp:mdModified) {
+			for(PlainMdict mdTmp:mdModified) {
 				String name = mdTmp.getPath();
 				boolean isFiler=mdTmp.tmpIsFilter, disabled=rejector.contains(name);
 				if(name.startsWith(parent))

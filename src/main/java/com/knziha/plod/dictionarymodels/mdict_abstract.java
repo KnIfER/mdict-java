@@ -1,8 +1,5 @@
 package com.knziha.plod.dictionarymodels;
 
-import com.knziha.plod.dictionary.Utils.SU;
-import test.CMN;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -13,7 +10,7 @@ import java.io.IOException;
 */
 
 
-public abstract class mdict_abstract extends mdict {
+public abstract class mdict_abstract extends PlainMdict {
 	//构造
 	public mdict_abstract(File fn) throws IOException {
 		super(fn, null);

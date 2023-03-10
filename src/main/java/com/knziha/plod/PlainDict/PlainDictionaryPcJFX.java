@@ -73,7 +73,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	Label advancedSearchLabel;
 	AdvancedSearchDialog advancedSearchDialog;
 	int currentDisplaying=0;
-	mdict currentDictionary;
+	PlainMdict currentDictionary;
 	public int adapter_idx;
 	public static Pattern windowPath=Pattern.compile("^[a-zA-Z]:\\\\.*");
 	public final static KeyCombination EscComb = KeyCombination.valueOf("ESC");
@@ -101,7 +101,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	private Clipboard clipboard;
 	String record_for_mirror;
 	
-	Map<String, mdict> md_table = Collections.synchronizedMap(new HashMap<>());
+	Map<String, PlainMdict> md_table = Collections.synchronizedMap(new HashMap<>());
 
 	@Override
 	public String md_getName(int i) {
@@ -109,7 +109,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	}
 
 	@Override
-	public mdict md_get(int i) {
+	public PlainMdict md_get(int i) {
 		return md.get(i);
 	}
 	
@@ -121,7 +121,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 		int len = md.size();
 		name = name+".";
 		for (int j = 0; j < len; j++) { 
-			mdict mdTmp = md.get(j);
+			PlainMdict mdTmp = md.get(j);
 			if(mdTmp.f().getName().replace("+", " ").startsWith(name)) {
 				return j;
 			}
@@ -202,7 +202,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 			if(len>1){
 				try {
 					int md_i=Integer.parseInt(arr[0]);
-					mdict mdTmp = md.get(md_i);
+					PlainMdict mdTmp = md.get(md_i);
 					int[] arr2 = new int[len-1];
 					for (int i = 1; i < len; i++)
 						arr2[i-1]=Integer.parseInt(arr[i]);
@@ -304,9 +304,9 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 		}
 
 		public void reloadDict(int idx){
-			mdict mdTmp = md.get(idx);
+			PlainMdict mdTmp = md.get(idx);
 			try {
-				mdict mdNew = new mdict(mdTmp.f(), opt);
+				PlainMdict mdNew = new PlainMdict(mdTmp.f(), opt);
 				md.set(idx, mdNew);
 				if(currentDictionary==mdTmp)
 					currentDictionary=mdNew;
@@ -436,6 +436,11 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	//构造
 	public PlainDictionaryPcJFX() {
 		super();
+		try {
+			//new App();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		bundle = ResourceBundle.getBundle("UIText" , Locale.getDefault());
 		SU.debug=true;
 	}
@@ -501,7 +506,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 				}
 				boolean refreshAllDicts=true;
 				if(refreshAllDicts) {
-					for(mdict mdTmp:md) {
+					for(PlainMdict mdTmp:md) {
 						mdTmp.handleDebugLines();
 					}
 				} else {
@@ -597,12 +602,12 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 					if(files!=null) {
 						int sizebefore=md.size();
 						HashSet<String> mdict_cache = new HashSet<>(md.size());
-						for(mdict mdTmp:md) mdict_cache.add(mdTmp.getPath());
+						for(PlainMdict mdTmp:md) mdict_cache.add(mdTmp.getPath());
 						for(File fI:files) {
 							String fileNameKey=fI.getPath();
 							if(!mdict_cache.contains(fileNameKey))
 								try {
-									md.add(new mdict(fI, opt));
+									md.add(new PlainMdict(fI, opt));
 									mdict_cache.add(fileNameKey);
 								} catch (Exception e) { e.printStackTrace(); }
 						}
@@ -632,12 +637,12 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 						mDialog.onCloseRequestProperty().set((e -> {
 							//CMN.show("close");
 							if(managerFragment.tableView.isDirty) {
-								ObservableList<mdict> mdModified = managerFragment.tableView.getItems();
+								ObservableList<PlainMdict> mdModified = managerFragment.tableView.getItems();
 								managerFragment.try_write_configureLet(getCurrentSetFile());
 								md.ensureCapacity(mdModified.size());
 								md.clear();
 								server.currentFilter.clear();
-								for(mdict mdTmp:mdModified) {
+								for(PlainMdict mdTmp:mdModified) {
 									boolean isFiler=mdTmp.tmpIsFilter, disabled=managerFragment.rejector.contains(mdTmp.getPath());
 									//CMN.Log(mdTmp.getClass().getName(), mdTmp._Dictionary_fName, isFiler, disabled);
 									if(disabled) continue;
@@ -645,7 +650,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 										continue;
 									if(mdTmp instanceof mdict_preempter){
 										try {
-											mdTmp=new mdict(mdTmp.f(), opt);
+											mdTmp=new PlainMdict(mdTmp.f(), opt);
 											mdTmp.tmpIsFilter=isFiler;
 										} catch (IOException ignored) { CMN.Log(e); continue; }
 									}
@@ -1090,7 +1095,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 			BufferedWriter out = new BufferedWriter(new FileWriter(def,true));
 			String parent = new File(opt.GetLastMdlibPath()).getAbsolutePath()+File.separatorChar;
 			for (int i = startIndex; i < md.size(); i++) {
-				mdict mdTmp=md.get(i);
+				PlainMdict mdTmp=md.get(i);
 				String name = mdTmp.getPath();
 				if(name.startsWith(parent))
 					name = name.substring(parent.length());
@@ -1156,7 +1161,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 
 
 
-	public final ArrayList<mdict> md = new ArrayList<>();
+	public final ArrayList<PlainMdict> md = new ArrayList<>();
 	private void scanInFiles() {
 		//![] start loading dictionaries
 		File def = getCurrentSetFile();      //!!!原配置
@@ -1192,7 +1197,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 					if(!windowPath.matcher(line).matches() && !line.startsWith("/"))
 						line=opt.GetLastMdlibPath()+File.separator+line;
 					try {
-						mdict mdtmp = new_mdict(line, opt);
+						PlainMdict mdtmp = new_mdict(line, opt);
 						if(isFilter){
 							mdtmp.tmpIsFilter=true;
 							server.currentFilter.add(mdtmp);
@@ -1222,10 +1227,10 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 			currentDictionary = md.get(0);
 	}
 
-	private mdict new_mdict(String line, PlainDictAppOptions opt) throws IOException {
+	private PlainMdict new_mdict(String line, PlainDictAppOptions opt) throws IOException {
 		if(com.knziha.plod.dictionary.mdict.mobiReg.matcher(line).find())
 			return new MobiBook(new File(line), opt);
-		return new mdict(new File(line), opt);
+		return new PlainMdict(new File(line), opt);
 	}
 
 
@@ -1233,7 +1238,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	public static class AdvancedSearchLogicLayer extends com.knziha.plod.dictionary.mdict.AbsAdvancedSearchLogicLayer {
 		final Tab chiefAmbassador;
 		final Text statusBar;
-		public final ArrayList<mdict> md;
+		public final ArrayList<PlainMdict> md;
 		final String Tag;
 		final PlainDictAppOptions opt;
 		Thread workerThread;
@@ -1241,7 +1246,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 		private String msg;
 		Pattern currentPattern;
 
-		AdvancedSearchLogicLayer(PlainDictAppOptions opt, ArrayList<mdict> md, Tab chiefAmbassador, Text statusBar, int type) {
+		AdvancedSearchLogicLayer(PlainDictAppOptions opt, ArrayList<PlainMdict> md, Tab chiefAmbassador, Text statusBar, int type) {
 			this.opt = opt;
 			this.chiefAmbassador = chiefAmbassador;
 			this.statusBar = statusBar;
@@ -1340,7 +1345,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 	}
 
 	static class AdvancedScopedSearchLayer extends AdvancedSearchLogicLayer{
-		AdvancedScopedSearchLayer(PlainDictAppOptions opt, ArrayList<mdict> md, Tab chiefAmbassador, Text statusBar, int type) {
+		AdvancedScopedSearchLayer(PlainDictAppOptions opt, ArrayList<PlainMdict> md, Tab chiefAmbassador, Text statusBar, int type) {
 			super(opt, new ArrayList<>(md), chiefAmbassador, statusBar, type);
 			combining_search_tree = new ArrayList<>();
 			for (int i = 0; i < md.size(); i++) {
@@ -1371,7 +1376,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 				String key = layer.key = etSearch.getText();
 				statusBar.setText(" 🔍 "+key+" ...");
 				layer.st = System.currentTimeMillis();
-				ArrayList<mdict> _md = layer.md;
+				ArrayList<PlainMdict> _md = layer.md;
 				if(_md==null) _md=md;
 				if(isCombinedSearch){
 					for(int i=0;i<_md.size();i++){
@@ -1514,7 +1519,7 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 							if(newV != null){
 								int index=newV.intValue();
 								if(listView.getSelectionModel().getSelectedItem()!=null) {
-									mdict mdTmp = layer.adapter.rec.getMdAt(index);
+									PlainMdict mdTmp = layer.adapter.rec.getMdAt(index);
 									CMN.Log("onitemclicked!!!", index, layer.adapter.rec.getIndexAt(index), layer.md.size());
 									boolean post=false;
 									if (!md.contains(mdTmp)) {
@@ -1582,11 +1587,11 @@ public class PlainDictionaryPcJFX extends Application implements MdictServerLet{
 					if(!isCombinedSearch)
 						layer.Idx=adapter_idx;
 
-					ArrayList<mdict> _md = layer.md;
+					ArrayList<PlainMdict> _md = layer.md;
 					int GETNUMBERENTRIES=0;
 					/* important to be here. clear and fetch total entry count.*/
 					for(int i=0, end=_md.size();i<end;i++){//遍历所有词典
-						mdict mdtmp = _md.get(i);
+						PlainMdict mdtmp = _md.get(i);
 						if(isCombinedSearch||i==layer.Idx)
 							GETNUMBERENTRIES+=mdtmp.getNumberEntries();
 						ArrayList<Integer>[] _combining_search_tree_ =

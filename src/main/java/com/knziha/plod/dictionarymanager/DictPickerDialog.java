@@ -2,13 +2,12 @@ package com.knziha.plod.dictionarymanager;
 
 import com.knziha.plod.PlainDict.PlainDictAppOptions;
 import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
-import com.knziha.plod.dictionarymodels.mdict;
+import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.widgets.DragResizeView;
 import com.knziha.plod.widgets.VirtualWindowEvent;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.TableCell;
@@ -43,13 +42,13 @@ public class DictPickerDialog extends Stage {
 	private final DragResizeView dv;
 	Text statusBar;
 	TableView<File> tv1;
-	TableView<mdict> tv2;
+	TableView<PlainMdict> tv2;
 	PlainDictAppOptions opt;
 	public int adapter_idx;
 	public int dirtyFlag;
-	HashMap<String, mdict> mdict_cache = new HashMap<>();
-	ArrayList<mdict> md;
-	ArrayList<mdict> currentFilter;
+	HashMap<String, PlainMdict> mdict_cache = new HashMap<>();
+	ArrayList<PlainMdict> md;
+	ArrayList<PlainMdict> currentFilter;
 	private String lastName;
 
 	public DictPickerDialog(PlainDictionaryPcJFX app,ArrayList<File> _sets, PlainDictAppOptions _opt, ResourceBundle bundle) {
@@ -71,13 +70,13 @@ public class DictPickerDialog extends Stage {
 		tv1 = new TableView<>();
 		tv2 = new TableView<>();
 		tv1.getColumns().add(createCol(tv1, "配置", propertyMapper_FilePath, -1, null));
-		tv2.getColumns().add(createCol(tv2, "词典", mdict::getFileNameProperty, -1, null));
+		tv2.getColumns().add(createCol(tv2, "词典", PlainMdict::getFileNameProperty, -1, null));
 		tv1.getItems().addAll(_sets);
 		tv2.getItems().addAll(md=app.md);
-		for(mdict mdTmp:md){
+		for(PlainMdict mdTmp:md){
 			mdict_cache.put(mdTmp.getPath(), mdTmp);
 		}
-		for(mdict mdTmp:currentFilter){
+		for(PlainMdict mdTmp:currentFilter){
 			mdict_cache.put(mdTmp.getPath(), mdTmp);
 		}
 		dv.heightProperty().bind(tv1.heightProperty());
@@ -113,7 +112,7 @@ public class DictPickerDialog extends Stage {
 			tv1.getItems().addAll(_sets);
 			tv2.getItems().clear();
 			tv2.getItems().addAll(md=app.md);
-			for(mdict mdTmp:md){
+			for(PlainMdict mdTmp:md){
 				mdict_cache.put(mdTmp.getPath(), mdTmp);
 			}
 		}
@@ -221,9 +220,9 @@ public class DictPickerDialog extends Stage {
 						line=opt.GetLastMdlibPath()+File.separator+line;
 					if(!disabled){
 						try {
-							mdict mdTmp = mdict_cache.get(line);
+							PlainMdict mdTmp = mdict_cache.get(line);
 							if(mdTmp==null)
-								mdTmp=new mdict(new File(line), opt);
+								mdTmp=new PlainMdict(new File(line), opt);
 							((mdTmp.tmpIsFilter=isFilter)?currentFilter:md).add(mdTmp);
 						} catch (IOException e) {
 							e.printStackTrace();

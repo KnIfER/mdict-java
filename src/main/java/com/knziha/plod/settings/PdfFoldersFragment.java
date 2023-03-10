@@ -2,9 +2,6 @@ package com.knziha.plod.settings;
 
 import com.knziha.plod.PlainDict.PU;
 import com.knziha.plod.PlainDict.PlainDictAppOptions;
-import com.knziha.plod.dictionarymodels.mdict;
-import com.knziha.plod.dictionarymodels.mdict_nonexist;
-import com.knziha.plod.dictionarymodels.mdict_preempter;
 import com.knziha.plod.widgets.DragSortTableView;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleBooleanProperty;

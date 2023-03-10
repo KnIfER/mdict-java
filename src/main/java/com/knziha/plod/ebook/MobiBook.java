@@ -12,7 +12,7 @@ package com.knziha.plod.ebook;
 
 import com.knziha.plod.dictionary.Utils.ReusableByteOutputStream;
 import com.knziha.plod.dictionary.Utils.SU;
-import com.knziha.plod.dictionarymodels.mdict;
+import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.ebook.Utils.BU;
 import com.knziha.plod.ebook.Utils.BU.MOBIHuffCdic;
 import com.knziha.plod.ebook.Utils.CU;
@@ -31,7 +31,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
-public class MobiBook extends mdict {
+public class MobiBook extends PlainMdict {
 	long file_size;
 	MOBIData m;
 	long compression_type;

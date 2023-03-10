@@ -8,7 +8,7 @@ import com.knziha.plod.dictionary.Utils.IU;
 import javafx.scene.web.WebEngine;
 
 public class resultRecorderScattered extends resultRecorderDiscrete {
-	private List<mdict> md;
+	private List<PlainMdict> md;
 	private WebEngine engine;
 	private int[] firstLookUpTable;
 	private int size=0;
@@ -22,7 +22,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 
 		int resCount=0;
 		for(int i=0;i<md.size();i++){//遍历所有词典
-			mdict mdtmp = md.get(i);
+			PlainMdict mdtmp = md.get(i);
 			//int baseCount=0;
 			//if(i!=0)
 			//	baseCount=firstLookUpTable[i-1];
@@ -51,7 +51,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 			firstLookUpTable = new int[md.size()];
 
 		int resCount=0;
-		mdict mdtmp = md.get(idx);
+		PlainMdict mdtmp = md.get(idx);
 
 		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(idx);
 		if(_combining_search_tree==null)
@@ -90,7 +90,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
 		if(Rgn<0 || Rgn>md.size()-1)
 			return "!!! Error: code 2 Rgn="+Rgn+" size="+md.size();
-		mdict mdtmp = md.get(Rgn);
+		PlainMdict mdtmp = md.get(Rgn);
 		dictIdx=Rgn;
 		if(Rgn!=0)
 			pos-=firstLookUpTable[Rgn-1];
@@ -122,7 +122,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 	}
 
 	@Override
-	public mdict getMdAt(int pos) {
+	public PlainMdict getMdAt(int pos) {
 		if(size<=0 || pos<0 || pos>size-1)
 			return null;
 		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
@@ -145,7 +145,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
 		if(Rgn<0 || Rgn>md.size()-1)
 			return;
-		mdict mdtmp = md.get(Rgn);
+		PlainMdict mdtmp = md.get(Rgn);
 		dictIdx=Rgn;
 		if(Rgn!=0)
 			pos-=firstLookUpTable[Rgn-1];

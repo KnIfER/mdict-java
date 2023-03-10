@@ -98,7 +98,7 @@ import java.util.zip.Inflater;
  * <b>Licence</b> : Apache2.0 under this package (com.knziha.plod.dictionary.*); GPL3.0 for everything else including the mdictBuilder. <br/>
  */
 @SuppressWarnings("SpellCheckingInspection")
-public class mdict extends mdBase{
+public class mdict extends mdBase implements UniversalDictionaryInterface{
 	private mdict parent;
 	byte[] textLineBreak;
 	protected Encoding encoding;
@@ -327,14 +327,14 @@ public class mdict extends mdBase{
 
 	public String test(int position) throws FileNotFoundException {
 		//Instantiating the PrintStream class
-		StringBuilder sb = new StringBuilder();
-		File file = new File("D:\\test.log");
-		PrintStream stream = new PrintStream(new FileOutputStream(file, true));
-		System.out.println("From now on "+file.getAbsolutePath()+" will be your console");
-		System.setOut(stream);
-		
-		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
-		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
+//		StringBuilder sb = new StringBuilder();
+//		File file = new File("D:\\test.log");
+//		PrintStream stream = new PrintStream(new FileOutputStream(file, true));
+//		System.out.println("From now on "+file.getAbsolutePath()+" will be your console");
+//		System.setOut(stream);
+//		
+//		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
+//		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
 		return "123";
 	}
 
@@ -369,6 +369,7 @@ public class mdict extends mdBase{
 	public int lookUp(String keyword) {
 		return lookUp(keyword,false);
 	}
+
 	String HeaderTextStr, TailerTextStr;
 
 	public int lookUp(String keyword,boolean isSrict)
@@ -2818,6 +2819,30 @@ public class mdict extends mdBase{
 			return false;
 		}
 	}
+
+	long _bid;
+	@Override
+	public long getBooKID() {
+		return _bid;
+	}
+	@Override
+	public void setBooKID(long id) {
+		_bid = id;
+	}
+	byte[] options;
+	@Override
+	public byte[] getOptions() {
+		return options;
+	}
+	@Override
+	public void setOptions(byte[] options) {
+		this.options = options;
+	}
+	@Override
+	public int getType() {
+		return 0;
+	}
+
 }
 
 
