@@ -69,8 +69,6 @@ public interface IHTTPSession {
 
     Map<String, List<String>> getParameters();
 
-    String getParameter(String key);
-
     String getQueryParameterString();
 
     /**

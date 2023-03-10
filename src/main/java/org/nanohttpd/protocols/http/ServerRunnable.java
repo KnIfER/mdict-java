@@ -33,6 +33,9 @@ package org.nanohttpd.protocols.http;
  * #L%
  */
 
+import com.knziha.plod.dictionary.Utils.SU;
+import com.knziha.plod.plaindict.PDICMainAppOptions;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -51,14 +54,17 @@ public class ServerRunnable implements Runnable {
     private IOException bindException;
 
     private boolean hasBinded = false;
-
-    public ServerRunnable(NanoHTTPD httpd, int timeout) {
+	public static long tid;
+	
+	public ServerRunnable(NanoHTTPD httpd, int timeout) {
         this.httpd = httpd;
         this.timeout = timeout;
     }
 
     @Override
     public void run() {
+    	tid = Thread.currentThread().getId();
+    	SU.Log("tid", tid);
         try {
             httpd.getMyServerSocket().bind(httpd.hostname != null ? new InetSocketAddress(httpd.hostname, httpd.myPort) : new InetSocketAddress(httpd.myPort));
             hasBinded = true;
@@ -68,14 +74,16 @@ public class ServerRunnable implements Runnable {
         }
         do {
             try {
+				//SU.rt();
                 final Socket finalAccept = httpd.getMyServerSocket().accept();
                 if (this.timeout > 0) {
-                    finalAccept.setSoTimeout(this.timeout);
+                    finalAccept.setSoTimeout(PDICMainAppOptions.isSingleThreadServer()?2:this.timeout); //this.timeout
                 }
                 final InputStream inputStream = finalAccept.getInputStream();
                 httpd.asyncRunner.exec(httpd.createClientHandler(finalAccept, inputStream));
+				//SU.pt("执行完毕");
             } catch (IOException e) {
-                NanoHTTPD.LOG.log(Level.FINE, "Communication with the client broken", e);
+				SU.Log(Level.FINE, "Communication with the client broken", e);
             }
         } while (!httpd.getMyServerSocket().isClosed());
     }

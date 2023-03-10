@@ -526,7 +526,7 @@ public abstract class NanoHTTPD {
      *            the incoming session
      * @return a response to the incoming session
      */
-    public Response handle(IHTTPSession session) throws IOException {
+    public Response handle(HTTPSession session) throws IOException {
         for (IHandler<IHTTPSession, Response> interceptor : interceptors) {
             Response response = interceptor.handle(session);
             if (response != null)
@@ -603,7 +603,7 @@ public abstract class NanoHTTPD {
 
         ServerRunnable serverRunnable = createServerRunnable(timeout);
         this.myThread = new Thread(serverRunnable);
-        this.myThread.setDaemon(daemon);
+        this.myThread.setDaemon(false);
         this.myThread.setName("NanoHttpd Main Listener");
         this.myThread.start();
         while (!serverRunnable.hasBinded() && serverRunnable.getBindException() == null) {
