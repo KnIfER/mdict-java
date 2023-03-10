@@ -1,8 +1,9 @@
 package com.knziha.plod.dictionarymodels;
 
+import com.alibaba.fastjson.JSONObject;
 import com.knziha.plod.dictionary.UniversalDictionaryInterface;
 import com.knziha.plod.dictionary.Utils.IU;
-import com.knziha.plod.plaindict.CMN;
+import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.plaindict.PDICMainAppOptions;
 import com.knziha.plod.plaindict.PlainDictionary;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -23,9 +24,17 @@ public class BookPresenter {
 	long FFStamp;
 	long firstFlag;
 	byte firstVersionFlag;
+
+	protected String searchKey;
+	protected String lastSch;
 	
 	private final DictionaryAdapter.PLAIN_BOOK_TYPE mType;
 	public /*final*/ UniversalDictionaryInterface bookImpl;
+
+	public BookPresenter(PlainMdict mdtmp) {
+		bookImpl = mdtmp;
+		mType = DictionaryAdapter.PLAIN_BOOK_TYPE.PLAIN_TYPE_MDICT;
+	}
 
 	/** set by {@link PDICMainAppOptions#getAllowPlugRes} */
 	public boolean isHasExtStyle() {
@@ -308,22 +317,58 @@ public class BookPresenter {
 		return (int) bookImpl.getNumberEntries();
 	}
 
-	public String getDictInfo(Object o) {
+	public JSONObject getDictInfo(JSONObject json) {
+		if(json==null)json = new JSONObject();
+		else json.clear();
+		json.put("name", getDictionaryName());
+		json.put("tag", true);
+		json.put("id", idStr);
+		json.put("tbg", SU.toHexRGB(getTitleBackground()));
+		json.put("tfg", SU.toHexRGB(getTitleForeground()));
+		json.put("bg", getUseInternalBG()?SU.toHexRGB(getContentBackground()):null);
+		json.put("img", getImageBrowsable() && bookImpl.hasMdd());
+		PlainWeb webx = getWebx();
+		if(webx!=null) {
+			json.put("isWeb", 1);
+			if(webx.hasField("synthesis") && PDICMainAppOptions.allowMergeSytheticalPage())
+				json.put("synth", 1);
+			String sch = webx.getSearchUrl();
+			json.put("sch", sch);
+		}
+		return json;
+	}
+
+	private int getContentBackground() {
+		return 0xffffffff;
+	}
+
+	private int getTitleForeground() {
+		return 0xffffffff;
+	}
+
+	private int getTitleBackground() {
+		return 0xff0000ff;
 	}
 
 	public String getDictionaryName() {
+		String ret=bookImpl.getDictionaryName();
+		return ret==null?"":ret;
 	}
 
 	public boolean getIsWebx() {
+		return mType==DictionaryAdapter.PLAIN_BOOK_TYPE.PLAIN_TYPE_WEB;
 	}
 
 	public PlainWeb getWebx() {
+		return getIsWebx()?((PlainWeb)bookImpl):null;
 	}
 	
 	public InputStream getDebuggingResource(String decoded) {
+		return null;
 	}
 
 	public String getPath() {
+		return bookImpl.getFile().getPath();
 	}
 
 	public void plugCssWithSameFileName(StringBuilder mdPageBuilder) {
@@ -342,5 +387,20 @@ public class BookPresenter {
 //			sb.append("padding-right:").append(CMN.GlobalPagePaddingRight).append(";");
 //			//else mWebView.evaluateJavascript("document.body.style.paddingRight='"+CMN.GlobalPagePaddingRight+"'", null);
 //		}
+	}
+	public final String GetSearchKey() {
+		return searchKey;
+	}
+
+	public final void SetSearchKey(String key) {
+		searchKey = key;
+	}
+
+	public CharSequence GetAppSearchKey() {
+		return null;
+	}
+
+	public PlainMdict getMdict() {
+		return (PlainMdict) bookImpl;
 	}
 }

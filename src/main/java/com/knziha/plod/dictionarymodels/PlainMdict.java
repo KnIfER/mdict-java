@@ -23,7 +23,7 @@ public class PlainMdict extends com.knziha.plod.dictionary.mdict {
 	}
 	List<Long> fileTimeRecords;
 	
-	public boolean tmpIsFilter;
+//	public boolean tmpIsFilter;
 	protected PlainDictAppOptions opt;
 	//构造
 	public PlainMdict(File f, PlainDictAppOptions _opt) throws IOException {
@@ -83,7 +83,7 @@ public class PlainMdict extends com.knziha.plod.dictionary.mdict {
 		return new SimpleDoubleProperty((f.length()/1024.0/1024));
 	}
 	public final BooleanProperty getFormationProperty() {
-		return new SimpleBooleanProperty(tmpIsFilter);
+		return new SimpleBooleanProperty(false);
 	}
 
 	public void savePagesTo(File file, int...position) throws IOException {

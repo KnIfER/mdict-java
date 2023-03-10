@@ -81,6 +81,31 @@ public class  SU{
 		path += h;
 		return path;
 	}
+	
+	public static String toHexRGB(int color) {
+		color&=0xFFFFFF;
+		if(color==0) {
+			return null;
+		}
+		String val = Integer.toHexString(color);
+		for (int i = val.length(); i < 6; i++) {
+			val = "0"+val;
+		}
+		return val;
+	}
+
+	public static int hashCode(String toHash, int start, int len) {
+		int h=0;
+		len = Math.min(toHash.length(), len);
+		for (int i = start; i < len; i++) {
+			h = 31 * h + Character.toLowerCase(toHash.charAt(i));
+		}
+		return h;
+	}
+
+	public static String valueOf(CharSequence text) {
+		return text == null ? null : text.toString();
+	}
 
 	public boolean CharsequenceEqual(CharSequence cs1, CharSequence cs2) {
 		if(cs1!=null&&cs2!=null) {

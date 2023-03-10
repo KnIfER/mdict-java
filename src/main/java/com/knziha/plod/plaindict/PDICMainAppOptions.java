@@ -1,30 +1,42 @@
 package com.knziha.plod.plaindict;
 
-import com.knziha.plod.dictionaryBuilder.mdictBuilder;
-
 public class PDICMainAppOptions {
 	public static boolean getAllowPlugRes() {
+		return false;
 	}
 
 	public static boolean getAllowPlugResNone() {
+		return false;
 	}
 
 	public static boolean getAllowPlugResSame() {
+		return false;
 	}
 
 	public static boolean getAllowPlugCss() {
+		return false;
 	}
 
 	public static boolean debugCss() {
+		return false;
 	}
 
 	public static boolean getNotificationEnabled() {
+		return false;
 	}
 
-	String _rootPath;
+	String _rootPath = "D:\\assets\\";
+
+	public static boolean allowMergeSytheticalPage() {
+		return true;
+	}
+
 	public final String GetPathToMainFolder() {
 		// _rootPath = rootPath + "/" + CMN.BrandName + "/";
 		return _rootPath;
 	}
 
+	public String DarkModeIncantation() {
+		return null;
+	}
 }

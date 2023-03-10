@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
 
@@ -40,10 +42,9 @@ public class MdictServerOyster extends MdictServer {
 	public PlainDictionaryPcJFX a;
 	private JAIConverter tiffConverter;
 
-	public MdictServerOyster(int port, PlainDictionaryPcJFX _a, PlainDictAppOptions _opt) throws IOException {
-		super(port, _opt);
+	public MdictServerOyster(int port, PlainDictionaryPcJFX _a, MainActivityUIBase app) throws IOException {
+		super(port, app);
 		a = _a;
-		MdbServerLet = _a;
 		MdbResource = new mdict("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\com\\knziha\\plod\\PlainDict\\MdbR.mdd");
 		setOnMirrorRequestListener((uri, mirror) -> {
 			if(uri==null)uri="";
@@ -85,22 +86,22 @@ public class MdictServerOyster extends MdictServer {
 		return new ByteArrayInputStream(((tiffConverter==null?tiffConverter=new JAIConverter():tiffConverter).terminateTiff(restmp)));
 		//BU.printFile(bos.toByteArray(), "F:\\htmldownload\\tmp"+key);
 	}
-	
+
 	private String record_for_mirror() {
 		return null;
 	}
 	
 	@Override
-	protected void handle_search_event(String text, IHTTPSession session) {
-		CMN.Log("启动搜索 : ", text
-				, session.getHeaders().get("content-type")
-				, session.getHeaders().get("content-length")
-				, session.getHeaders().get("user-agent")
-				, session.getHeaders().get("content")
-				, session.getParameters().get("f")
-		);
+	protected void handle_search_event(Map<String, List<String>> text, InputStream inputStream) {
+//		CMN.Log("启动搜索 : ", text
+//				, session.getHeaders().get("content-type")
+//				, session.getHeaders().get("content-length")
+//				, session.getHeaders().get("user-agent")
+//				, session.getHeaders().get("content")
+//				, session.getParameters().get("f")
+//		);
 		try {
-			InputStream input = session.getInputStream();
+			InputStream input = inputStream;
 			CMN.Log(input.available());
 			byte[] data = new byte[input.available()];
 			input.read(data);
@@ -109,5 +110,23 @@ public class MdictServerOyster extends MdictServer {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	public static InputStream getRemoteServerRes(String key, boolean check) {
+		InputStream ret = null;
+		if(hasRemoteDebugServer/* && PDICMainAppOptions.debug()*/) {
+//			try {
+//				return testDebugServer(check?"192.168.0.100":remoteDebugServer, key, check);
+//			} catch (Exception e) {
+//				if (check) {
+//					try {
+//						return testDebugServer("192.168.0.102", key, check);
+//					} catch (IOException ex) {
+//						CMN.debug("getRemoteServerRes failed::"+e);
+//						hasRemoteDebugServer = false;
+//					}
+//				}
+//			}
+		}
+		return ret;
 	}
 }

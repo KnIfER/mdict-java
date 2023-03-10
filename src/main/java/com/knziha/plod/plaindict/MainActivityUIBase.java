@@ -1,7 +1,10 @@
 package com.knziha.plod.plaindict;
 
 import com.knziha.plod.dictionary.Utils.IU;
+import com.knziha.plod.dictionary.Utils.SubStringKey;
 import com.knziha.plod.dictionarymodels.BookPresenter;
+import com.knziha.plod.dictionarymodels.PlainWeb;
+import com.knziha.plod.ebook.Utils.BU;
 import org.nanohttpd.protocols.http.HTTPSession;
 import org.nanohttpd.protocols.http.response.Response;
 
@@ -11,6 +14,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 
 public class MainActivityUIBase {
 
@@ -19,11 +23,18 @@ public class MainActivityUIBase {
 	public PDICMainAppOptions opt;
 	public LoadManager loadManager;
 
+	public Map<SubStringKey, String> serverHosts;
+	public ArrayList<PlainWeb>  serverHostsHolder=new ArrayList();
+	
 	public boolean getCommonAsset(String s) {
 	}
 
 	public Response decodeExp(HTTPSession session) {
 		return null;
+	}
+
+	public String fileToString(String path) {
+		return BU.fileToString(new File(path));
 	}
 
 	public static class LoadManager {
