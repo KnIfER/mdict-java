@@ -33,6 +33,9 @@ package org.nanohttpd.protocols.http.response;
  * #L%
  */
 
+import com.knziha.plod.dictionary.Utils.RecyclableByteArrayInputStream;
+import com.knziha.plod.dictionary.Utils.ReusableByteInputStream;
+
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -115,13 +118,22 @@ public class Response implements Closeable {
     private List<String> cookieHeaders;
 
     private GzipUsage gzipUsage = GzipUsage.DEFAULT;
-
-    private static enum GzipUsage {
+	
+	public void putHeaders(Map<String, String> headers) {
+		if(headers!=null) {
+			this.header.putAll(headers);
+		}
+	}
+	
+	private static enum GzipUsage {
         DEFAULT,
         ALWAYS,
         NEVER;
     }
-
+	
+	protected Response() {
+ 
+	}
     /**
      * Creates a fixed length response if totalBytes>=0, otherwise chunked.
      */
@@ -142,7 +154,28 @@ public class Response implements Closeable {
         this.chunkedTransfer = this.contentLength < 0;
         this.keepAlive = true;
         this.cookieHeaders = new ArrayList(10);
+		addHeader("Access-Control-Allow-Origin", "*");
+		addHeader("Access-Control-Allow-Headers", "*");
     }
+	
+	public Response newInstance(boolean fast) {
+		RecyclableByteArrayInputStream data = (RecyclableByteArrayInputStream) this.data;
+		if (fast) {
+			data.recycle();
+			return this;
+		}
+		Response ret = new Response();
+		ret.status = status;
+		ret.mimeType = mimeType;
+		ret.data = data.newInstance();
+		ret.contentLength = data.available();
+		ret.chunkedTransfer = this.contentLength < 0;
+		ret.keepAlive = true;
+		ret.cookieHeaders = this.cookieHeaders;
+		ret.addHeader("Access-Control-Allow-Origin", "*");
+		ret.addHeader("Access-Control-Allow-Headers", "*");
+		return ret;
+	}
 
     @Override
     public void close() throws IOException {
@@ -423,6 +456,29 @@ public class Response implements Closeable {
                 bytes = new byte[0];
             }
             return newFixedLengthResponse(status, contentType.getContentTypeHeader(), new ByteArrayInputStream(bytes), bytes.length);
+        }
+    }
+	
+    /**
+     * Create a recyclable text response with known length.
+     */
+    public static Response newRecyclableResponse(IStatus status, String mimeType, String txt) {
+        ContentType contentType = new ContentType(mimeType);
+        if (txt == null) {
+            return newFixedLengthResponse(status, mimeType, new ByteArrayInputStream(new byte[0]), 0);
+        } else {
+            byte[] bytes;
+            try {
+                CharsetEncoder newEncoder = Charset.forName(contentType.getEncoding()).newEncoder();
+                if (!newEncoder.canEncode(txt)) {
+                    contentType = contentType.tryUTF8();
+                }
+                bytes = txt.getBytes(contentType.getEncoding());
+            } catch (UnsupportedEncodingException e) {
+                NanoHTTPD.LOG.log(Level.SEVERE, "encoding problem, responding nothing", e);
+                bytes = new byte[0];
+            }
+            return newFixedLengthResponse(status, contentType.getContentTypeHeader(), new RecyclableByteArrayInputStream(bytes), bytes.length);
         }
     }
 
