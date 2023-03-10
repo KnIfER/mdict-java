@@ -2,8 +2,11 @@ package com.knziha.plod.dictionarymodels;
 
 import com.knziha.plod.dictionary.UniversalDictionaryInterface;
 import com.knziha.plod.dictionary.Utils.IU;
+import com.knziha.plod.plaindict.CMN;
+import com.knziha.plod.plaindict.PDICMainAppOptions;
 import com.knziha.plod.plaindict.PlainDictionary;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.knziha.metaline.Metaline;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,8 +20,167 @@ public class BookPresenter {
 	public final String idStr10;
 	public File placeHolder;
 
+	long FFStamp;
+	long firstFlag;
+	byte firstVersionFlag;
+	
 	private final DictionaryAdapter.PLAIN_BOOK_TYPE mType;
 	public /*final*/ UniversalDictionaryInterface bookImpl;
+
+	/** set by {@link PDICMainAppOptions#getAllowPlugRes} */
+	public boolean isHasExtStyle() {
+		return hasExtStyle;
+	}
+
+	private boolean hasExtStyle;
+
+
+	/**几乎肯定是段落，不是单词或成语。**/
+	public static boolean testIsParagraph(String searchText, int paragraphWords) {
+		if (searchText.length()>15) {
+			int words=0;
+			int ppos=-1;
+			char c;
+			boolean white=false;
+			for (int v = 0; v < searchText.length(); v++) {
+				c=searchText.charAt(v);
+				if(c<=' ') {
+					if (v>ppos+1) words++;
+					ppos=v;
+					if(!white&&words>0) white=true;
+				}
+				if(c>=0x4e00&&c<=0x9fbb) {
+					words++;
+					if(!white) white=true;
+				}
+				if (words>=paragraphWords && white) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	public int getCaseStrategy() {
+		return (int) (firstFlag&3);
+	}
+
+	public void setCaseStrategy(int val) {
+		firstFlag&=~3;
+		firstFlag|=val;
+		bookImpl.setCaseStrategy(val);
+	}
+
+	public boolean getIsolateImages(){
+		//return (firstFlag & 0x2) != 0;
+		return false;
+	}
+
+	public void setIsolateImages(boolean val){
+		firstFlag&=~0x2;
+		if(val) firstFlag|=0x2;
+	}
+
+	@Metaline(flagPos=6) public boolean getIsDedicatedFilter(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=6) public void setIsDedicatedFilter(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	/** 内容可重载（检查数据库或文件系统中的重载内容） */
+	@Metaline(flagPos=7) public boolean getContentEditable(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=7) public void setContentEditable(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+	/** 内容可编辑（处于编辑状态） */
+	@Metaline(flagPos=8) public boolean getEditingContents(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=8) public void setEditingContents(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+
+
+	@Metaline(flagPos=5) public boolean getUseInternalBG(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=5) public void setUseInternalBG(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=4) public boolean getUseInternalFS(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=4) public void setUseInternalFS(boolean val){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=9) public boolean getUseTitleBackground(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=9) public void setUseTitleBackground(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=10) public boolean getUseTitleForeground(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=10) public void setUseTitleForeground(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=11) public boolean getImageOnly(){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	// 12~20
+
+	//	public boolean getStarLevel(){
+//		0x100000~0x400000  20~22
+//	}
+	@Metaline(flagPos=23) public boolean getContentFixedHeightWhenCombined(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=24) public boolean getNoScrollRect(){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=25) public boolean getShowToolsBtn(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=25) public void setShowToolsBtn(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Deprecated @Metaline(flagPos=26, shift=1) public boolean getRecordHiKeys(){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=27) public boolean getOfflineMode(){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=28) public boolean getLimitMaxMinChars(){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=29) public boolean getAcceptParagraph(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=29) public void setAcceptParagraph(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=30) public boolean getUseInternalParagraphWords(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=30) public void setUseInternalParagraphWords(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=31, shift=1) public boolean getImageBrowsable(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=31, shift=1) public void setImageBrowsable(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=32) public boolean getAutoFold(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=32) public void setAutoFold(boolean val){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=33) public boolean getDrawHighlightOnTop(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	@Metaline(flagPos=33) public void setDrawHighlightOnTop(boolean value){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+
+	@Metaline(flagPos=34, shift=1) public boolean checkVersionBefore_5_4() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=34, shift=1) public void uncheckVersionBefore_5_4(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+
+	@Metaline(flagPos=35) public boolean isMergedBook() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=35) public void isMergedBook(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=36) public boolean getEntryJumpList(){ firstFlag=firstFlag; throw new RuntimeException(); }
+	/** 词条跳转到点译弹窗 (entry://) */
+	@Metaline(flagPos=37) public boolean getPopEntry(){ firstFlag=firstFlag; throw new RuntimeException(); }
+
+	@Metaline(flagPos=38) public boolean hasFilesTag() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=38) public void hasFilesTag(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=39, shift=1) public boolean getUseHosts() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=39, shift=1) public void setUseHosts(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=40) public boolean getUseMirrors() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=40) private void setUseMirrorsInternal(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=41, flagSize=5) public int getMirrorIdx() { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=46) public boolean padSet() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=46) public void padSet(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=47, shift=1) public boolean padLeft() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=47, shift=1) public void padLeft(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=48, shift=1) public boolean padRight() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=48, shift=1) public void padRight(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=49) public boolean hasWebEntrances() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=49) public void hasWebEntrances(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=50) public boolean padBottom() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=50) public void padBottom(boolean val) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=51, shift=1) public boolean tapschWebStandalone() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=51, shift=1) public void tapschWebStandalone(boolean v) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=52) public boolean tapschWebStandaloneSet() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=52) public void tapschWebStandaloneSet(boolean v) { firstFlag=firstFlag; throw new RuntimeException();}
+
+	@Metaline(flagPos=53, flagSize=2) public int zhoAny() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=53) public boolean zhoVer() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=54) public boolean zhoHor() { firstFlag=firstFlag; throw new RuntimeException();}
+	@Metaline(flagPos=55) public boolean zhoHigh() { firstFlag=firstFlag; throw new RuntimeException();}
+
 
 	public static ConcurrentHashMap<Long, UniversalDictionaryInterface> bookImplsMap = new ConcurrentHashMap<>();
 
@@ -157,13 +319,7 @@ public class BookPresenter {
 
 	public PlainWeb getWebx() {
 	}
-
-	public boolean isMergedBook() {
-	}
-
-	public boolean isHasExtStyle() {
-	}
-
+	
 	public InputStream getDebuggingResource(String decoded) {
 	}
 
@@ -173,6 +329,18 @@ public class BookPresenter {
 	public void plugCssWithSameFileName(StringBuilder mdPageBuilder) {
 	}
 
-	public boolean padLeft() {
+	public void ApplyPadding(StringBuilder sb) {
+//		if (PDICMainAppOptions.padLeft() && padLeft()) {
+//			if (CMN.GlobalPagePaddingLeft==null)
+//				CMN.GlobalPagePaddingLeft = opt.getString("GPL", "3%");
+//			sb.append("padding-left:").append(CMN.GlobalPagePaddingLeft).append(";");
+//			//else mWebView.evaluateJavascript("document.body.style.paddingLeft='"+CMN.GlobalPagePaddingLeft+"'", null);
+//		}
+//		if (PDICMainAppOptions.padRight() && padRight()) {
+//			if (CMN.GlobalPagePaddingRight==null)
+//				CMN.GlobalPagePaddingRight = opt.getString("GPR", "3%");
+//			sb.append("padding-right:").append(CMN.GlobalPagePaddingRight).append(";");
+//			//else mWebView.evaluateJavascript("document.body.style.paddingRight='"+CMN.GlobalPagePaddingRight+"'", null);
+//		}
 	}
 }

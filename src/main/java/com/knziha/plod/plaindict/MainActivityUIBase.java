@@ -2,6 +2,8 @@ package com.knziha.plod.plaindict;
 
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionarymodels.BookPresenter;
+import org.nanohttpd.protocols.http.HTTPSession;
+import org.nanohttpd.protocols.http.response.Response;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,8 +17,13 @@ public class MainActivityUIBase {
 	public String fontFaces;
 	public String plainCSS;
 	public PDICMainAppOptions opt;
+	public LoadManager loadManager;
 
 	public boolean getCommonAsset(String s) {
+	}
+
+	public Response decodeExp(HTTPSession session) {
+		return null;
 	}
 
 	public static class LoadManager {
