@@ -1,7 +1,7 @@
 package com.knziha.plod.dictionarymanager;
 
-import com.knziha.plod.PlainDict.PlainDictAppOptions;
-import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
+import com.knziha.plod.plaindict.PlainDictAppOptions;
+import com.knziha.plod.plaindict.PlainDictionaryPcJFX;
 import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.widgets.DragResizeView;
 import com.knziha.plod.widgets.VirtualWindowEvent;
@@ -34,8 +34,8 @@ import java.util.HashMap;
 import java.util.ResourceBundle;
 import java.util.function.Function;
 
-import static com.knziha.plod.PlainDict.PlainDictionaryPcJFX.EscComb;
-import static com.knziha.plod.PlainDict.PlainDictionaryPcJFX.AltDComb;
+import static com.knziha.plod.plaindict.PlainDictionaryPcJFX.EscComb;
+import static com.knziha.plod.plaindict.PlainDictionaryPcJFX.AltDComb;
 
 /** dictionary & dictionary set picker ui*/
 public class DictPickerDialog extends Stage {

@@ -1,25 +1,13 @@
 package com.knziha.plod.db;
 
-import com.alibaba.fastjson.JSONObject;
-import com.knziha.plod.PlainDict.db.FFDB;
 import com.knziha.plod.dictionary.Utils.IU;
 import test.CMN;
-import test.privateTest.wget.WGet;
-import test.privateTest.wget.info.DownloadInfo;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.zip.Deflater;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.InflaterOutputStream;
 
 public class Test1 {
 	

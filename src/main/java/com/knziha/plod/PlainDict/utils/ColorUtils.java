@@ -1,4 +1,4 @@
-package com.knziha.plod.PlainDict.utils;
+package com.knziha.plod.plaindict.utils;
 
 import org.junit.Test;
 import test.CMN;

@@ -1,4 +1,4 @@
-package com.knziha.plod.PlainDict.utils;
+package com.knziha.plod.plaindict.utils;
 
 import java.io.InputStream;
 

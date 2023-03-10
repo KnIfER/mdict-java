@@ -1,4 +1,4 @@
-package com.knziha.plod.PlainDict.db;
+package com.knziha.plod.plaindict.db;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -22,7 +22,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.knziha.plod.PlainDict.MdictServer.emptyResponse;
+import static com.knziha.plod.plaindict.MdictServer.emptyResponse;
 import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
 
 /** Sqlite Database helper */

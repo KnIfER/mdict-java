@@ -3,7 +3,7 @@ package com.knziha.plod.dictionarymodels;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
+import com.knziha.plod.plaindict.PlainDictionaryPcJFX;
 import com.knziha.plod.dictionary.Utils.IU;
 import javafx.scene.web.WebEngine;
 

@@ -41,7 +41,7 @@ public class MobiBook extends PlainMdict {
 	ArrayList<MOBIPdbRecord> RecordInfos;
 	WeakReference<ReusableByteOutputStream> bos_buffer = new WeakReference<>(new ReusableByteOutputStream());
 
-	public MobiBook(File file, com.knziha.plod.PlainDict.PlainDictAppOptions opt) throws IOException{
+	public MobiBook(File file, com.knziha.plod.plaindict.PlainDictAppOptions opt) throws IOException{
 		super(file, null);
 		this.opt = opt;
 		m = new MOBIData();
@@ -195,7 +195,7 @@ public class MobiBook extends PlainMdict {
 		file = "D:\\Downloads\\十四分之一+合集【www.d4j.cn】.azw3";
 		file = "D:\\Downloads\\犹太智慧枕边书.mobi";
 		file = "D:\\Downloads\\编码_隐匿在计算机软硬件背后的语言.azw_BR7KQB23ROBNK5RQIY6KHTHSP46SFR34.azw";
-		com.knziha.plod.PlainDict.PlainDictAppOptions opt = new com.knziha.plod.PlainDict.PlainDictAppOptions();
+		com.knziha.plod.plaindict.PlainDictAppOptions opt = new com.knziha.plod.plaindict.PlainDictAppOptions();
 		MobiBook mbook = new MobiBook(new File(file), opt);
 
 		SU.Log("book instanced", mbook.m.rec.next, mbook.m.rec.next.size);

@@ -1,6 +1,6 @@
 package com.knziha.plod.settings;
 
-import com.knziha.plod.PlainDict.PlainDictAppOptions;
+import com.knziha.plod.plaindict.PlainDictAppOptions;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.Property;
 import javafx.beans.value.ChangeListener;

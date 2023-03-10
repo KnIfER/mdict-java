@@ -1,4 +1,4 @@
-/*  Copyright 2018 KnIfER Zenjio-Kang
+/*  Copyright 2018 PlainDict author
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
 	
 	Mdict-Java Query Library
 */
-package com.knziha.plod.PlainDict;
+package com.knziha.plod.plaindict;
 
-import com.knziha.plod.PlainDict.utils.JAIConverter;
+import com.knziha.plod.plaindict.utils.JAIConverter;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.mdict;
 import org.nanohttpd.protocols.http.IHTTPSession;

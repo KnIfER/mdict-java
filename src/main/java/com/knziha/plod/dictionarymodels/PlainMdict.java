@@ -1,6 +1,6 @@
 package com.knziha.plod.dictionarymodels;
 
-import com.knziha.plod.PlainDict.PlainDictAppOptions;
+import com.knziha.plod.plaindict.PlainDictAppOptions;
 import javafx.beans.property.*;
 import org.apache.commons.text.StringEscapeUtils;
 import org.joni.Option;

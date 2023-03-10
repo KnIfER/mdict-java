@@ -1,6 +1,6 @@
 package com.knziha.plod.dictionarymanager;
 
-import com.knziha.plod.PlainDict.*;
+import com.knziha.plod.plaindict.*;
 import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.dictionarymodels.mdict_nonexist;
 import com.knziha.plod.dictionarymodels.mdict_preempter;

@@ -4,8 +4,8 @@ import com.icafe4j.image.ImageParam;
 import com.icafe4j.image.ImageType;
 import com.icafe4j.image.options.PNGOptions;
 import com.icafe4j.image.writer.ImageWriter;
-import com.knziha.plod.PlainDict.utils.JAIConverter;
-import com.knziha.plod.PlainDict.utils.TiffTerminator;
+import com.knziha.plod.plaindict.utils.JAIConverter;
+import com.knziha.plod.plaindict.utils.TiffTerminator;
 import com.knziha.plod.dictionary.Utils.BU;
 import com.knziha.plod.dictionary.mdict;
 import com.knziha.plod.dictionary.mdictRes;
@@ -15,7 +15,6 @@ import test.CMN;
 
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 

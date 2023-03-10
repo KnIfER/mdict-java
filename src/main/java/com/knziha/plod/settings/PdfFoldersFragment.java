@@ -1,7 +1,7 @@
 package com.knziha.plod.settings;
 
-import com.knziha.plod.PlainDict.PU;
-import com.knziha.plod.PlainDict.PlainDictAppOptions;
+import com.knziha.plod.plaindict.PU;
+import com.knziha.plod.plaindict.PlainDictAppOptions;
 import com.knziha.plod.widgets.DragSortTableView;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleBooleanProperty;

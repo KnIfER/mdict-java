@@ -1,8 +1,8 @@
 package com.knziha.plod.settings;
 
-import com.knziha.plod.PlainDict.PU;
-import com.knziha.plod.PlainDict.PlainDictAppOptions;
-import com.knziha.plod.PlainDict.PlainDictionaryPcJFX;
+import com.knziha.plod.plaindict.PU;
+import com.knziha.plod.plaindict.PlainDictAppOptions;
+import com.knziha.plod.plaindict.PlainDictionaryPcJFX;
 import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
 import com.knziha.plod.widgets.toggle.ToggleSwitch;
 import javafx.beans.binding.DoubleBinding;
@@ -24,7 +24,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
-import com.knziha.plod.PlainDict.PlainDictionaryPcJFX.UI;
+import com.knziha.plod.plaindict.PlainDictionaryPcJFX.UI;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -35,7 +35,7 @@ import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ResourceBundle;
 
-import static com.knziha.plod.PlainDict.PlainDictionaryPcJFX.EscComb;
+import static com.knziha.plod.plaindict.PlainDictionaryPcJFX.EscComb;
 
 //设置界面
 public class SettingsDialog extends javafx.stage.Stage implements ChangeListener, EventHandler {
