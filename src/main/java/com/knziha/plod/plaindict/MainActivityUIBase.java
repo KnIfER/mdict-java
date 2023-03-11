@@ -347,7 +347,7 @@ public class MainActivityUIBase {
 		try {
 			ResultSet res = statement.executeQuery("select path from book where id=" + bid);
 			if (res.next()) {
-				path = res.getString(0);
+				path = res.getString(1);
 			}
 			res.close();
 		} catch (Exception e) {
@@ -365,8 +365,8 @@ public class MainActivityUIBase {
 			ResultSet res = statement.executeQuery("select id,path from book where name=\"" + bookName+"\"");
 			if (res.next()) {
 				insertNew = false;
-				id = res.getLong(0);
-				path = res.getString(1);
+				id = res.getLong(1);
+				path = res.getString(2);
 			}
 			res.close();
 			if (insertNew) {

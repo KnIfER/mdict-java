@@ -105,7 +105,7 @@ public abstract class MdictServer extends NanoHTTPD {
 		
 		if(uri.startsWith("/MdbR/")) {
 			CMN.debug("[fetching internal res : ]", uri);
-			//InputStream candi = MdictServer.class.getResourceAsStream("Mdict-browser"+uri);
+//			InputStream candi = MdictServer.class.getResourceAsStream("Mdict-browser"+uri);
 			InputStream candi = OpenMdbResourceByName(uri.replace("/", "\\"));
 			if(candi!=null) {
 				String mime="*/*";
@@ -620,6 +620,11 @@ public abstract class MdictServer extends NanoHTTPD {
 	}
 	
 	protected InputStream OpenMdbResourceByName(String key) throws IOException {
+		try {
+			return MdictServer.class.getResourceAsStream("Mdict-browser"+key);
+		} catch (Exception e) {
+			System.err.println(e);
+		}
 		InputStream ret = null;
 		if (MdbResource!=null) {
 			if (!key.startsWith("\\")) {
