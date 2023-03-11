@@ -29,7 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.knziha.plod.widgets.splitpane;
+package com.knziha.plod.plaindict.javafx.widgets.splitpane;
 
 import javafx.application.Application;
 import javafx.scene.Parent;

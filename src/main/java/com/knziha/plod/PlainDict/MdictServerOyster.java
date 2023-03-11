@@ -16,14 +16,15 @@
 */
 package com.knziha.plod.plaindict;
 
+import com.knziha.plod.plaindict.CMN;
+import com.knziha.plod.plaindict.MainActivityUIBase;
+import com.knziha.plod.plaindict.MdictServer;
+import com.knziha.plod.plaindict.javafx.PlainDictionaryPcJFX;
 import com.knziha.plod.plaindict.utils.JAIConverter;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.mdict;
-import org.nanohttpd.protocols.http.IHTTPSession;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.List;
@@ -39,12 +40,12 @@ import static org.nanohttpd.protocols.http.response.Response.newFixedLengthRespo
  */
 
 public class MdictServerOyster extends MdictServer {
-	public PlainDictionaryPcJFX a;
+	public MainActivityUIBase a;
 	private JAIConverter tiffConverter;
 
-	public MdictServerOyster(int port, PlainDictionaryPcJFX _a, MainActivityUIBase app) throws IOException {
+	public MdictServerOyster(int port, MainActivityUIBase app) throws IOException {
 		super(port, app);
-		a = _a;
+		a = app;
 		MdbResource = new mdict("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\com\\knziha\\plod\\PlainDict\\MdbR.mdd");
 		setOnMirrorRequestListener((uri, mirror) -> {
 			if(uri==null)uri="";
@@ -58,7 +59,7 @@ public class MdictServerOyster extends MdictServer {
 			}
 			int pos=IU.parsint(args.get("POS"), a.currentDisplaying);
 			int dx=IU.parsint(args.get("DX"), a.adapter_idx);
-			String key=a.etSearch.getText();
+			String key=a.etSearch_getText();
 			try {
 				key=URLDecoder.decode(args.get("KEY"),"UTF-8");
 			}catch(Exception ignored) {}
@@ -128,5 +129,20 @@ public class MdictServerOyster extends MdictServer {
 //			}
 		}
 		return ret;
+	}
+
+	@Override
+	protected InputStream OpenMdbResourceByName(String key) throws IOException {
+		try {
+			return new FileInputStream(new File("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\resources\\com\\knziha\\plod\\plaindict\\Mdict-browser", key));
+		} catch (Exception e) {
+			System.err.println(e);
+		}
+		try {
+			return MdictServer.class.getResourceAsStream("Mdict-browser"+key);
+		} catch (Exception e) {
+			System.err.println(e);
+		}
+		return super.OpenMdbResourceByName(key);
 	}
 }

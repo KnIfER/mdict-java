@@ -272,7 +272,7 @@ public abstract class MdictServer extends NanoHTTPD {
 		}
 		
 		if(key.equals("\\dicts.json")) {
-			SU.Log("dicts.json::", session.getParameters(), session.getMethod());
+			SU.Log("dicts.json::", session.getParameters(), session.getMethod(), loadManager.md_size, CMN.id(loadManager));
 			if (Method.POST.equals(session.getMethod())) {
 				try {
 					session.parseBody(null);
@@ -620,11 +620,6 @@ public abstract class MdictServer extends NanoHTTPD {
 	}
 	
 	protected InputStream OpenMdbResourceByName(String key) throws IOException {
-		try {
-			return MdictServer.class.getResourceAsStream("Mdict-browser"+key);
-		} catch (Exception e) {
-			System.err.println(e);
-		}
 		InputStream ret = null;
 		if (MdbResource!=null) {
 			if (!key.startsWith("\\")) {
@@ -901,8 +896,8 @@ public abstract class MdictServer extends NanoHTTPD {
 		}
 	}
 	public static Response emptyResponse = newFixedLengthResponse(Status.NO_CONTENT,"*/*", "");
-	
-	interface OnMirrorRequestListener{
+
+	public interface OnMirrorRequestListener{
 		public Response onMirror(String uri, boolean mirror);
 	}OnMirrorRequestListener om;
 	

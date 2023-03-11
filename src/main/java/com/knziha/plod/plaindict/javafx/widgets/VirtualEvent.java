@@ -1,4 +1,4 @@
-package com.knziha.plod.widgets;
+package com.knziha.plod.plaindict.javafx.widgets;
 
 import javafx.event.Event;
 

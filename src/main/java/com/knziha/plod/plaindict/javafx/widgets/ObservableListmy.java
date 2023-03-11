@@ -1,4 +1,4 @@
-package com.knziha.plod.widgets;
+package com.knziha.plod.plaindict.javafx.widgets;
 
 import com.knziha.plod.dictionarymodels.resultRecorderDiscrete;
 import javafx.collections.ObservableListBase;

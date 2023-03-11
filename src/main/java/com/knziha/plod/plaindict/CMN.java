@@ -172,4 +172,8 @@ public class CMN{
     public static long now() {
         return System.currentTimeMillis();
     }
+
+    public static int id(Object e) {
+        return System.identityHashCode(e);
+    }
 }

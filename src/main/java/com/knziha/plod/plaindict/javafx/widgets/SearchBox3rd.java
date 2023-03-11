@@ -1,9 +1,8 @@
-package com.knziha.plod.widgets;
+package com.knziha.plod.plaindict.javafx.widgets;
  
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 

@@ -22,6 +22,14 @@ import java.util.HashSet;
 import java.util.Map;
 
 public class MainActivityUIBase {
+	public final  PlainDictAppOptions opt;
+	public final  LoadManager loadManager;
+
+	public String userDir;
+	public BookPresenter currentDictionary;
+	public int currentDisplaying=0;
+	public int adapter_idx;
+	
 	Connection database;
 	private Statement statement;
 
@@ -30,7 +38,11 @@ public class MainActivityUIBase {
 	public static final String FIELD_VISIT_TIME = "last_visit_time";
 	public static final String FIELD_EDIT_TIME = "last_edit_time";
 
+	public String record_for_mirror;
+	
 	public MainActivityUIBase(){
+		opt = new PlainDictAppOptions();
+		loadManager = new MainActivityUIBase.LoadManager(this);
 		try {
 			userDir = System.getProperty("user.dir") + "\\" + "PlainDict";
 			if (System.getProperty("app")!=null)
@@ -61,10 +73,6 @@ public class MainActivityUIBase {
 			CMN.Log("init done.");
 //			database.close();
 
-			opt = new PlainDictAppOptions();
-
-			loadManager = new MainActivityUIBase.LoadManager(this);
-
 			loadManager.reload("test.set.txt");
 		} catch (Exception e) {
 			CMN.Log(e);
@@ -73,11 +81,6 @@ public class MainActivityUIBase {
 	
 	public String fontFaces;
 	public String plainCSS;
-	public PlainDictAppOptions opt;
-	public LoadManager loadManager;
-
-	public String userDir;
-	BookPresenter currentDictionary;
 	
 	public Map<SubStringKey, String> serverHosts;
 	public ArrayList<PlainWeb>  serverHostsHolder=new ArrayList();
@@ -100,6 +103,11 @@ public class MainActivityUIBase {
 		return new_book(fullPath, THIS);
 	}
 
+	public BookPresenter new_book(String pathFull) throws IOException {
+		File fullPath = pathFull.startsWith("/")?new File(pathFull):new File(opt.lastMdlibPath, pathFull);
+		return new_book(fullPath, this);
+	}
+
 	public static BookPresenter new_book(File fullPath, MainActivityUIBase THIS) throws IOException {
 		BookPresenter ret = THIS.mdict_cache.get(fullPath.getName());
 		if (ret!=null) {
@@ -109,7 +117,7 @@ public class MainActivityUIBase {
 		THIS.mdict_cache.put(fullPath.getName(), ret);
 		return ret;
 	}
-	
+
 	public class LoadManager {
 		public int md_size;
 		public final ArrayList<BookPresenter> md = new ArrayList<>();
@@ -384,6 +392,7 @@ public class MainActivityUIBase {
 		return id;
 	}
 
-
-
+	public String etSearch_getText() {
+		return null;
+	}
 }

@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.knziha.plod.widgets.toggle;
+package com.knziha.plod.plaindict.javafx.widgets.toggle;
 
 import com.sun.javafx.css.converters.SizeConverter;
 import javafx.animation.TranslateTransition;

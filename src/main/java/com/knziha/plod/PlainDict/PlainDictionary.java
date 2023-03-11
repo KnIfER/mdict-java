@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PlainDictionary extends MainActivityUIBase{
-	PlainDictionary() {
+	public PlainDictionary() {
 		super();
 		CMN.Log("App");
 		try {

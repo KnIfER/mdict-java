@@ -1,4 +1,4 @@
-package com.knziha.plod.widgets;
+package com.knziha.plod.plaindict.javafx.widgets;
 
 import javafx.scene.Cursor;
 import javafx.scene.input.MouseEvent;

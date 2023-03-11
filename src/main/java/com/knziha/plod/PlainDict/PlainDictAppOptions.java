@@ -24,7 +24,7 @@ public class PlainDictAppOptions extends PDICMainAppOptions
 	String PdfArgs=null;
 	String BsrArgs=null;
 	String currentSetName="default";
-	static String SearchUrlDefault = "https://www.baidu.com/#ie={inputEncoding}&wd=%s";
+	public static String SearchUrlDefault = "https://www.baidu.com/#ie={inputEncoding}&wd=%s";
 	public PlainDictAppOptions(){
 
 	}

@@ -1,9 +1,8 @@
-package com.knziha.plod.widgets;
+package com.knziha.plod.plaindict.javafx.widgets;
  
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.scene.input.ClipboardContent;
@@ -14,7 +13,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
-import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
+import com.knziha.plod.plaindict.javafx.widgets.splitpane.HiddenSplitPaneApp;
 
 public class SearchBox extends Region {
 	final static Text snapshotter = new Text();

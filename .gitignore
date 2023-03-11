@@ -19,3 +19,4 @@ MIJI
 *.log
 src/test/resources/1000.txt
 src/test/resources/greek-earthquakes-1964-2000.txt.gz
+/PlainDict/

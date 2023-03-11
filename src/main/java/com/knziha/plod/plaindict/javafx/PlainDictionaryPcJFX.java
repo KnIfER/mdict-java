@@ -1,4 +1,4 @@
-package com.knziha.plod.plaindict;
+package com.knziha.plod.plaindict.javafx;
 
 import com.knziha.plod.dictionary.SearchResultBean;
 import com.knziha.plod.dictionary.Utils.SU;
@@ -6,9 +6,10 @@ import com.knziha.plod.dictionary.Utils.SU;
 //import com.knziha.plod.dictionarymanager.ManagerFragment;
 import com.knziha.plod.dictionarymodels.*;
 import com.knziha.plod.ebook.MobiBook;
+import com.knziha.plod.plaindict.*;
+import com.knziha.plod.plaindict.javafx.widgets.*;
 import com.knziha.plod.settings.SettingsDialog;
-import com.knziha.plod.widgets.*;
-import com.knziha.plod.widgets.splitpane.HiddenSplitPaneApp;
+import com.knziha.plod.plaindict.javafx.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -57,7 +58,6 @@ import java.awt.datatransfer.Transferable;
 import java.io.*;
 import java.lang.ref.WeakReference;
 import java.net.*;
-import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.Timer;
 import java.util.*;
@@ -69,14 +69,11 @@ import static javafx.concurrent.Worker.State.FAILED;
 public class PlainDictionaryPcJFX extends Application{
 	GridPane topGrid;
 	SearchBox searchBox;
-	TextField etSearch;
+	public TextField etSearch;
 	private WebEngine engine;
 	javafx.stage.Stage stage;
 	Label advancedSearchLabel;
 	AdvancedSearchDialog advancedSearchDialog;
-	int currentDisplaying=0;
-	BookPresenter currentDictionary;
-	public int adapter_idx;
 	public static Pattern windowPath=Pattern.compile("^[a-zA-Z]:\\\\.*");
 	public final static KeyCombination EscComb = KeyCombination.valueOf("ESC");
 	public final static KeyCombination AltDComb = KeyCombination.valueOf("ALT+D");
@@ -101,9 +98,10 @@ public class PlainDictionaryPcJFX extends Application{
 	WeakReference<SettingsDialog> settingDialog;
 	WeakReference<Stage> managerDialog;
 	private Clipboard clipboard;
-	String record_for_mirror;
 	
 	Map<String, PlainMdict> md_table = Collections.synchronizedMap(new HashMap<>());
+
+	public final ArrayList<BookPresenter> md;
 	
 	final MainActivityUIBase app;
 	
@@ -116,7 +114,7 @@ public class PlainDictionaryPcJFX extends Application{
 			return flag;
 		}
 		public void setPos(String pos) {
-			currentDisplaying=Integer.parseInt(pos);
+			app.currentDisplaying=Integer.parseInt(pos);
 			CMN.Log("currentDisplaying" +pos);
 		}
 
@@ -127,8 +125,8 @@ public class PlainDictionaryPcJFX extends Application{
 		public void setLastMd(String val) {
 			try {
 				int idx = Integer.parseInt(val);
-				currentDictionary= md.get(idx);
-				adapter_idx=idx;
+				app.currentDictionary= md.get(idx);
+				app.adapter_idx=idx;
 			} catch (Exception e) { }
 		}
 
@@ -156,7 +154,7 @@ public class PlainDictionaryPcJFX extends Application{
 		}
 
 		public void recordRecords(String record){
-			record_for_mirror=record;
+			app.record_for_mirror=record;
 		}
 
 		public void setCombinedSeaching(boolean val){
@@ -417,7 +415,13 @@ public class PlainDictionaryPcJFX extends Application{
 		}
 		bundle = ResourceBundle.getBundle("UIText" , Locale.getDefault());
 		SU.debug=true;
-		app = new PlainDictionary();
+		app = new MainActivityUIBase() {
+			@Override
+			public String etSearch_getText() {
+				return etSearch.getText();
+			}
+		};
+		md = app.loadManager.md;
 	}
 
 	public static class UI{
@@ -454,8 +458,8 @@ public class PlainDictionaryPcJFX extends Application{
 	public void start(javafx.stage.Stage stage_) throws Exception {
 		//sun.net.http.allowRestrictedHeaders=true;
 		ScanSettings(new File(PlainDictAppOptions.projectPath,"settings.xml"));
-		server = new MdictServerOyster(port, this, app);
-		scanInFiles();
+		server = new MdictServerOyster(port, app);
+		//scanInFiles();
 		toolBar = new MenuBar();
 		stage = stage_;
 		stage.setTitle("平典");
@@ -570,7 +574,7 @@ public class PlainDictionaryPcJFX extends Application{
 				case UI.open:{
 					FileChooser fileChooser = new FileChooser();
 					fileChooser.getExtensionFilters().addAll(
-							new ExtensionFilter("mdict file", "*.mdx")
+						new ExtensionFilter("mdict file", "*.mdx")
 					);
 					fileChooser.setInitialDirectory(new File(opt.GetLastMdlibPath()));
 					List<File> files = fileChooser.showOpenMultipleDialog(stage);
@@ -582,7 +586,8 @@ public class PlainDictionaryPcJFX extends Application{
 							String fileNameKey=fI.getPath();
 							if(!mdict_cache.contains(fileNameKey))
 								try {
-									md.add(new BookPresenter(new PlainMdict(fI, opt)));
+									md.add(app.new_book(fileNameKey));
+									app.loadManager.md_size = md.size();
 									mdict_cache.add(fileNameKey);
 								} catch (Exception e) { e.printStackTrace(); }
 						}
@@ -651,7 +656,7 @@ public class PlainDictionaryPcJFX extends Application{
 				} break;
 				case UI.browser:{
 					try {
-						AppMessenger.handleWebLink("http://127.0.0.1:"+port+"/MIRROR.jsp?DX=" + adapter_idx + "&POS=" + currentDisplaying + "&KEY=" + URLEncoder.encode(etSearch.getText(), "UTF-8"));
+						AppMessenger.handleWebLink("http://127.0.0.1:"+port+"/MIRROR.jsp?DX=" + app.adapter_idx + "&POS=" + app.currentDisplaying + "&KEY=" + URLEncoder.encode(etSearch.getText(), "UTF-8"));
 					} catch (UnsupportedEncodingException e1) {
 						e1.printStackTrace();
 					}
@@ -848,7 +853,7 @@ public class PlainDictionaryPcJFX extends Application{
 		((VBox) scene.getRoot()).getChildren().add(view);
 		VBox.setVgrow(view, Priority.ALWAYS);
 		stage.setScene(scene);
-		stage.getIcons().add(new Image(PlainDictionaryPcJFX.class.getResourceAsStream("Mdict-browser/MdbR/MdbR.png")));
+		stage.getIcons().add(new Image(MdictServer.class.getResourceAsStream("Mdict-browser/MdbR/MdbR.png")));
 
 		stage.show();
 		try {
@@ -1125,68 +1130,6 @@ public class PlainDictionaryPcJFX extends Application{
 	}
 
 	public static boolean isNeoJRE=false;
-
-	//HashSet<String> mdlibsCon;
-
-
-
-	public final ArrayList<BookPresenter> md = new ArrayList<>();
-	private void scanInFiles() {
-		//![] start loading dictionaries
-		File def = getCurrentSetFile();      //!!!原配置
-		File CONFIG = new File(PlainDictAppOptions.projectPath,"CONFIG");
-		if(!CONFIG.isDirectory()) CONFIG.mkdirs();
-		int cc=0;
-		if(def.exists()){
-			try {
-				BufferedReader in = new BufferedReader(new FileReader(def));
-				String line;
-				while((line = in.readLine())!=null){
-					boolean disabled=false;
-					if (line.startsWith("[:")) {
-						int nextbrace=line.indexOf("]",2);
-						if(nextbrace>=3){
-							String[] args = line.substring(2, nextbrace).split(":");
-							for (int i = 0; i < args.length; i++) {
-								switch (args[i]){
-									case "D":
-										disabled = true;
-									break;
-								}
-							}
-						}
-						if(disabled) continue;
-						if(nextbrace!=-1)
-							line = line.substring(nextbrace+1);
-					}
-					//CMN.Log("?",opt.GetLastMdlibPath(), line, !windowPath.matcher(line).matches() , !line.startsWith("/"));
-					if(!windowPath.matcher(line).matches() && !line.startsWith("/"))
-						line=opt.GetLastMdlibPath()+File.separator+line;
-					try {
-						PlainMdict mdtmp = new_mdict(line, opt);
-						md.add(new BookPresenter(mdtmp));
-						//if(mdtmp._Dictionary_fName.equals(opt.getLastMdFn()))
-						//	adapter_idx = md.size();
-					} catch (Exception e) {
-						cc++;
-						CMN.Log(line, e);
-					}
-				}
-				in.close();
-			} catch (IOException e2) {
-				e2.printStackTrace();
-			}
-		}
-		else{
-			def.getParentFile().mkdirs();
-			try {
-				def.createNewFile();
-			} catch (IOException ignored) {}
-		}
-
-		if(md.size()>0)
-			currentDictionary = md.get(0);
-	}
 
 	private PlainMdict new_mdict(String line, PlainDictAppOptions opt) throws IOException {
 		if(com.knziha.plod.dictionary.mdict.mobiReg.matcher(line).find())
@@ -1568,7 +1511,7 @@ public class PlainDictionaryPcJFX extends Application{
 
 					layer.IsInterrupted=false;
 					if(!isCombinedSearch)
-						layer.Idx=adapter_idx;
+						layer.Idx=app.adapter_idx;
 
 					ArrayList<BookPresenter> _md = layer.md;
 					int GETNUMBERENTRIES=0;

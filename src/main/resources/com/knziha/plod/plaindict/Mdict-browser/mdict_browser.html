@@ -4071,6 +4071,9 @@
 			const temp = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 			var negative=num<0;
 			if(negative) num=-num;
+			if(!num) {
+				return "0";
+			}
 			if(num<0) {
 				// todo INCONGRUENT
 				return "8m85Y0n8LzA~";
