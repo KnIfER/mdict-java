@@ -2,6 +2,7 @@ package com.knziha.plod.dictionarymodels;
 
 import java.util.List;
 
+import com.knziha.plod.plaindict.javafx.AdvancedSearchLogicLayer;
 import com.knziha.plod.plaindict.javafx.PlainDictionaryPcJFX;
 import javafx.scene.web.WebEngine;
 
@@ -73,7 +74,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 //		size=resCount;
 	}
 	
-	public resultRecorderScattered(PlainDictionaryPcJFX.AdvancedSearchLogicLayer _SearchLauncher, WebEngine engine_){
+	public resultRecorderScattered(AdvancedSearchLogicLayer _SearchLauncher, WebEngine engine_){
 		md=_SearchLauncher.md;
 		engine=engine_;
 		firstLookUpTable = new int[md.size()];

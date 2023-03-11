@@ -324,7 +324,7 @@ public class ManagerFragment extends VBox {
 							String fn = file.getName();
 							opt.setCurrentPlanName(fn.substring(0,fn.length()-4));
 							statusBar.setText(opt.getCurrentPlanName()+" >> saved");
-							((Stage)getScene().getWindow()).setTitle(bundle.getString(PlainDictionaryPcJFX.UI.manager)+" - "+opt.getCurrentPlanName());
+							((Stage)getScene().getWindow()).setTitle(bundle.getString(UI.manager)+" - "+opt.getCurrentPlanName());
 						}
 					}
 				} break;
@@ -341,7 +341,7 @@ public class ManagerFragment extends VBox {
 							String fn = file.getName();
 							opt.setCurrentPlanName(fn.substring(0,fn.length()-4));
 							statusBar.setText("loaded << " + opt.getCurrentPlanName());
-							((Stage)getScene().getWindow()).setTitle(bundle.getString(PlainDictionaryPcJFX.UI.manager)+" - "+opt.getCurrentPlanName());
+							((Stage)getScene().getWindow()).setTitle(bundle.getString(UI.manager)+" - "+opt.getCurrentPlanName());
 						}
 					}
 				} break;

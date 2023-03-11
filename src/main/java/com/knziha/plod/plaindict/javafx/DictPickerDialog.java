@@ -3,13 +3,12 @@ package com.knziha.plod.plaindict.javafx;
 import com.knziha.plod.dictionarymodels.BookPresenter;
 import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.plaindict.PlainDictAppOptions;
-import com.knziha.plod.dictionarymodels.BookPresenter;
-import com.knziha.plod.plaindict.javafx.PlainDictionaryPcJFX;
 import com.knziha.plod.plaindict.javafx.widgets.DragResizeView;
 import com.knziha.plod.plaindict.javafx.widgets.VirtualWindowEvent;
 import com.knziha.plod.plaindict.javafx.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.TableCell;
@@ -24,13 +23,12 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 import com.knziha.plod.plaindict.CMN;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.ResourceBundle;
@@ -56,7 +54,7 @@ public class DictPickerDialog extends Stage {
 	public DictPickerDialog(PlainDictionaryPcJFX app, ArrayList<File> _sets, PlainDictAppOptions _opt, ResourceBundle bundle) {
 		super();
 		opt=_opt;
-		setTitle(bundle.getString(PlainDictionaryPcJFX.UI.switchdict));
+		setTitle(bundle.getString(UI.switchdict));
 		getIcons().add(new Image(HiddenSplitPaneApp.class.getResourceAsStream("shared-resources/bundle.png")));
 		int defaultPercent=25;
 		dv = new DragResizeView(defaultPercent);
@@ -251,4 +249,33 @@ public class DictPickerDialog extends Stage {
 		public ObservableValue<String> apply(File m) {
 			return new SimpleStringProperty(m.getName().substring(0, m.getName().length()-4));
 		}};
+
+	public void SyncPaneToMain(PlainDictionaryPcJFX app) {
+		setOnCloseRequest(new EventHandler<WindowEvent>() {
+			@Override
+			public void handle(WindowEvent event) {
+				//CMN.Log("???setOnCloseRequest");
+				if(dirtyFlag!=0){
+					adapter_idx=adapter_idx;
+					app.app.currentDictionary=md.get(adapter_idx);
+					if(!opt.GetDirectSetLoad() && (dirtyFlag&0x1)!=0){
+						File from;
+						if((from=new File(opt.projectPath,"CONFIG/"+opt.getCurrentPlanName()+".set")).exists()){
+							try {
+								FileChannel inChannel =new FileInputStream(from).getChannel();
+								FileChannel outChannel=new FileOutputStream(new File(PlainDictAppOptions.projectPath,"default.txt")).getChannel();
+								inChannel.transferTo(0, inChannel.size(), outChannel);
+								inChannel.close();
+								outChannel.close();
+							} catch (Exception ignored) { }
+						}
+					}
+					app.engine.executeScript("lastDingX="+adapter_idx+"; ScanInDicts();");
+					dirtyFlag=0;
+				}
+				if(!(event instanceof VirtualWindowEvent))
+					app.contextDialog=null;
+			}
+		});
+	}
 }
