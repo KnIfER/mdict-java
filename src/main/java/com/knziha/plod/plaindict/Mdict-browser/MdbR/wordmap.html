@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="description" content="WordMap">
+    <meta name="robots" content="noindex">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes, maximum-scale=10">
+
+    <style>
+		#toastview {
+		  display:none;
+		  position:fixed;
+		  left:50%;
+		  top:89%;
+		  width:100%;
+		  opacity:0;
+		  position:absolute;
+		  transform:translate(-50%,-50%);
+		  -webkit-transform:translate(-50%,-50%);
+		  transition:opacity 0.3s;
+		  overflow:auto;
+		  text-align:center;
+		  z-index:5;
+		  user-select:none;
+		  pointer-events: none;
+		}
+		#toasttext{
+		  display:inline-block;
+		  margin:0 0px;
+		  padding:7px 15px;
+		  font-size:16px;
+		  color:#FFFFFF;
+		  letter-spacing:0;
+		  line-height:22px;
+		  border-radius:30px;
+		  -moz-border-radius:30px;
+		}
+		.warn{
+			background-image: linear-gradient(-45deg, #ff9569 0%, #e92758 100%);
+		}
+		.info{
+			background-image: linear-gradient(0deg, #27bdc9 0%, #296ade 21%);
+			box-shadow: inset 0px 0px 4px 0px #ffffff9c;
+		}
+	
+		
+		html,body{
+			padding:0;
+			margin:0;
+            height: 100%;
+            width: 100%;
+		}
+		body{
+		    overflow: scroll;
+		}
+        .wordmap-svg {
+            height: 100%;
+            width: 100%;
+			overflow:hidden;
+			user-select: none;
+        }
+        .wordmap-svg:focus {
+            outline: none;
+        }
+        wordnode {
+            background: #f5f5f5;
+            border-radius: 10px;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+            color: #212121;
+            display: inline-block;
+            font-family: 'Raleway';
+            font-size: 22px;
+            margin: 0 auto;
+            padding: 15px;
+			position:absolute;
+			left:0;
+			user-select: text;
+			//opacity: 0.1;
+        }
+        wordnode.hotNode {
+            box-shadow: 0 2px 0px 10px rgb(255 133 0)
+        }
+        .wordlink {
+            fill: transparent;
+            stroke: #9e9e9e;
+            stroke-dasharray: 10px 4px;
+            stroke-width: 3px;
+        }
+        .wordlink.xia {
+            stroke: transparent;
+			stroke-width: 34px;
+			stroke-dasharray: unset;
+        }
+		.toolbar-container{
+			font-size: 12px;
+			color: rgb(255, 255, 255);
+			display: flex;
+			flex-grow: 1;
+			user-select:none;
+		}
+		.toolbar-item{
+			color: rgb(255, 255, 255);
+			display: inline-block;
+			line-height: 22px;
+			height: 100%;
+			vertical-align: top;
+			max-width: 40vw;
+			padding-top:5px;
+			padding-bottom:5px;
+		}
+		.toolbar-item>a{
+			line-height: 22px;
+			text-decoration: none;
+			cursor: pointer;
+			display: flex;
+			height: 100%;
+			padding: 0 5px;
+			white-space: pre;
+			align-items: center;
+			text-overflow: ellipsis;
+			overflow: hidden;
+			outline-width: 0;
+			margin-right: 3px;
+			margin-left: 3px;
+			color: #000;
+		}
+		.toolbar-item>a>span{
+			text-align: center;
+			font-size: 14px;
+			padding-top:10px;
+			padding-bottom:10px;
+		}
+		#location {
+			z-index: 9999;
+			position:absolute;
+		}
+		#editbar {
+			z-index: 9998;
+		}
+    </style>
+</head>
+
+<body style='background:#fff'>
+    <div id="map" class="wordmap-svg" style="transform:scale(0.3);width:1500px;height:2500px;transform-origin:left top;">
+		<wordnode style="left:800px;top:500px;" id="test">
+			<div style="whitespace:nowrap;">basics<br>asdsa asd<br>sdsaddddd<br>asdsadads<br></div>
+			<video preload="none" src='https://www.runoob.com/try/demo_source/movie.mp4' controls> </video>
+		</wordnode>
+		
+		<wordnode id="editbar" style="transform:scale(1.5);padding-top:0;padding-bottom:0;opacity:0.8">
+			<div class="toolbar-container" style="width:auto;">
+				<div class="toolbar-item" id="move" style="padding:0">
+					<a tabindex="-1" role="button"  style="cursor:all-scroll">
+						<span class="codicon codicon-bookmark" style="padding-top:15px;padding-bottom:15px;">✥ 移动</span>
+					</a>
+				</div>
+				<!--div class="toolbar-item" >
+					<a tabindex="-1" role="button"  style="">
+						<span class="codicon codicon-bookmark">🗑️ 删除</span>
+					</a>
+				</div-->
+				<div class="toolbar-item" id="lnk">
+					<a tabindex="-1" role="button"  style="">
+						<span class="codicon codicon-bookmark">🔗 连线</span>
+					</a>
+				</div>
+				<div class="toolbar-item" >
+					<a tabindex="-1" role="button"  style="">
+						<span class="codicon codicon-bookmark" id="edit">🖊 编辑</span>
+					</a>
+				</div>
+			</div>
+		</wordnode>
+		
+		<svg id="location" style="overflow:visible;pointer-events:none;">
+			<g>
+				<path transform="translate(0,0) scale(1)" d="M0,-7c-3.87,0 -7,3.13 -7,7s3.13,7 7,7 7,-3.13 7,-7 -3.13,-7 -7,-7zM15.65,-1.75c-0.81,-7.3 -6.6,-13.09 -13.9,-13.9L1.75,-19.25h-3.5v3.61C-9.05,-14.84 -14.84,-9.05 -15.65,-1.75L-19.25,-1.75v3.5h3.61c0.81,7.3 6.6,13.09 13.9,13.9L-1.75,19.25h3.5v-3.61c7.3,-0.81 13.09,-6.6 13.9,-13.9L19.25,1.75v-3.5h-3.61zM0,12.25c-6.77,0 -12.25,-5.48 -12.25,-12.25s5.48,-12.25 12.25,-12.25 12.25,5.48 12.25,12.25 -5.48,12.25 -12.25,12.25z">
+				</path>
+			</g>
+		</svg>
+		
+		<svg id="paths" style="overflow:visible;width:100%;height:100%">
+			<g>
+			</g>
+		</svg>
+	</div>
+	
+	<script>
+		var doc = document, w=window;
+		function ge(e,p){return (p||doc).getElementById(e)};
+		w.debug = function(a,b,c,d,e){var t=[a,b,c,d,e];for(var i=5;i>=0;i--){if(t[i]===undefined)t[i]='';else break}console.log("%c wordmap ","color:#333!important;background:#0FF;",t[0],t[1],t[2],t[3],t[4])}
+
+		var ua=navigator.userAgent, mobile=(/Android|webOS|iPhone|iPod|BlackBerry/i.test(ua));
+		
+		var map = ge("map");
+		var loca = ge("location");
+		var editbar = ge("editbar");
+		var paths = ge("paths");
+		var move = ge("move"), edit=ge("edit"), lnk=ge("lnk");
+		var focaNode;
+		var editingNode;
+		var app = w.app;
+		var word = w.word;
+		var snap = true;
+		var gx=100, gy=100;
+		
+		var linkMode = false;
+		var linkingNode;
+		var linkingContinuous;
+		
+		var mapX = 1500, mapY = 2500;
+		var ff = mapX / doc.documentElement.clientWidth;
+		map.style.transform = "scale("+(doc.documentElement.clientWidth/mapX)+")";
+		
+		map.style.background="#0000ff22"
+		// loca.style.display='none';
+		editbar.style.display='none';
+		
+		ge("test").lnks=[];
+		
+		map.innerHTML = "";
+		
+		map.appendChild(paths);
+		map.appendChild(loca);
+		map.appendChild(editbar);
+		
+		function parseJson(e){
+			try{return JSON.parse(e)}catch(e){return {}}
+		}
+		
+		function loadJson(url,cb,parm,fNet,type='json'){
+			debug('loadJson!!!', url,parm)
+			if(!fNet && app) {
+				var e = parseJson(app.loadJson(parm?(url+'?'+parm):url));
+				if(cb)cb(e);
+			} else {
+				var x = new XMLHttpRequest();
+				x.open(parm?'POST':'GET', url, true);
+				x.responseType = type;
+				if(cb)x.onload = function() {
+					//debug('=', x.responseText);
+					cb(x.response);
+				};
+				x.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+				//x.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+				x.send(parm);
+			}
+		}
+		
+		loadJson("http://mdbr.com/wordmap.json", function(e){
+			// location.origin
+			// 'http://192.168.0.102:8080'
+			if(e) {
+				var nodes = e.split('\0');
+				debug(nodes);
+				for(var i=0;i<nodes.length;i++) {
+					try{
+						var json = parseJson(nodes[i]);
+						debug('renode::', json);
+						if(json.type>='150') {
+							linkNodes(ge(json.a), ge(json.b), 0, json.id);
+						} else if(json.type=='0'){
+							var node = craft("WORDNODE", map);
+							craft("DIV", node).innerHTML = json.text;
+							node.style.left = json.x+"px";
+							node.style.top = json.y+"px";
+							node.id = json.id;
+							node.lnks = [];
+						} else if(json.type=='-1'){
+							mapX = parseInt(json.w)||mapX;
+							mapY = parseInt(json.h)||mapY;
+							map.style.width = mapX+'px';
+							map.style.height = mapY+'px';
+						}
+					} catch(e) { debug(e) }
+				}
+			}
+			
+		}, 'x=1', true, 'text')
+		
+		function craft(t, p, c) {
+			var e=doc.createElement(t||"DIV");
+			//e.nid = nid;
+			if(c)e.className=c;
+			if(p)p.appendChild(e);
+			return e;
+		}
+			
+		function getPos(){
+			return (parseInt(loca.style.left)||0)+","+(parseInt(loca.style.top)||0);
+		}
+		
+		function add(text, nid){
+			debug('add', text, nid);
+			var node = craft("WORDNODE", map);
+			if(!text.startsWith('<div>'))
+				craft("DIV", node).innerHTML = text;
+			else
+				node.innerHTML = text;
+			node.style.left = loca.style.left;
+			node.style.top = loca.style.top;
+			node.id = nid;
+			node.lnks = [];
+			selectNode(node);
+		}
+		
+		// https://blog.csdn.net/yiyueqinghui/article/details/108004272
+		function makeSVG(tag, attrs) {
+			const ns = 'http://www.w3.org/2000/svg';
+			const xlinkns = 'http://www.w3.org/1999/xlink';
+			let el= document.createElementNS(ns, tag);
+			if (tag==='svg'){
+				el.setAttribute('xmlns:xlink', xlinkns);
+			}
+			for (let k in attrs) {
+				if (k === 'xlink:href') {
+					el.setAttributeNS(xlinkns, k, attrs[k]);
+				} else {
+					el.setAttribute(k, attrs[k]);
+				}
+			}
+			return el;
+		}
+		
+		var colors = "0f0 0ff f60 f0f 00f f00".split(' '), i=0;
+		function debugPathClick(){this.style.stroke = "#"+colors[i++%colors.length];}
+		
+		function linkNodes(A, B, path, id) {
+			if(path) { // resolve
+				A = path.A;
+				B = path.B;
+				id = path.id;
+			} 
+			else if(!id){ // create
+				if(word) {
+					id = word.createLnk(sid.get(), A.id, B.id);
+				}
+			}
+			var x = parseInt(A.style.left)||0;
+			var y = parseInt(A.style.top)||0;
+			var x1 = parseInt(B.style.left)||0;
+			var y1 = parseInt(B.style.top)||0;
+			x = parseInt(x+A.offsetWidth/2);
+			y = parseInt(y+A.offsetHeight/2);
+			x1 = parseInt(x1+B.offsetWidth/2);
+			y1 = parseInt(y1+B.offsetHeight/2);
+			//  d="M 0 0 Q 443 241 , 402 540"
+			var d = "M "+x+" "+y+" Q "+(x+x1)/2+" "+(y+y1)/2+","+x1+" "+y1;
+			if(!path) {
+				path = makeSVG("path", {d:d, class:"wordlink"});
+				paths.firstElementChild.appendChild(path);
+				path.A=A;
+				path.B=B;
+				A.lnks.push(path);
+				B.lnks.push(path);
+				var xia = makeSVG("path", {d:d, class:"wordlink xia"});
+				xia.onclick = debugPathClick;
+				path.xia = xia;
+				xia.P = path;
+				path.id = id;
+				
+				paths.firstElementChild.appendChild(xia);
+				
+				// var text = makeSVG("text", {style:"fill:red;"});
+				// var textpath = makeSVG("textPath", {'xlink:href':"#path1", 'startOffset':"50%"});
+				// text.appendChild(textpath);
+				// paths.appendChild(text);
+				// textpath.append("TEST");
+			} else {
+				path.setAttribute("d", d);
+				path.xia.setAttribute("d", d);
+			}
+		}
+		
+		function resolveLnks(node) {
+			var lnks = node.lnks;
+			if(lnks.length) for(var i=0;i<lnks.length;i++) {
+				linkNodes(0,0,lnks[i]);
+			}
+		}
+		
+		function placeEditbar(node) {
+			var obj = node;
+			var x = parseInt(obj.style.left)||0;
+			//x+=node.offsetWidth/3;
+			x+=55;
+			var y = parseInt(obj.style.top)||0;
+			y+=node.offsetHeight;
+			y+=19;
+			editbar.style.left = x+"px";
+			editbar.style.top = y+"px";
+		}
+		
+		function onNodeResize(e){
+			//debug("onNodeResize", e);
+			for(var i=0;i<e.length;i++) {
+				if(e[i].type==='childList') {e=0;break;}
+			}
+			if(!e) placeEditbar(focaNode);
+		}
+		var onNodeResizeOpt = { attributes: true, childList: true, subtree: false };
+		var nodeResizeObz = new MutationObserver(onNodeResize);
+
+		function selectNode(node){
+			loca.style.display='none';
+			if(node==editbar || focaNode==node) return;
+			if(focaNode) {
+				nodeResizeObz.disconnect();
+				focaNode.classList.remove("hotNode");
+				if(linkMode) {
+					linkNodes(focaNode, node);
+				}
+			}
+			focaNode = node;
+			debug(node);
+			placeEditbar(node);
+			if(!editbar.parentNode) map.appendChild(editbar);
+			editbar.style.display='';
+			node.classList.add("hotNode");
+			nodeResizeObz.observe(node, onNodeResizeOpt);
+		}
+		
+		map.addEventListener('click', function(e){
+			var p=e.path,node=0;
+			if(!p && e.composedPath) p=e.composedPath();
+			debug(p);
+			if(p) for(var i=0;(t=p[i])&&i++<99;) {
+				if(t.tagName==='WORDNODE') {
+					node = t;
+					break;
+				}
+			}
+			if(node==editbar) {
+				return;
+			}
+			if(node) {
+				if(linkingNode) {
+					if(linkingNode!=node) {
+						linkNodes(linkingNode, node);
+						if(!linkingContinuous) {
+							linkingNode = 0;
+							editbar.style.display = '';
+						}
+					} else {
+						linkingNode = 0;
+						editbar.style.display = '';
+					}
+					return;
+				}
+				var editing = focaNode && focaNode.getAttribute("contenteditable")=="true";
+				selectNode(node);
+				if(editing) edit.click();
+				return;
+			}
+			// placeLocation
+			linkingNode = 0;
+			var x = xy(e).clientX, y=e.clientY;
+			//debug("mousedown", x, y, e);
+			var xx = (x+doc.documentElement.scrollLeft) * ff;
+			var yy = (y+doc.documentElement.scrollTop) * ff;
+			if(snap) {
+				xx = Math.round(xx/gx)*gx;
+				yy = Math.round(yy/gy)*gy;
+			}
+			if(!loca.parentNode) map.appendChild(loca);
+			loca.style.display='';
+			loca.style.left=parseInt(xx)+'px';
+			loca.style.top=parseInt(yy)+'px';
+			//loca.setAttribute("transform", "translate("++","++")");
+			if(!getSelection().isCollapsed)
+				getSelection().collapseToEnd();
+			if(editingNode) {
+				editingNode.setAttribute("contenteditable", "false");
+				commitEdits(editingNode);
+				editingNode = null;
+			} else {
+				editbar.style.display='none';
+				if(focaNode) {
+					nodeResizeObz.disconnect();
+					focaNode.classList.remove("hotNode");
+					focaNode = 0;
+				}
+			}
+			//h5Test()
+		});
+		
+		function xy(e){
+			if(e.clientX==undefined)
+				e.clientX=e.changedTouches[0].clientX;
+			if(e.clientY==undefined)
+				e.clientY=e.changedTouches[0].clientY;
+			return e;
+		};
+		
+		
+		var moving = 0, orgX, orgY, nodeXYs=[], dragResizer={
+			st:mobile?'touchstart':'mousedown'
+			,ed:mobile?'touchend':'mouseup'
+			,mv:mobile?'touchmove':'mousemove'
+		}, tmPress;
+		function dragMove(e){
+		}
+		function releaseLck(){
+			if(tmPress) clearTimeout(tmPress);
+			doc.removeEventListener(dragResizer.ed, dragAbort, true);
+			checkMoved();
+		}
+		// check and save moved nodes
+		function checkMoved(){
+			if(moving) {
+				var x=parseInt(moving.style.left)||0, y=parseInt(moving.style.top)||0;
+				if(nodeXYs[0]!=x || nodeXYs[1]!=y) {
+					debug('node changed!', moving);
+					if(word) 
+						word.moveNode(moving.id, x, y);
+				}
+			}
+			moving = 0;
+		}
+		function fakeScroll(x, y){
+			//debug('fakeScroll', x, y);
+			if(moving) {
+				var x = parseInt(nodeXYs[0]+x*ff);
+				var y = parseInt(nodeXYs[1]+y*ff);
+				if(snap) {
+					x = Math.round(x/gx)*gx;
+					y = Math.round(y/gy)*gy;
+				}
+				// 边界检查
+				var w=moving.offsetWidth, h=moving.offsetHeight;
+				if(x<0) x=0;
+				if(y<0) y=0;
+				if(x+w>mapX) x=mapX-w;
+				if(y+h>mapY) y=mapY-h;
+				moving.style.left = x+"px";
+				moving.style.top = y+"px";
+				resolveLnks(moving);
+				placeEditbar(moving);
+			}
+		}
+		function dragAbort(){
+			//doc.removeEventListener(modragResizer.mv, dragMove, true);
+			doc.removeEventListener(dragResizer.ed, dragAbort, true);
+			checkMoved();
+			if(mobile)
+			{
+				if(app) app.lockScroll(sid.get(), false);
+			}
+		}
+		
+		doc.addEventListener(dragResizer.ed, function(e){
+			if(tmPress) clearTimeout(tmPress);
+		});
+		
+		function touchStart(e){
+			var x = xy(e).clientX, y=e.clientY;
+			orgX = x;
+			orgY = y;
+			moving = focaNode;
+			doc.removeEventListener(dragResizer.ed, dragAbort, true);
+			doc.addEventListener(dragResizer.ed, dragAbort, true);
+			//doc.addEventListener(dragResizer.mv, dragMove, true);
+			if(moving) {
+				nodeXYs[0] = parseInt(moving.style.left)||0;
+				nodeXYs[1] = parseInt(moving.style.top)||0;
+			}
+			debug('touchstart', x, y, nodeXYs[0], nodeXYs[1]);
+			if(mobile) {
+				if(app) app.lockScroll(sid.get(), true);
+			}
+		}
+		move.addEventListener(dragResizer.st, touchStart, true);
+		function longPress(e){
+			toast("长按拖动");
+			tmPress = 0;
+			if(!moving) {
+				touchStart(e);
+			}
+		}
+		edit.addEventListener(dragResizer.st, function(e){
+			var x = xy(e).clientX, y=e.clientY;
+			orgX = x;
+			orgY = y;
+			tmPress = setTimeout(function(){longPress(e)},380);
+			if(word) word.lockScroll(sid.get());
+		});
+		edit.addEventListener(dragResizer.mv, function(e){
+			debug('edit touchstart',e);
+			var x = xy(e).clientX, y=e.clientY;
+			if(tmPress)
+			if(Math.abs(x-orgX)>5 || Math.abs(y-orgY)>5) {
+				clearTimeout(tmPress);
+			}
+			if(!moving)
+			if(Math.abs(x-orgX)>25 || Math.abs(y-orgY)>25) {
+				touchStart(e); 
+			}
+		});
+		edit.onclick = function(e){
+			editingNode = focaNode;
+			editingNode.setAttribute("contenteditable", "true");
+			editingNode.focus();
+			editingNode.oldText = editingNode.innerHTML;
+			if(editingNode.innerText.trim().length==0) {
+				var r = new Range();
+				r.selectNode(editingNode.firstElementChild);
+				getSelection().empty();
+				getSelection().addRange(r);
+			} else {
+				getSelection().modify('move', 'forward', 'lineboundary');
+			}
+			if(app)
+				app.ntxt = e.timeStamp
+		}
+		function commitEdits(node) {
+			var t = node.innerHTML;
+			if(node.oldText!=t) {
+				if(t.startsWith('<div>') && t.endsWith('</div>'))
+					t = t.slice(5, t.length-6);
+				word.editNode(node.id, t);
+			}
+			node.oldText=0;
+		}
+		lnk.addEventListener(dragResizer.st, function(e){
+			tmPress = setTimeout(function longPress(e){
+				toast("长按连续连线");
+				tmPress = 0;
+				linkingNode = focaNode;
+				linkingContinuous = true;
+				editbar.style.display='none';
+			},380);
+		});
+		lnk.addEventListener(dragResizer.mv, function(e){
+			if(tmPress) clearTimeout(tmPress);
+		});
+		lnk.onclick = function(){
+			linkingNode = focaNode;
+			linkingContinuous = false;
+			editbar.style.display = 'none';
+			toast("请点击下一节点");
+		}
+		
+		var toastTimer=-1;
+		var toastOpacity = 0.45;
+		function fadeToast() {
+			clearTimeout(toastTimer);
+			var toast = ge("toastview");
+			toast.style.opacity=0;
+			toastTimer=setTimeout(function(){toastTimer=-1;toast.style.display='none'}, 300);
+		}
+		function toast(msg, severity, time, parent, alpha){
+			if(toastTimer!=-1)clearTimeout(toastTimer);
+			if(!parent) parent=document.body;
+			var toast = ge("toastview");
+			if(!toast) {
+				toast = craft(0,parent);
+				toast.id="toastview";
+				craft(0,toast).id="toasttext";
+			}
+			var p=toast.parentNode;
+			if(p!=parent){
+				//debug("re-add toast!");
+				if(p) toast.remove();
+				parent.appendChild(toast);
+			}
+			var tt=toast.firstChild;
+			tt.innerHTML=msg;
+			tt.className=severity>=1?"warn":"info";
+			toastTimer=setTimeout(fadeToast, time||1000);
+			setTimeout(function(){toast.style.opacity=toastOpacity}, 16);
+			toast.style.display='block'
+			tt.style.opacity=alpha||1;
+			
+			var W=w.innerWidth, H=w.innerHeight
+				, zoom = app.getZoom(sid.get()) , zoom0 = w.outerWidth/W
+				;
+			var pageSx = app.getScrollX(sid.get());
+			var pageSy = app.getScrollY(sid.get());
+			var p=toast;
+			debug('zoom=', zoom);
+			debug('pageSx=', pageSx, pageSy);
+			if(zoom>1) {
+				var hh = (H*zoom0/zoom);
+				p.style.left = (pageSx/zoom + ((W)/zoom)/2)+'px';
+				p.style.top = ((H*zoom0+pageSy))/zoom+'px';
+				p.style.width = ((W)/zoom-20)+'px';
+				p.style.height = hh/2+'px';
+				tt.style.fontSize = parseInt(1/zoom*100)+"%";
+			} else {
+				p.style.left = '';
+				p.style.width = '';
+				p.style.height = '';
+				p.style.top = '';
+				tt.style.fontSize = '';
+			}
+		}
+		
+		function h5Test(){
+			toast("hello world");
+		}
+		
+		//h5Test();
+	
+		function resetAll(){
+			focaNode = 0;
+			moving = 0;
+			// linkMode = false;
+			linkingNode = false;
+		}
+		
+		function delSel(){
+			debug('delSel', focaNode);
+			delNode(focaNode);
+			resetAll();
+		}
+		
+		function delLink(el) {
+			if(word) word.removeNode(el.id);
+			el.xia.remove();
+			el.remove();
+		}
+		
+		function delNode(node){
+			if(word) {
+				word.removeNode(node.id);
+				var lnks = node.lnks;
+				if(lnks.length) for(var i=0;i<lnks.length;i++) {
+					delLink(lnks[i]);
+				}
+			}
+			node.remove();
+		}
+		
+		function expandMap(dw, dh){
+			debug('expandMap', dw, dh);
+			mapX += dw;
+			mapY += dh;
+			map.style.width = mapX+'px';
+			map.style.height = mapY+'px';
+			return mapX+","+mapY;
+		}
+		
+	</script>
+
+
+</body>
+
+</html>

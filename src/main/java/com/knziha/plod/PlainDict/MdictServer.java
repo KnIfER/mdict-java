@@ -639,6 +639,7 @@ public abstract class MdictServer extends NanoHTTPD {
 	}
 	
 	private String Reroute(String currentText) {
+		if(true) return currentText;
 		SU.Log(currentFilter.size(), "Reroute", currentText);
 		try {
 			for (BookPresenter mdTmp:currentFilter) {
@@ -788,7 +789,7 @@ public abstract class MdictServer extends NanoHTTPD {
 	int MdPageLength=0;
 	private String constructMdPage(BookPresenter presenter, String record, boolean b1, int pos, HTTPSession session) {
 		if(b1 && mdict.fullpagePattern.matcher(record).find())
-			b1=false;
+			b1=false;		 
 		CMN.debug("constructMdPage", session.isProxy, b1);
 		b1=true;
 		if(b1) {
@@ -894,7 +895,7 @@ public abstract class MdictServer extends NanoHTTPD {
 			return record;
 		}
 	}
-	static Response emptyResponse = newFixedLengthResponse(Status.NO_CONTENT,"*/*", "");
+	public static Response emptyResponse = newFixedLengthResponse(Status.NO_CONTENT,"*/*", "");
 	
 	interface OnMirrorRequestListener{
 		public Response onMirror(String uri, boolean mirror);

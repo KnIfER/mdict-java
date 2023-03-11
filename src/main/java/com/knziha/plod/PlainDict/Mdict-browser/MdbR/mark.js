@@ -191,15 +191,15 @@
       value: function waitForIframes(ctx, done) {
         var _this2 = this;
 
-        var eachCalled = 0;
+        var eachCalled = ctx.querySelectorAll('iframe').length;
+
         this.forEachIframe(ctx, function () {
           return true;
         }, function (ifr) {
-          eachCalled++;
-
           _this2.waitForIframes(ifr.querySelector('html'), function () {
-            if (! --eachCalled) {
+            if (--eachCalled<=0 && done) {
               done();
+              done=0;
             }
           });
         }, function (handled) {
@@ -229,10 +229,12 @@
           checkEnd();
         }
 
+        //console.log('forEachIframe=', ifr);
         ifr.forEach(function (ifr) {
           if (DOMIterator.matches(ifr, _this3.exclude)) {
             checkEnd();
           } else {
+            //console.log('forEachIframe, ifr=', ifr);
             _this3.onIframeReady(ifr, function (con) {
               if (filter(ifr)) {
                 handled++;
@@ -252,7 +254,7 @@
     }, {
       key: "createInstanceOnIframe",
       value: function createInstanceOnIframe(contents) {
-        return new DOMIterator(contents.querySelector('html'), this.iframes);
+        return new DOMIterator(contents.querySelector('html'), this.iframes, this.exclude, this.iframesTimeout);
       }
     }, {
       key: "compareNodeIframe",
@@ -329,12 +331,11 @@
     }, {
       key: "handleOpenIframes",
       value: function handleOpenIframes(ifr, whatToShow, eCb, fCb) {
-        var _this4 = this;
-
+        var _thisX = this;
         ifr.forEach(function (ifrDict) {
           if (!ifrDict.handled) {
-            _this4.getIframeContents(ifrDict.val, function (con) {
-              _this4.createInstanceOnIframe(con).forEachNode(whatToShow, eCb, fCb);
+            _thisX.getIframeContents(ifrDict.val, function (con) {
+              _thisX.createInstanceOnIframe(con).forEachNode(whatToShow, eCb, fCb);
             });
           }
         });
@@ -342,9 +343,10 @@
     }, {
       key: "iterateThroughNodes",
       value: function iterateThroughNodes(whatToShow, ctx, eachCb, filterCb, doneCb) {
+        //debug('iterateThroughNodes, whatToShow=', whatToShow, 'ctx=', ctx, filterCb);
         var _this5 = this;
 
-        var itr = this.createIterator(ctx, whatToShow, filterCb);
+        var itr = _this5.createIterator(ctx, whatToShow, filterCb);
 
         var ifr = [],
             elements = [],
@@ -355,14 +357,18 @@
 
           prevNode = _this5$getIteratorNod.prevNode;
           node = _this5$getIteratorNod.node;
+          //debug('retrieveNodes', node);
           return node;
         };
 
         while (retrieveNodes()) {
-          if (this.iframes) {
-            this.forEachIframe(ctx, function (currIfr) {
+          //debug('retrieveNodes.iframe.node?', node);
+          if (_this5.iframes) {
+            _this5.forEachIframe(ctx, function (currIfr) {
+              //debug('iframe?', currIfr, currIfr, ifr);
               return _this5.checkIframeFilter(node, prevNode, currIfr, ifr);
             }, function (con) {
+              //debug('iframe', con);
               _this5.createInstanceOnIframe(con).forEachNode(whatToShow, function (ifrNode) {
                 return elements.push(ifrNode);
               }, filterCb);
@@ -376,8 +382,8 @@
           eachCb(node);
         });
 
-        if (this.iframes) {
-          this.handleOpenIframes(ifr, whatToShow, eachCb, filterCb);
+        if (_this5.iframes) {
+          _this5.handleOpenIframes(ifr, whatToShow, eachCb, filterCb);
         }
 
         doneCb();
@@ -388,7 +394,7 @@
         var _this6 = this;
 
         var done = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : function () {};
-        var contexts = this.getContexts();
+        var contexts = _this6.getContexts();
         var open = contexts.length;
 
         if (!open) {
@@ -404,9 +410,10 @@
             });
           };
 
-          if (_this6.iframes) {
+          if (_this6.iframes && _this6.iframesTimeout>0) {
             _this6.waitForIframes(ctx, ready);
           } else {
+            //debug('nowait!!!', _this6);
             ready();
           }
         });
@@ -1083,7 +1090,7 @@
           var regex = new RegExpCreator(_this9.opt).create(kw);
           var matches = 0;
 
-          _this9.log("Searching with expression \"".concat(regex, "\""));
+          debug("Searching with expression \"".concat(regex, "\""));
 
           _this9[fn](regex, 1, function (term, node) {
             return _this9.opt.filter(node, kw, totalMatches, matches);
@@ -1152,10 +1159,10 @@
           sel += ".".concat(this.opt.className);
         }
 
-        this.log("Removal selector \"".concat(sel, "\""));
         this.iterator.forEachNode(NodeFilter.SHOW_ELEMENT, function (node) {
-          _this11.unwrapMatches(node);
+          if(node.tagName!=='IFRAME') _this11.unwrapMatches(node);
         }, function (node) {
+          if(node.tagName==='IFRAME') return NodeFilter.FILTER_ACCEPT;
           var matchesSel = DOMIterator.matches(node, sel),
               matchesExclude = _this11.matchesExclude(node);
 

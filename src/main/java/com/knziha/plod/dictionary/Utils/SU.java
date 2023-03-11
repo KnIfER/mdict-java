@@ -19,6 +19,7 @@ package com.knziha.plod.dictionary.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.text.Normalizer;
 
 
 /**
@@ -106,6 +107,19 @@ public class  SU{
 	public static String valueOf(CharSequence text) {
 		return text == null ? null : text.toString();
 	}
+	
+	//static net.jpountz.lz4.LZ4Factory factory;
+
+	public static void Lz4_decompress(byte[] compressed, int offset, byte[] output, int out_offset, int decompressedLen) {
+//		if (factory==null) {
+//			factory = net.jpountz.lz4.LZ4Factory.fastestInstance();
+//		}
+//		factory.fastDecompressor().decompress(compressed, offset, output, out_offset, decompressedLen);
+	}
+	public static void Zstd_decompress(byte[] compressed, int offset, int length, byte[] output, int out_offset, int decompressedLen) {
+		////new ZstdDecompressor().decompress(compressed, offset, length, output, out_offset, decompressedLen);
+		//Zstd.decompressByteArray(output, out_offset, decompressedLen, compressed, offset, length);
+	}
 
 	public boolean CharsequenceEqual(CharSequence cs1, CharSequence cs2) {
 		if(cs1!=null&&cs2!=null) {
@@ -121,6 +135,31 @@ public class  SU{
 		}
 		return false;
 	}
+
+
+	public static String removeDiacritics(String text) {
+		if (!Normalizer.isNormalized(text, Normalizer.Form.NFD)) {
+			text = Normalizer.normalize(text, Normalizer.Form.NFD);
+			char[] chars = text.toCharArray();
+			int j = 0;
+			for (char c : chars) {
+				chars[j] = c;
+				if(c>'a'&&c<'z' || c>'A'&&c<'Z' || !IsMark(c)) j++;
+			}
+			text = new String(chars, 0, j);
+		}
+		return text;
+	}
+
+	private static boolean IsMark(char ch) {
+		int gc = Character.getType(ch);
+//
+//		return gc == Character.NON_SPACING_MARK
+//				|| gc == Character.ENCLOSING_MARK
+//				|| gc == Character.COMBINING_SPACING_MARK;
+		return gc>=Character.NON_SPACING_MARK&&gc<=Character.COMBINING_SPACING_MARK;
+	}
+
 }
 	
 

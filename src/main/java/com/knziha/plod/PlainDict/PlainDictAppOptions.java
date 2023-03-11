@@ -5,7 +5,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import java.io.File;
 
 @XmlRootElement(name = "opt")
-public class PlainDictAppOptions implements MdictServer.AppOptions
+public class PlainDictAppOptions extends PDICMainAppOptions
 {
 	public static File projectPath;
 	private long FirstFlag=0;
@@ -425,7 +425,6 @@ public class PlainDictAppOptions implements MdictServer.AppOptions
 		BsrArgs=val;
 	}
 
-	@Override
 	public boolean isCombinedSearching() {
 		return GetCombinedSearching();
 	}

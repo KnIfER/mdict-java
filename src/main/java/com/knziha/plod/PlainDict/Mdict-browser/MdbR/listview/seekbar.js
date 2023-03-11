@@ -150,6 +150,9 @@ $.extend(Seekbar.Seekbar.prototype, {
     },
 
     clickOnBar_then_startDragging: function (e) {
+        if(e.button===1||e.button===2) {
+            return false;
+        }
         e.preventDefault();
         var pos = this.orientation == "vertical" ? this.area.size - e.offsetY  - e.currentTarget.offsetTop : e.offsetX;
 
@@ -285,8 +288,12 @@ $.extend(Seekbar.Seekbar.prototype, {
     },
 
     startDragging: function (e) {
+        if(e.button===1||e.button===2) {
+            return true;
+        }
         this.thumbOuter.css("opacity", "");
         this.thumbOuter.addClass("seekbar-thumb-over");
+        $(document.body).addClass("dragging");
         this.active = true;
 
         var position = this.thumb.position();
@@ -356,6 +363,7 @@ $.extend(Seekbar.Seekbar.prototype, {
     },
 
     endDrag: function () {
+        $(document.body).removeClass("dragging");
         if (!this.active)return;
 
         this.updateAlpha();

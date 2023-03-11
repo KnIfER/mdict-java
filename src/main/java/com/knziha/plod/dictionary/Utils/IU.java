@@ -125,8 +125,58 @@ the valueOf method.
 }
 
 
+	public static long parseLong(String s)
+	{
+		return parseLong(s, -1);
+	}
 
-    public static int reduce(String phrase,int start,int end) {//via mdict-js
+	public static long parseLong(String s, long val)
+	{
+		if (s == null) {
+			return val;
+		}
+
+		long result = 0;
+		boolean negative = false;
+		int i = 0, len = s.length();
+		long limit = -Long.MAX_VALUE;
+		long multmin;
+		int digit;
+
+		if (len > 0) {
+			char firstChar = s.charAt(0);
+			if (firstChar < '0') { // Possible leading "+" or "-"
+				if (firstChar == '-') {
+					negative = true;
+					limit = Long.MIN_VALUE;
+				} else if (firstChar != '+')
+					return val;
+
+				if (len == 1) // Cannot have lone "+" or "-"
+					return val;
+				i++;
+			}
+			multmin = limit / 10;
+			while (i < len) {
+				// Accumulating negatively avoids surprises near MAX_VALUE
+				digit = Character.digit(s.charAt(i++),10);
+				if (digit < 0
+						|| result < multmin
+						|| (result *= 10) < limit + digit) {
+					if(i>(negative?1:0)) break;
+					else return val;
+				}
+				result -= digit;
+			}
+		} else {
+			return val;
+		}
+		return negative ? result : -result;
+	}
+
+
+
+	public static int reduce(String phrase,int start,int end) {//via mdict-js
         int len = end-start;
         if (len > 1) {
             len = len >> 1;

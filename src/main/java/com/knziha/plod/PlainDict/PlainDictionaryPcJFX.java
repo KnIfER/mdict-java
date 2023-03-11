@@ -1,8 +1,9 @@
 package com.knziha.plod.plaindict;
 
+import com.knziha.plod.dictionary.SearchResultBean;
 import com.knziha.plod.dictionary.Utils.SU;
-import com.knziha.plod.dictionarymanager.DictPickerDialog;
-import com.knziha.plod.dictionarymanager.ManagerFragment;
+//import com.knziha.plod.dictionarymanager.DictPickerDialog;
+//import com.knziha.plod.dictionarymanager.ManagerFragment;
 import com.knziha.plod.dictionarymodels.*;
 import com.knziha.plod.ebook.MobiBook;
 import com.knziha.plod.settings.SettingsDialog;
@@ -40,6 +41,8 @@ import javafx.scene.web.WebView;
 import javafx.stage.*;
 import javafx.stage.FileChooser.ExtensionFilter;
 import netscape.javascript.JSObject;
+
+import static com.knziha.plod.dictionary.SearchResultBean.SEARCHTYPE_SEARCHINNAMES;
 import static org.nanohttpd.protocols.http.response.Response.newFixedLengthResponse;
 //import static fi.iki.elonen.NanoHTTPD.newFixedLengthResponse;
 
@@ -90,7 +93,7 @@ public class PlainDictionaryPcJFX extends Application{
 	private PlainDictAppOptions opt;
 	private long FFStamp;
 	private Stage contextDialog;
-	private DictPickerDialog pickDictDialog;
+//	private DictPickerDialog pickDictDialog;
 	private MenuBar toolBar;
 	private ArrayList<mFile> DocumentIncludePaths;
 	private ArrayList<File> DictionarySets;
@@ -414,7 +417,7 @@ public class PlainDictionaryPcJFX extends Application{
 		}
 		bundle = ResourceBundle.getBundle("UIText" , Locale.getDefault());
 		SU.debug=true;
-		app = new MainActivityUIBase();
+		app = new PlainDictionary();
 	}
 
 	public static class UI{
@@ -590,53 +593,53 @@ public class PlainDictionaryPcJFX extends Application{
 					}
 				} break;
 				case UI.manager:{
-					Stage mDialog;
-					if(managerDialog==null || managerDialog.get()==null || managerDialog.get().getScene()==null){
-						managerDialog = new WeakReference<>(mDialog=new Stage());
-						mDialog.setTitle(bundle.getString("manager")+" - "+opt.getCurrentPlanName());
-						mDialog.initModality(Modality.WINDOW_MODAL);
-						mDialog.initOwner(stage);
-						ManagerFragment managerFragment = new ManagerFragment(this, server, opt);
-						Scene dialogScene = new Scene(managerFragment, 800, 600);
-						mDialog.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-							public void handle(KeyEvent e) {
-								if (EscComb.match(e)) {
-									mDialog.hide();
-									e.consume();
-								}
-							}
-						});
-						mDialog.onCloseRequestProperty().set((e -> {
-							//CMN.show("close");
-							if(managerFragment.tableView.isDirty) {
-								ObservableList<PlainMdict> mdModified = managerFragment.tableView.getItems();
-								managerFragment.try_write_configureLet(getCurrentSetFile());
-								md.ensureCapacity(mdModified.size());
-								md.clear();
-								server.currentFilter.clear();
-								for(PlainMdict mdTmp:mdModified) {
-									boolean disabled=managerFragment.rejector.contains(mdTmp.getPath());
-									//CMN.Log(mdTmp.getClass().getName(), mdTmp._Dictionary_fName, isFiler, disabled);
-									if(disabled) continue;
-									if(mdTmp instanceof mdict_nonexist)
-										continue;
-									if(mdTmp instanceof mdict_preempter){
-										try {
-											mdTmp=new PlainMdict(mdTmp.f(), opt);
-										} catch (IOException ignored) { CMN.Log(e); continue; }
-									}
-									md.add(new BookPresenter(mdTmp));
-								}
-								engine.executeScript("ScanInDicts();");
-							}
-							//event.consume();
-						}));
-						mDialog.setScene(dialogScene);
-					}else{
-						mDialog = managerDialog.get();
-						((ManagerFragment)mDialog.getScene().getRoot()).tableView.refresh();
-					}
-					mDialog.show();
+//					Stage mDialog;
+//					if(managerDialog==null || managerDialog.get()==null || managerDialog.get().getScene()==null){
+//						managerDialog = new WeakReference<>(mDialog=new Stage());
+//						mDialog.setTitle(bundle.getString("manager")+" - "+opt.getCurrentPlanName());
+//						mDialog.initModality(Modality.WINDOW_MODAL);
+//						mDialog.initOwner(stage);
+//						ManagerFragment managerFragment = new ManagerFragment(this, server, opt);
+//						Scene dialogScene = new Scene(managerFragment, 800, 600);
+//						mDialog.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+//							public void handle(KeyEvent e) {
+//								if (EscComb.match(e)) {
+//									mDialog.hide();
+//									e.consume();
+//								}
+//							}
+//						});
+//						mDialog.onCloseRequestProperty().set((e -> {
+//							//CMN.show("close");
+//							if(managerFragment.tableView.isDirty) {
+//								ObservableList<PlainMdict> mdModified = managerFragment.tableView.getItems();
+//								managerFragment.try_write_configureLet(getCurrentSetFile());
+//								md.ensureCapacity(mdModified.size());
+//								md.clear();
+//								server.currentFilter.clear();
+//								for(PlainMdict mdTmp:mdModified) {
+//									boolean disabled=managerFragment.rejector.contains(mdTmp.getPath());
+//									//CMN.Log(mdTmp.getClass().getName(), mdTmp._Dictionary_fName, isFiler, disabled);
+//									if(disabled) continue;
+//									if(mdTmp instanceof mdict_nonexist)
+//										continue;
+//									if(mdTmp instanceof mdict_preempter){
+//										try {
+//											mdTmp=new PlainMdict(mdTmp.f(), opt);
+//										} catch (IOException ignored) { CMN.Log(e); continue; }
+//									}
+//									md.add(new BookPresenter(mdTmp));
+//								}
+//								engine.executeScript("ScanInDicts();");
+//							}
+//							//event.consume();
+//						}));
+//						mDialog.setScene(dialogScene);
+//					}else{
+//						mDialog = managerDialog.get();
+//						((ManagerFragment)mDialog.getScene().getRoot()).tableView.refresh();
+//					}
+//					mDialog.show();
 				} break;
 				case UI.mainfolder:{
 					DirectoryChooser fileChooser = new DirectoryChooser();
@@ -680,13 +683,13 @@ public class PlainDictionaryPcJFX extends Application{
 					}
 				} break;
 				case UI.switchdict:{//切换词典
-					if(!DismissSyncedPane(DictPickerDialog.class)){
-						if(pickDictDialog==null)
-							pickDictDialog = new DictPickerDialog(this, ScanSets(), opt, bundle);
-						SyncPaneToMain(pickDictDialog);
-						contextDialog=pickDictDialog;
-						pickDictDialog.show();
-					}
+//					if(!DismissSyncedPane(DictPickerDialog.class)){
+//						if(pickDictDialog==null)
+//							pickDictDialog = new DictPickerDialog(this, ScanSets(), opt, bundle);
+//						SyncPaneToMain(pickDictDialog);
+//						contextDialog=pickDictDialog;
+//						pickDictDialog.show();
+//					}
 				}break;
 				case UI.settings:{
 					if(!DismissSyncedPane(SettingsDialog.class)){
@@ -793,11 +796,8 @@ public class PlainDictionaryPcJFX extends Application{
 								JSObject win = (JSObject) engine.executeScript("window");
 								win.setMember("app", AppMessenger);
 								//win.setMember("chrome", AppMessenger);
-
-								win = (JSObject)engine.executeScript("window.chrome");
-								
-								win.setMember("Runtime", AppMessenger);
-								
+//								win = (JSObject)engine.executeScript("window.chrome");
+//								win.setMember("Runtime", AppMessenger);
 							}
 						}
 				);
@@ -955,40 +955,41 @@ public class PlainDictionaryPcJFX extends Application{
 		if(pane.getOwner()==null){
 			pane.initModality(Modality.NONE);
 			pane.initOwner(stage);
-			if(pane == pickDictDialog){
-				pane.setOnCloseRequest(new EventHandler<WindowEvent>() {
-					@Override
-					public void handle(WindowEvent event) {
-						//CMN.Log("???setOnCloseRequest");
-						if(pickDictDialog.dirtyFlag!=0){
-							adapter_idx=pickDictDialog.adapter_idx;
-							currentDictionary=md.get(adapter_idx);
-							if(!opt.GetDirectSetLoad() && (pickDictDialog.dirtyFlag&0x1)!=0){
-								File from;
-								if((from=new File(opt.projectPath,"CONFIG/"+opt.getCurrentPlanName()+".set")).exists()){
-									try {
-										FileChannel inChannel =new FileInputStream(from).getChannel();
-										FileChannel outChannel=new FileOutputStream(new File(PlainDictAppOptions.projectPath,"default.txt")).getChannel();
-										inChannel.transferTo(0, inChannel.size(), outChannel);
-										inChannel.close();
-										outChannel.close();
-									} catch (Exception ignored) { }
-								}
-							}
-							engine.executeScript("lastDingX="+adapter_idx+"; ScanInDicts();");
-							pickDictDialog.dirtyFlag=0;
-						}
-						if(!(event instanceof VirtualWindowEvent))
-							contextDialog=null;
-					}
-				});
-			}else{
+//			if(pane == pickDictDialog)
+//			{
+//				pane.setOnCloseRequest(new EventHandler<WindowEvent>() {
+//					@Override
+//					public void handle(WindowEvent event) {
+//						//CMN.Log("???setOnCloseRequest");
+//						if(pickDictDialog.dirtyFlag!=0){
+//							adapter_idx=pickDictDialog.adapter_idx;
+//							currentDictionary=md.get(adapter_idx);
+//							if(!opt.GetDirectSetLoad() && (pickDictDialog.dirtyFlag&0x1)!=0){
+//								File from;
+//								if((from=new File(opt.projectPath,"CONFIG/"+opt.getCurrentPlanName()+".set")).exists()){
+//									try {
+//										FileChannel inChannel =new FileInputStream(from).getChannel();
+//										FileChannel outChannel=new FileOutputStream(new File(PlainDictAppOptions.projectPath,"default.txt")).getChannel();
+//										inChannel.transferTo(0, inChannel.size(), outChannel);
+//										inChannel.close();
+//										outChannel.close();
+//									} catch (Exception ignored) { }
+//								}
+//							}
+//							engine.executeScript("lastDingX="+adapter_idx+"; ScanInDicts();");
+//							pickDictDialog.dirtyFlag=0;
+//						}
+//						if(!(event instanceof VirtualWindowEvent))
+//							contextDialog=null;
+//					}
+//				});
+//			}else{
 				pane.setOnCloseRequest(event -> {
 					((SettingsDialog)pane).destroyView();
 					//pane.getScene().getWindow().hide();
 					contextDialog=null;
 				});
-			}
+//			}
 		}
 	}
 
@@ -1215,21 +1216,43 @@ public class PlainDictionaryPcJFX extends Application{
 			Tag=(type==1||type==-1)?UI.wildmatch:UI.fulltext;
 		}
 
+//		public ArrayList<Integer>[] getCombinedTree(int DX) {
+//			if(combining_search_tree!=null && DX<combining_search_tree.size())
+//				return combining_search_tree.get(DX);
+//			return null;
+//		}
+//		public void setCombinedTree(int DX, ArrayList<Integer>[] _combining_search_tree) {
+//			combining_search_tree.set(DX, _combining_search_tree);
+//		}
+//		public ArrayList<Integer>[] getInternalTree(com.knziha.plod.dictionary.mdict md){
+//			return type==-1?md.combining_search_tree2:(type==-2?md.combining_search_tree_4:null);
+//		}
+
 		@Override
-		public ArrayList<Integer>[] getCombinedTree(int DX) {
-			if(combining_search_tree!=null && DX<combining_search_tree.size())
-				return combining_search_tree.get(DX);
+		public ArrayList<SearchResultBean>[] getTreeBuilding(Object book, int splitNumber) {
+			BookPresenter presenter = (BookPresenter) book;
+			if (presenter!=null) {
+				if (type==SEARCHTYPE_SEARCHINNAMES) {
+					if (presenter.combining_search_tree2==null || presenter.combining_search_tree2.length!=splitNumber) {
+						presenter.combining_search_tree2=new ArrayList[splitNumber];
+					}
+					return presenter.combining_search_tree2;
+				} else {
+					if (presenter.combining_search_tree_4==null || presenter.combining_search_tree_4.length!=splitNumber) {
+						presenter.combining_search_tree_4=new ArrayList[splitNumber];
+					}
+					return presenter.combining_search_tree_4;
+				}
+			}
 			return null;
 		}
-
 		@Override
-		public void setCombinedTree(int DX, ArrayList<Integer>[] _combining_search_tree) {
-			combining_search_tree.set(DX, _combining_search_tree);
-		}
-
-		@Override
-		public ArrayList<Integer>[] getInternalTree(com.knziha.plod.dictionary.mdict md){
-			return type==-1?md.combining_search_tree2:(type==-2?md.combining_search_tree_4:null);
+		public ArrayList<SearchResultBean>[] getTreeBuilt(Object book) {
+			BookPresenter presenter = (BookPresenter) book;
+			if (presenter!=null) {
+				return type==SEARCHTYPE_SEARCHINNAMES?presenter.combining_search_tree2:presenter.combining_search_tree_4;
+			}
+			return null;
 		}
 
 		@Override
@@ -1253,7 +1276,7 @@ public class PlainDictionaryPcJFX extends Application{
 		}
 
 		@Override
-		public int getSearchType() {
+		public int getSearchEngineType() {
 			return 0;
 		}
 
@@ -1554,8 +1577,8 @@ public class PlainDictionaryPcJFX extends Application{
 						PlainMdict mdtmp = _md.get(i).getMdict();
 						if(isCombinedSearch||i==layer.Idx)
 							GETNUMBERENTRIES+=mdtmp.getNumberEntries();
-						ArrayList<Integer>[] _combining_search_tree_ =
-								layer.type<0?layer.getInternalTree(mdtmp):layer.getCombinedTree(i);
+						ArrayList<Integer>[] _combining_search_tree_ = null;
+//								layer.type<0?layer.getInternalTree(mdtmp):layer.getCombinedTree(i);
 						if(_combining_search_tree_!=null)
 						for(int ti=0;ti<_combining_search_tree_.length;ti++){//遍历搜索结果
 							if(_combining_search_tree_[ti]!=null) {

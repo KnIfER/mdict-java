@@ -18,89 +18,73 @@
 package com.knziha.plod.dictionary;
 
 import com.alibaba.fastjson.JSONObject;
-import com.knziha.plod.dictionary.Utils.*;
+import com.knziha.plod.dictionary.Utils.BU;
+import com.knziha.plod.dictionary.Utils.F1ag;
+import com.knziha.plod.dictionary.Utils.Flag;
+import com.knziha.plod.dictionary.Utils.GetIndexedString;
+import com.knziha.plod.dictionary.Utils.IU;
+import com.knziha.plod.dictionary.Utils.SU;
+import com.knziha.plod.dictionary.Utils.key_info_struct;
+import com.knziha.plod.dictionary.Utils.myCpr;
+import com.knziha.plod.dictionary.Utils.record_info_struct;
+import com.knziha.plod.dictionarymodels.BookPresenter;
+import com.knziha.plod.plaindict.CMN;
 import com.knziha.rbtree.RBTree_additive;
 
+import org.apache.commons.lang3.StringUtils;
+import org.knziha.metaline.Metaline;
 import org.anarres.lzo.LzoDecompressor1x;
 import org.anarres.lzo.lzo_uintp;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jcodings.Encoding;
-import org.jcodings.specific.ASCIIEncoding;
-import org.jcodings.specific.BIG5Encoding;
-import org.jcodings.specific.Big5HKSCSEncoding;
-import org.jcodings.specific.CP949Encoding;
-import org.jcodings.specific.EUCJPEncoding;
-import org.jcodings.specific.EUCKREncoding;
-import org.jcodings.specific.EUCTWEncoding;
-import org.jcodings.specific.GB18030Encoding;
-import org.jcodings.specific.GB2312Encoding;
-import org.jcodings.specific.GBKEncoding;
-import org.jcodings.specific.ISO8859_10Encoding;
-import org.jcodings.specific.ISO8859_11Encoding;
-import org.jcodings.specific.ISO8859_13Encoding;
-import org.jcodings.specific.ISO8859_14Encoding;
-import org.jcodings.specific.ISO8859_15Encoding;
-import org.jcodings.specific.ISO8859_16Encoding;
-import org.jcodings.specific.ISO8859_1Encoding;
-import org.jcodings.specific.ISO8859_2Encoding;
-import org.jcodings.specific.ISO8859_3Encoding;
-import org.jcodings.specific.ISO8859_4Encoding;
-import org.jcodings.specific.ISO8859_5Encoding;
-import org.jcodings.specific.ISO8859_6Encoding;
-import org.jcodings.specific.ISO8859_7Encoding;
-import org.jcodings.specific.ISO8859_8Encoding;
-import org.jcodings.specific.ISO8859_9Encoding;
-import org.jcodings.specific.KOI8REncoding;
-import org.jcodings.specific.KOI8UEncoding;
-import org.jcodings.specific.SJISEncoding;
-import org.jcodings.specific.UTF16BEEncoding;
-import org.jcodings.specific.UTF16LEEncoding;
-import org.jcodings.specific.UTF32BEEncoding;
-import org.jcodings.specific.UTF32LEEncoding;
-import org.jcodings.specific.UTF8Encoding;
-import org.jcodings.specific.Windows_1250Encoding;
-import org.jcodings.specific.Windows_1251Encoding;
-import org.jcodings.specific.Windows_1252Encoding;
-import org.jcodings.specific.Windows_1253Encoding;
-import org.jcodings.specific.Windows_1254Encoding;
-import org.jcodings.specific.Windows_1257Encoding;
-import org.jcodings.specific.Windows_31JEncoding;
+import org.jcodings.specific.*;
 import org.joni.Option;
 import org.joni.Regex;
 import org.joni.exception.SyntaxException;
-import org.knziha.metaline.Metaline;
-import com.knziha.plod.plaindict.CMN;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 
+import static com.knziha.plod.dictionary.SearchResultBean.SEARCHENGINETYPE_REGEX;
+import static com.knziha.plod.dictionary.SearchResultBean.SEARCHTYPE_SEARCHINNAMES;
+import static com.knziha.plod.dictionary.SearchResultBean.SEARCHTYPE_SEARCHINTEXTS;
+
 
 /**
- * **Mdict Java Library**<br/><br/>
+ * <h2>Mdict Java Library</h2>
  * <b>FEATURES</b>:<br/>
- * 1. Basic listing and fast binary query of mdx files.<br/>
- * 2. Dictionary conjunction search.<br/>
- * 3. Fast Multi-threaded search in all contents.<br/>
- * 4. Fast Multi-threaded search in all entries.<br/>
- * 5. Optional regex expression engine( Joni ) or wildcards( .* ) for above two search modes.<br/><br/>
+ * 1. getEntryAt(long) & lookUp(String) : List entries and perform fast binary search for mdict file format.<br/>
+ * 2. lookUpRange(String,...) : Search for multiple entries. <br/>
+ * 3. flowerFindAllContents(String,...) : Fast Multi-threaded search in all contents.<br/>
+ * 4. flowerFindAllKeys(String,...) : Fast Multi-threaded search in all entries.<br/>
+ * 5. Optional regex expression engine( Joni ) or wildcards( .* ) for above two searching methods.<br/><br/>
  * Author : KnIfER<br/>
- * <b>Licence</b> : Apache2.0 under this package (com.knziha.plod.dictionary.*); GPL3.0 for everything else including the mdictBuilder. <br/>
+ * <b>Licence</b> : Apache2.0 under this package (com.knziha.plod.dictionary.*); GPL3.0 for anything else including the mdictBuilder. <br/>
  */
 @SuppressWarnings("SpellCheckingInspection")
 public class mdict extends mdBase implements UniversalDictionaryInterface{
 	private mdict parent;
-	byte[] textLineBreak;
 	protected Encoding encoding;
 
 	/** Packed mdd files. */
@@ -113,21 +97,33 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	public String _Dictionary_fName;
 	public /*final*/ boolean isResourceFile;
 	private EncodeChecker encodeChecker;
-	private HashMap<Integer, String> PageNumberMap;
+	private HashMap<Long, String> PageNumberMap;
 	protected File fZero;
 	private long fZero_LPT;
+	
+	byte[] options;
+	
+	public static String error_input;
 
 	public boolean getIsDedicatedFilter(byte firstFlag){
 		return false;
 	}
+	
+	
+	int mCaseStrategy;
+	
+	
 	//public int KeycaseStrategy=0;//0:global 1:Java API 2:classical
 	public int getCaseStrategy(){
-		return 0;
-	}
-	public boolean getKeyCaseSensitive(){
-		return isKeyCaseSensitive;
+		return mCaseStrategy;
 	}
 	public void setCaseStrategy(int val){
+		mCaseStrategy = val;
+	}
+	
+	@Override
+	public File getFile() {
+		return f;
 	}
 	
 	public boolean getOnlyContainsImg(){
@@ -152,7 +148,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	public byte[][] htmlTags;
 	public byte[][] htmlTagsA;
 	public byte[][] htmlTagsB;
-	
+	public byte[] spaceBytes;
 	//构造
 	public mdict(String fn) throws IOException{
 		this(new File(fn), 0, null, null);
@@ -206,10 +202,11 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	protected boolean handleDebugLines(String line) {
 		//SU.Log("handleDebugLines", line);
 		if(line.length()>0){
+			line = line.replace("\\", File.separator);
 			if(line.startsWith(":")){
 				String[] arr = line.substring(1).split(":"); //竟然长度为3
-				int id;
-				if(arr.length==2&&(id=IU.parsint(arr[0]))>=0) {
+				long id;
+				if(arr.length==2&&(id=IU.parseLong(arr[0]))>=0) {
 					if(PageNumberMap==null) {
 						PageNumberMap=new HashMap<>();
 					}
@@ -225,7 +222,6 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				}
 				return true;
 			} else if(line.contains(File.separator)){
-				CMN.Log("111");
 				File f = new File(line);
 				if(f.isDirectory()) {
 					ftd.add(f);
@@ -238,51 +234,58 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				return true;
 			}
 		}
-		SU.Log(".0.txt 存在", _Dictionary_fName, line);
+		//SU.Log(".0.txt 存在", _Dictionary_fName, line);
 		return false;
 	}
 
 	public boolean hasVirtualIndex() {
 		return virtualIndex!=null;
 	}
-
+	
 	public InputStream getResourceByKey(String key) {
-		SU.Log("getResourceByKey", _Dictionary_fName, ftd);
-		if(ftd !=null && ftd.size()>0){
-			String keykey = key.replace("\\",File.separator);
-			for(File froot: ftd){
-				File ft= new File(froot, keykey);
-				SU.Log("getResourceByKey", _Dictionary_fName, ft.getAbsolutePath(), ft.exists());
-				if(ft.exists()) {
-					try {
-						return new FileInputStream(ft);
-					} catch (Exception e) {
-						e.printStackTrace();
+		//SU.Log("getResourceByKey", _Dictionary_fName, ftd);
+		try {
+			if(ftd !=null && ftd.size()>0){
+				String keykey = key.replace("\\",File.separator);
+				for(File froot: ftd){
+					File ft= new File(froot, keykey);
+					//SU.Log("getResourceByKey", _Dictionary_fName, ft.getAbsolutePath(), ft.exists());
+					if(ft.exists()) {
+						try {
+							return new FileInputStream(ft);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
 					}
 				}
 			}
-		}
-		if(isResourceFile){
-			int idx = lookUp(key);
-			if(idx>=0) {
-				try {
-					return getResourseAt(idx);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		} else if(mdd!=null && mdd.size()>0){
-			for(mdictRes mddTmp:mdd){
-				int idx = mddTmp.lookUp(key);
+			if(isResourceFile){
+				int idx = lookUp(key);
 				if(idx>=0) {
 					try {
-						return mddTmp.getResourseAt(idx);
+						return getResourseAt(idx);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
-				//else SU.Log("chrochro inter_ key is not find:",_Dictionary_fName,key, idx);
 			}
+			else if(mdd!=null && mdd.size()>0){
+				for(mdictRes mddTmp:mdd){
+					int idx = mddTmp.lookUp(key);
+					if(idx>=0) {
+						//CMN.debug("got resource @", idx, key+"=?"+mddTmp.getEntryAt(idx));
+						try {
+							return mddTmp.getResourseAt(idx);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					//else SU.Log("chrochro inter_ key is not find:",_Dictionary_fName,key, idx);
+				}
+			}
+		} catch (Exception e) {
+			CMN.hotTracingObject = getPath();
+			throw e;
 		}
 		return null;
 	}
@@ -291,7 +294,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 
 	}
 
-	public String getCachedEntryAt(int pos) {
+	public String getCachedEntryAt(long pos) {
 		return currentDisplaying;
 	}
 
@@ -303,10 +306,11 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	}
 
 	//for lv
-	public String getEntryAt(int position, Flag mflag) {
+	public String getEntryAt(long position, Flag mflag) {
 		if(virtualIndex!=null)
 			return virtualIndex.getEntryAt(position, mflag);
 		if(position==-1) return "about:";
+		if(position>=_num_entries) return position+">!!!"+_num_entries;
 		if(_key_block_info_list==null) read_key_block_info(null);
 		int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
 		key_info_struct infoI = _key_block_info_list[blockId];
@@ -315,27 +319,24 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		else
 			mflag.data = null;
 		//TODO null pointer error
-		return new String(prepareItemByKeyInfo(infoI,blockId,null).keys[(int) (position-infoI.num_entries_accumulator)],_charset);
+		CMN.hotTracingObject = getPath();
+		try {
+			cached_key_block keyInfo = prepareItemByKeyInfo(infoI, blockId, null);
+			String ret = keyInfo.getString((int) (position - infoI.num_entries_accumulator));
+			CMN.hotTracingObject = null;
+			return ret;
+		} catch (Exception e) {
+			CMN.hotTracingObject = getPath() + e;
+			CMN.debug(e);
+			return "!!!";
+		}
 	}
 
 	@Override
-	public String getEntryAt(int position) {
+	public String getEntryAt(long position) {
 		if(virtualIndex!=null)
 			return virtualIndex.getEntryAt(position);
 		return super.getEntryAt(position);
-	}
-
-	public String test(int position) throws FileNotFoundException {
-		//Instantiating the PrintStream class
-//		StringBuilder sb = new StringBuilder();
-//		File file = new File("D:\\test.log");
-//		PrintStream stream = new PrintStream(new FileOutputStream(file, true));
-//		System.out.println("From now on "+file.getAbsolutePath()+" will be your console");
-//		System.setOut(stream);
-//		
-//		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
-//		CMN.Log("TEST!!!D:\\Code\\mdict-java-core\\out\\production\\mdict-java-core");
-		return "123";
 	}
 
 	public int reduce_index2(byte[] phrase, int start, int end) {//via mdict-js
@@ -356,8 +357,8 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		int len = end-start;
 		if (len > 1) {
 			len = len >> 1;
-			//show("reducearound:"+(start + len - 1)+"@"+len+": "+new String(_key_block_info_list[start + len - 1].tailerKeyText));
-			//show(start+"::"+end+"   "+new String(_key_block_info_list[start].tailerKeyText,_charset)+"::"+new String(_key_block_info_list[end==_key_block_info_list.length?end-1:end].tailerKeyText,_charset));
+			//SU.Log("reducearound:"+(start + len - 1)+"@"+len+": "+new String(_key_block_info_list[start + len - 1].tailerKeyText));
+			//SU.Log(start+"::"+end+"   "+new String(_key_block_info_list[start].tailerKeyText,_charset)+"::"+new String(_key_block_info_list[end==_key_block_info_list.length?end-1:end].tailerKeyText,_charset));
 			String zhujio = new String(_key_block_info_list[start + len - 1].tailerKeyText,_charset);
 			return phrase.compareToIgnoreCase(/*isCompact*/false?zhujio:processMyText(zhujio))>0
 					? reduce_index(phrase,start+len,end)
@@ -366,13 +367,30 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			return start;
 		}
 	}
+	public int reduce_index_with_keycase(String phrase,int start,int end) {//via mdict-js
+		int len = end-start;
+		if (len > 1) {
+			len = len >> 1;
+			//SU.Log("reducearound:"+(start + len - 1)+"@"+len+": "+new String(_key_block_info_list[start + len - 1].tailerKeyText));
+			//SU.Log(start+"::"+end+"   "+new String(_key_block_info_list[start].tailerKeyText,_charset)+"::"+new String(_key_block_info_list[end==_key_block_info_list.length?end-1:end].tailerKeyText,_charset));
+			String zhujio = new String(_key_block_info_list[start + len - 1].tailerKeyText,_charset);
+			return phrase.compareTo(/*isCompact*/false?zhujio:processMyText(zhujio))>0
+					? reduce_index_with_keycase(phrase,start+len,end)
+					: reduce_index_with_keycase(phrase,start,start+len);
+		} else {
+			return start;
+		}
+	}
 	public int lookUp(String keyword) {
 		return lookUp(keyword,false);
 	}
-
 	String HeaderTextStr, TailerTextStr;
-
-	public int lookUp(String keyword,boolean isSrict)
+	
+	public int lookUp(String keyword,boolean isSrict) {
+		return lookUp(keyword,isSrict,null);
+	}
+	
+	public int lookUp(String keyword, boolean isSrict, List<UniversalDictionaryInterface> morphogen)
 	{
 		if(isResourceFile) {
 			if(!keyword.startsWith("\\"))
@@ -390,6 +408,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		int blockId = -1;
 		
 		//isGBoldCodec = true;
+		//SU.Log("isKeyCaseSensitive="+isKeyCaseSensitive, "isGBoldCodec="+isGBoldCodec, "isStripKey="+isStripKey);
 		
 		if(isGBoldCodec) {
 			int boudaryCheck = compareByteArray(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,kAB);
@@ -403,12 +422,14 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		}
 		else {
 			int boudaryCheck = processMyText(new String(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,_charset)).compareTo(keyword);
+			//SU.Log("TailTextStr::", processMyText(new String(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,_charset)), boudaryCheck, keyword);
 			if(boudaryCheck<0)
 				return -1;
 			if(boudaryCheck==0) blockId = (int)_num_key_blocks-1;
 			if(HeaderTextStr==null)
 				HeaderTextStr=processMyText(new String(_key_block_info_list[0].headerKeyText,_charset));
 			boudaryCheck = HeaderTextStr.compareTo(keyword);
+			//SU.Log("HeaderTextStr::", HeaderTextStr, boudaryCheck, keyword);
 			if(boudaryCheck>0) {
 				if(HeaderTextStr.startsWith(keyword)) {
 					return isSrict?-(0+2):0;
@@ -417,14 +438,16 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			}
 			if(boudaryCheck==0) return 0;
 		}
-		if(blockId==-1)
-			blockId = isGBoldCodec?reduce_index2(keyword.getBytes(_charset),0,_key_block_info_list.length):reduce_index(keyword,0,_key_block_info_list.length);
+		if(blockId==-1) {
+			if(isGBoldCodec) blockId = reduce_index2(keyword.getBytes(_charset),0,_key_block_info_list.length);
+			else if(isKeyCaseSensitive) blockId = reduce_index_with_keycase(keyword,0,_key_block_info_list.length);
+			else blockId = reduce_index(keyword,0,_key_block_info_list.length);
+		}
 		if(blockId==-1) return blockId;
 
 		//SU.Log("blockId:",blockId, new String(_key_block_info_list[blockId].headerKeyText,_charset), new String(_key_block_info_list[blockId].tailerKeyText,_charset));
 		//while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,kAB)>=0) blockId--;
 		//SU.Log("finally blockId is:"+blockId+":"+_key_block_info_list.length);
-
 
 		key_info_struct infoI = _key_block_info_list[blockId];
 
@@ -441,18 +464,18 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		int res;
 		if(isGBoldCodec)
 			//res = binary_find_closest2(infoI_cache.keys,keyword);//keyword
-			res = reduce_keys2(infoI_cache.keys,kAB,0,infoI_cache.keys.length);
+			res = reduce_keys2(infoI_cache,kAB,0,infoI_cache.key_offsets.length);
 		else
 			//res = binary_find_closest(infoI_cache.keys,keyword);//keyword
-			res = reduce_keys(infoI_cache.keys,keyword,0,infoI_cache.keys.length);
+			res = reduce_keys(infoI_cache,keyword,0,infoI_cache.key_offsets.length);
 
 		if (res==-1){
-			System.out.println("search failed!"+keyword);
+			SU.Log("search failed!"+keyword);
 			return -1;
 		}
 		//SU.Log(keyword, res, getEntryAt((int) (res+infoI.num_entries_accumulator)));
 		////if(isCompact) //compatibility fix
-		String other_key = new String(infoI_cache.keys[res],_charset);
+		String other_key = infoI_cache.getString(res);
 		String looseMatch = processMyText(other_key);
 		boolean bIsEqual = looseMatch.equals(keyword);
 
@@ -483,8 +506,30 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				}
 			}
 			
+			if (morphogen != null) {
+				char ch = keyword.charAt(0);
+				boolean same1stChar = looseMatch.charAt(0)==ch;
+				if (!same1stChar) {
+					try {
+						looseMatch = getEntryAt(infoI.num_entries_accumulator+res-1);
+						same1stChar = looseMatch.charAt(0)==ch;
+					} catch (Exception e) {
+						SU.Log(e);
+					}
+				}
+				if (same1stChar) {
+					for(UniversalDictionaryInterface d:morphogen) {
+						int idx = d.guessRootWord(this, keyword);
+						if (idx>=0) {
+							return idx;
+						}
+					}
+				}
+			}
+			
 			if(isSrict) {
-				SU.Log(getEntryAt((int) (infoI.num_entries_accumulator+res)), res, "::",  -1 * (res + 2));
+				//SU.Log("isSrict:", morphogen, looseMatch.charAt(0),other_key.charAt(0));
+				//SU.Log("isSrict:", keyword, other_key, getEntryAt((int) (infoI.num_entries_accumulator+res)), res, "::",  -1 * (res + 2));
 				return -1*(int) ((infoI.num_entries_accumulator+res+2));
 			}
 		}
@@ -522,7 +567,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return -1;
 	}
 
-	public int reduce_keys(byte[][] keys,String val,int start,int end) {//via mdict-js
+	public int reduce_keys(cached_key_block keys,String val,int start,int end) {//via mdict-js
 		int len = end-start;
 		if (len > 1) {
 			len = len >> 1;
@@ -537,18 +582,18 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			  }
 		  }*/
 
-			//show("->"+new String(keys[start + len - 1],_charset)+" ="+val.compareTo(processMyText(new String(keys[start + len - 1],_charset))));
-			//show(start+"::"+end+"   "+new String(keys[start],_charset)+"::"+new String(keys[end==keys.length?end-1:end],_charset));
+			//SU.Log(val+"->"+keys.getString(start + len - 1)+" ="+val.compareTo(processMyText(keys.getString(start + len - 1))));
+			//SU.Log(start+"::"+end+"   "+keys.getString(start)+"::"+keys.getString(end==keys.key_offsets.length?end-1:end));
 
 
-			return val.compareTo(processMyText(new String(keys[start + len - 1],_charset)))>0
+			return val.compareTo(processMyText(keys.getString(start + len - 1)))>0
 					? reduce_keys(keys,val,start+len,end)
 					: reduce_keys(keys,val,start,start+len);
 		} else {
 			return start;
 		}
 	}
-	public int reduce_keys2(byte[][] keys,byte[] val,int start,int end) {//via mdict-js
+	public int reduce_keys2(cached_key_block keys,byte[] val,int start,int end) {//via mdict-js
 		int len = end-start;
 		if (len > 1) {
 			len = len >> 1;
@@ -562,8 +607,9 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				  zhujue = replaceReg2.matcher(zhujue).replaceAll(emptyStr);
 			  }
 		  }*/
+			
 			//SU.Log(start+"::"+end+"   "+new String(keys[start],_charset)+"::"+new String(keys[end],_charset));
-			return compareByteArray(val, processMyText(new String(keys[start + len - 1],_charset)).getBytes(_charset))>0
+			return compareByteArray(val, processMyText(keys.getString(start + len - 1)).getBytes(_charset))>0
 					? reduce_keys2(keys,val,start+len,end)
 					: reduce_keys2(keys,val,start,start+len);
 		} else {
@@ -581,21 +627,54 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		if(i<0){
 			return -1;
 		}
-		return getRecordAt(i);
+		return getRecordAt(i, null, true);
 	}
+	
+	
+	/**debug('fatal debug annot::restoring::multiple!!! 多视图列表');
+	 window.remarkPage = function(t, fun) {
+		var frames = document.getElementsByClassName('_PDict_body'), map=[];
+		for(var i=0,f;f=frames[i++];) {
+			map[f.getAttribute('pd_pos')] = f;
+		}
+		t = t.split('\t\n\0'); // \n\n\n
+	 	for(var i=0,f,n;n=t[i];i+=2) {
+			f = map[t[i+1]];
+			if(f) {
+	 			RestoreMarks(n, f, document)
+			}
+		}
+	 }
+	 window.markPage = function(tcn) {
+	 	var f = getSelection().getRangeAt(0).startContainer;
+	 	while(f=f.parentNode) {
+		 	if(f.classList.contains('_PDict_body')) {
+	 			MakeMark(tcn, f, 0, parseInt(f.getAttribute('pd_pos')))
+			 	break;
+			 }
+		 }
+	 }
+	 */
+	@Metaline(trim = false)
+	public final static String RESTORE_MARKS = ""; // 仅为旧版多页面，不以url形式加载的
 
-	public String getRecordsAt(int... positions) throws IOException {
+	public String getRecordsAt(GetRecordAtInterceptor getRecordAtInterceptor, long... positions) throws IOException {
 		if(isResourceFile)
 			return constructLogicalPage(positions);
 		String ret;
-		int p0 = positions[0];
+		long p0 = positions[0];
 		if(positions.length==1) {
-			ret = getRecordAt(p0);
+			ret = getRecordAt(p0, getRecordAtInterceptor, true);
 		} else {
 			StringBuilder sb = new StringBuilder();
+			sb.append("<script>");
+			sb.append(RESTORE_MARKS);
+			sb.append("</script>");
 			int c=0;
-			for(int i:positions) {
-				sb.append(getRecordAt(i));//.trim()
+			for(long i:positions) {
+				sb.append("<div class='_PDict_body' pd_pos=").append(i).append(">");
+				sb.append(getRecordAt(i, getRecordAtInterceptor, true));//.trim()
+				sb.append("</div>");
 				if(c!=positions.length-1)
 					sb.append("<HR>");
 				c++;
@@ -605,14 +684,15 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return processStyleSheet(ret, p0);
 	}
 
+	// 初始化
 	/** @param positions virutal indexes*/
-	public String getVirtualRecordsAt(int... positions) throws IOException {
+	public String getVirtualRecordsAt(Object presenter, long... positions) throws IOException {
 		if(virtualIndex==null)
-			return getRecordsAt(positions);
+			return getRecordsAt(null, positions);
 		StringBuilder sb = new StringBuilder();
 		int c=0, lastAI=-1;
-		for(int i:positions) {
-			String vi = virtualIndex.getRecordAt(i);
+		for(long i:positions) {
+			String vi = virtualIndex.getRecordAt(i, null, true);
 			JSONObject vc = JSONObject.parseObject(vi);
 			int AI=vc.getInteger("I");
 			if(lastAI==AI){
@@ -620,7 +700,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			}
 			else{
 				String JS = vc.getString("JS");
-				String record = getRecordAt(AI);
+				String record = getRecordAt(AI, null, true);
 				int headId= record.indexOf("<head>");
 				if(headId<0) {
 					headId=-6;
@@ -640,11 +720,31 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			c++;
 		}
 		sb.append("<div class=\"_PDict\" style='display:none;'><p class='bd_body'/>");
-		if(mdd!=null && mdd.size()>0) sb.append("<p class='MddExist'/>");
+		if(mdd!=null && mdd.size()>0) sb.append("<p class='MddExist' id='MddExist'/>");
 		sb.append("</div>");
 		return processStyleSheet(sb.toString(), positions[0]);
 	}
-
+	
+//	@Override
+//	public String getVirtualTextValidateJs(Object presenter, WebViewmy mWebView, long position) {
+//		return "";
+//	}
+	
+	@Override
+	public String getVirtualTextEffectJs(Object presenter, long[] positions) {
+		return "";
+	}
+	
+	@Override
+	public long getBooKID() {
+		return _bid;
+	}
+	
+	@Override
+	public void setBooKID(long id) {
+		_bid = id;
+	}
+	
 	/**
 	<style>
 	audio {
@@ -664,10 +764,11 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	String logicalPageHeader="SUBPAGE";
 
 	/** Construct Logical Page For mdd resource file. */
-	private String constructLogicalPage(int...positions) {
+	private String constructLogicalPage(long...positions) {
+		CMN.Log("constructLogicalPage!!!");
 		StringBuilder LoPageBuilder = new StringBuilder();
 		LoPageBuilder.append(logicalPageHeader);
-		for(int i:positions) {
+		for(long i:positions) {
 			String key = getEntryAt(i);
 			if(key.startsWith("/")||key.startsWith("\\"))
 				key=key.substring(1);
@@ -705,7 +806,18 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return 0;
 	}
 
-	public String getRecordAt(int position) throws IOException {
+	public String getRecordAt(long position) throws IOException {
+		return getRecordAt(position, null, true);
+	}
+	
+	public String getRecordAt(long position, GetRecordAtInterceptor getRecordAtInterceptor, boolean allowJump) throws IOException {
+		if(getRecordAtInterceptor!=null)
+		{
+			String ret = getRecordAtInterceptor.getRecordAt(this, position);
+			if (ret!=null) {
+				return ret;
+			}
+		}
 		if(ftd!=null && ftd.size()>0 && ReadOffset==0){
 			File ft;
 			for(File f:ftd){
@@ -723,12 +835,19 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		byte[] data = va1.data;
 		int record_start=va1.ral;
 		int record_end=va1.val;
-
-		if(textTailed(data, record_end-textLineBreak.length, textLineBreak)) record_end-=textLineBreak.length;
+		
+		//SU.Log("record_start", record_start, record_end);
+		
+		if(record_start==record_end) {
+			return StringUtils.EMPTY;
+		}
+		
+		if(record_end>=record_start+textLineBreak.length
+				&& textTailed(data, record_end-textLineBreak.length, textLineBreak)) record_end-=textLineBreak.length;
 
 		String tmp = new String(data, record_start, record_end-record_start,_charset);
 
-		if(tmp.startsWith(linkRenderStr)) {
+		if(allowJump && tmp.startsWith(linkRenderStr)) {
 			//SU.Log("rerouting",tmp);
 			//SU.Log(tmp.replace("\n", "1"));
 			String key = tmp.substring(linkRenderStr.length());
@@ -757,25 +876,26 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 					if(key.equals(getEntryAt(idx+offset)))
 						idx+=offset;
 				}
-				tmp=getRecordAt(idx);
+				if (idx!=position)
+					tmp=getRecordAt(idx, null, false);
 			}
 		}
 		return tmp;
 	}
 
-	private String getDebugPageResourceKey(int position) {
+	private String getDebugPageResourceKey(long position) {
 		String key=null;
 		if(PageNumberMap!=null) {
 			key=PageNumberMap.get(position);
 		}
 		if(key==null) {
-			key=Integer.toString(position);
+			key=Long.toString(position);
 		}
 		return key;
 	}
 
 	@Override
-	public String decodeRecordData(int position, Charset charset) {
+	public String decodeRecordData(long position, Charset charset) {
 		if(ftd !=null && ftd.size()>0){
 			for(File froot: ftd){
 				File ft= new File(froot, ""+position);
@@ -791,6 +911,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return super.decodeRecordData(position, charset);
 	}
 
+	// todo
 	public static boolean textTailed(byte[] data, int off, byte[] textLineBreak) {
 		if(off+2<data.length){
 			return data[off]==textLineBreak[0]&&data[off+1]==textLineBreak[1]&&data[off+2]==textLineBreak[2];
@@ -839,6 +960,13 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						try {
 							int ret = inf.inflate(currentKeyBlock,0,(int)(infoI.key_block_decompressed_size));
 						} catch (DataFormatException e) {e.printStackTrace();}
+						inf.end();
+					break;
+					case 3:
+						SU.Zstd_decompress(_key_block_compressed, 8, (int)(compressedSize-8), currentKeyBlock, 0, (int)(infoI.key_block_decompressed_size));
+					break;
+					case 4:
+						SU.Lz4_decompress(_key_block_compressed, 8, currentKeyBlock,0,(int)(infoI.key_block_decompressed_size));
 					break;
 				}
 				//!!spliting curr Key block
@@ -856,13 +984,13 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 
 
 	protected int split_recs_thread_number;
-	public void flowerFindAllContents(String key, int selfAtIdx, AbsAdvancedSearchLogicLayer SearchLauncher) throws IOException{
-		//SU.Log("Find In All Contents Started");
+	public void flowerFindAllContents(String key, Object book, AbsAdvancedSearchLogicLayer SearchLauncher) throws IOException{
+		SU.Log("Find In All Contents Started");
 		if(isResourceFile||getOnlyContainsImg()) return;
 		byte[][][][][] matcher=null;
 		Regex Joniregex = null;
-		if(SearchLauncher.getSearchType()==1){
-			if(encoding==null) bakeJoniEncoding();
+		if(SearchLauncher.getSearchEngineType()==SEARCHENGINETYPE_REGEX){
+			if(encoding==null) encoding = bakeJoniEncoding(_charset);
 			if(encoding!=null) {
 				//if (getRegexAutoAddHead() && !key.startsWith(".*"))
 				//	key = ".*" + key;
@@ -870,7 +998,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				Joniregex = new Regex(pattern, 0, pattern.length, getRegexOption(), encoding);
 			}
 		}
-		if(Joniregex==null) matcher =  leafSanLieZhi(SearchLauncher);
+		if(Joniregex==null) matcher =  leafSanLieZhi(SearchLauncher, _charset);
 
 		if(_key_block_info_list==null) read_key_block_info(null);
 
@@ -882,28 +1010,21 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		split_recs_thread_number = split_keys_thread_number>16?6:split_keys_thread_number;
 		//split_recs_thread_number = Runtime.getRuntime().availableProcessors();
 		final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+2, split_keys_thread_number);
-		//SU.Log("fatal_","split_recs_thread_number"+split_recs_thread_number);
-		//SU.Log("fatal_","thread_number"+thread_number);
+		//split_recs_thread_number = (int) (_num_record_blocks/16);
 
 		final int step = (int) (_num_record_blocks/split_recs_thread_number);
 		final int yuShu=(int) (_num_record_blocks%split_recs_thread_number);
+		
+		SU.Log("fatal_","split_recs_thread_number"+split_recs_thread_number);
+		SU.Log("fatal_","thread_number"+thread_number);
+		SU.Log("fatal_","step/yuShu", step, yuShu);
 
 
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(selfAtIdx);
-		boolean hold=false;
-		if(SearchLauncher.combining_search_tree==null){
-			hold=true; _combining_search_tree=combining_search_tree_4;
-		}
-		if(_combining_search_tree==null || _combining_search_tree.length!=split_keys_thread_number){
-			_combining_search_tree = new ArrayList[split_keys_thread_number];
-			if(hold)
-				combining_search_tree_4=_combining_search_tree;
-			else
-				SearchLauncher.setCombinedTree(selfAtIdx, _combining_search_tree);
-		}
-
+		ArrayList<SearchResultBean>[] _combining_search_tree=SearchLauncher.getTreeBuilding(book, split_recs_thread_number);
 
 		SearchLauncher.poolEUSize.set(SearchLauncher.dirtyProgressCounter=0);
+		
+		//if (preparedStream==null) prepareFileStream();
 
 		//ArrayList<Thread> fixedThreadPool = new ArrayList<>(thread_number);
 		ExecutorService fixedThreadPool = OpenThreadPool(thread_number);
@@ -919,17 +1040,15 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				}
 			}
 
-			if(combining_search_tree_4[it]==null)
-				combining_search_tree_4[it] = new ArrayList<>();
+			if(_combining_search_tree[it]==null)
+				_combining_search_tree[it] = new ArrayList<>();
 
 			if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(1);
-
+			
 			Regex finalJoniregex = Joniregex;
 			byte[][][][][] finalMatcher = matcher;
 			fixedThreadPool.execute(
-					//(
-				new Runnable(){@Override public void run()
-				{
+				new Runnable(){@Override public void run() {
 					if(SearchLauncher.IsInterrupted || searchCancled) { SearchLauncher.poolEUSize.set(0); return; }
 					final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
 					final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
@@ -937,21 +1056,23 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 					InputStream data_in = null;
 					try
 					{
-						data_in = mOpenInputStream();
 						long seekTarget=_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width;
-						long seek = data_in.skip(seekTarget);
+						//data_in = mOpenInputStream();
+						//long seek = data_in.skip(seekTarget);
+						data_in = getStreamAt(seekTarget, false);
 						//if(seek!=seekTarget)
 						//	throw new RuntimeException("seek!=seekTarget !!!");
 						int jiaX=0;
 						if(it==split_recs_thread_number-1) jiaX=yuShu;
+						THREAD:
 						for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
 						{
-							//if(SearchLauncher.IsInterrupted || searchCancled) { SearchLauncher.poolEUSize.set(0); return; }
+							if(SearchLauncher.IsInterrupted || searchCancled) { SearchLauncher.poolEUSize.set(0); break; }
 							record_info_struct RinfoI = _record_info_struct_list[i];
 
 							int compressed_size = (int) RinfoI.compressed_size;
 							int decompressed_size = (int) RinfoI.decompressed_size;
-							data_in.read(record_block_compressed,0, compressed_size);
+							data_in.read(record_block_compressed, 0, compressed_size);
 
 							//解压开始
 							switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
@@ -965,6 +1086,13 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 									Inflater inf = new Inflater();
 									inf.setInput(record_block_compressed,8,compressed_size-8);
 									int ret = inf.inflate(record_block_,0,decompressed_size);
+									inf.end();
+								break;
+								case 3:
+									SU.Zstd_decompress(record_block_compressed, 8, compressed_size-8, record_block_, 0, decompressed_size);
+								break;
+								case 4:
+									SU.Lz4_decompress(record_block_compressed, 8, record_block_, 0, decompressed_size);
 								break;
 							}
 
@@ -978,7 +1106,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 							long[] ko; int recordodKeyLen, try_idx;
 							OUT:
 							while(true) {
-								if(SearchLauncher.IsInterrupted  || searchCancled || key_block_id>=_key_block_info_list.length) break;
+								if(SearchLauncher.IsInterrupted  || searchCancled || key_block_id>=_key_block_info_list.length) break THREAD;
 								ko = prepareItemByKeyInfo(null,key_block_id,null).key_offsets;
 								//if(infoI_cacheI.blockID!=key_block_id)
 								//	throw new RuntimeException("bad !!!"+infoI_cacheI.blockID+" != "+key_block_id);
@@ -1016,6 +1144,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 										ArrayList<ArrayList<Object>> mpk;
 										ArrayList<Object> mParallelKeys;
 										for (int j = 0; j < finalMatcher.length; j++) { // and group
+											if(SearchLauncher.IsInterrupted || searchCancled) break THREAD;
 											mpk = SearchLauncher.mParallelKeys.get(j);
 											for (int k = 0; k < finalMatcher[j].length; k++) { // or group
 												mParallelKeys = mpk.get(k);
@@ -1033,15 +1162,15 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 										try_idx=Jonimatcher.searchInterruptible(start, start+recordodKeyLen, Option.DEFAULT);
 									}
 
-									if(SearchLauncher.IsInterrupted || searchCancled) break;
-
-									//if(GlobalOptions.debug) SU.Log("full res ::", try_idx, key, (int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator), recordodKeyLen, record_block_.length);
+//									if(GlobalOptions.debug) SU.Log("full res ::", try_idx, key, (int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator), recordodKeyLen, record_block_.length);
+									
+									if(SearchLauncher.IsInterrupted || searchCancled) break THREAD;
 
 									if(try_idx!=-1) {
 										//SU.Log("full res ::", try_idx, finalKey, new String(record_block_, (int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator)+try_idx-100, 200, _charset));
-										int pos = (int) (relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator);
+										long pos = relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator;
 										SearchLauncher.dirtyResultCounter++;
-										combining_search_tree_4[it].add(pos);
+										_combining_search_tree[it].add(new SearchResultBean(pos));
 									}
 									SearchLauncher.dirtyProgressCounter++;
 								}
@@ -1056,14 +1185,194 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						} catch (IOException ignored) {  }
 						//BU.printBytes(record_block_compressed,0,4);
 						//CMN.Log(record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32);
-						SU.Log(e);
+						SU.Log(Thread.currentThread().getId(), e);
 					}
 					SearchLauncher.thread_number_count--;
 					if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(-1);
 				}}
+			);
+		}
+		SearchLauncher.currentThreads=fixedThreadPool;
+		fixedThreadPool.shutdown();
+		try {
+			fixedThreadPool.awaitTermination(45, TimeUnit.MINUTES);
+		} catch (Exception e1) {
+			SU.Log("Find In Full Text Interrupted!!!");
+			//e1.printStackTrace();
+		}
+//		for(Thread t:fixedThreadPool){
+//			try {
+//				t.join();
+//			} catch (InterruptedException e) {
+//				SU.Log("Find In Full Text Interrupted!!!");
+//				e.printStackTrace();
+//			}
+//		}
+	}
+	
+	public void doForAllRecords(Object book, AbsAdvancedSearchLogicLayer SearchLauncher, DoForAllRecords dor, Object parm) throws IOException {
+		//SU.Log("Find In All Contents Started");
+		if(isResourceFile||getOnlyContainsImg()||dor==null) return;
+		byte[][][][][] matcher=null;
+		
+		if(_key_block_info_list==null) read_key_block_info(null);
+		
+		if(_record_info_struct_list==null) decode_record_block_header();
+		
+		if(keyBlocksHeaderTextKeyID==null) fetch_keyBlocksHeaderTextKeyID();
+		
+		split_recs_thread_number = _num_record_blocks<6?1:(int) (_num_record_blocks/6);//Runtime.getRuntime().availableProcessors()/2*2+10;
+		split_recs_thread_number = split_keys_thread_number>16?6:split_keys_thread_number;
+		//split_recs_thread_number = Runtime.getRuntime().availableProcessors();
+		final int thread_number = Math.min(Runtime.getRuntime().availableProcessors()/2*2+2, split_keys_thread_number);
+		// split_recs_thread_number = 1;
+		
+		final int step = (int) (_num_record_blocks/split_recs_thread_number);
+		final int yuShu=(int) (_num_record_blocks%split_recs_thread_number);
+		
+		SU.Log("fatal_","split_recs_thread_number"+split_recs_thread_number);
+		SU.Log("fatal_","thread_number"+thread_number);
+		SU.Log("fatal_","step/yuShu", step, yuShu);
+		
+		SearchLauncher.unitAborted = false;
+		
+		SearchLauncher.poolEUSize.set(SearchLauncher.dirtyProgressCounter=0);
+		
+		//ArrayList<Thread> fixedThreadPool = new ArrayList<>(thread_number);
+		ExecutorService fixedThreadPool = OpenThreadPool(thread_number);
+		for(int ti=0; ti<split_recs_thread_number; ti++){//分  thread_number 股线程运行
+			if(SearchLauncher.IsInterrupted || searchCancled) break;
+			final int it = ti;
+			//if(false)
+			if(split_recs_thread_number>thread_number) while (SearchLauncher.poolEUSize.get()>=thread_number) {
+				try {
+					Thread.sleep(2);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(1);
+			
+			fixedThreadPool.execute(
+					//(
+					new Runnable(){@Override public void run()
+					{
+						if(SearchLauncher.IsInterrupted || SearchLauncher.unitAborted) { SearchLauncher.poolEUSize.set(0); return; }
+						final byte[] record_block_compressed = new byte[(int) maxComRecSize];//!!!避免反复申请内存
+						final byte[] record_block_ = new byte[(int) maxDecompressedSize];//!!!避免反复申请内存
+						F1ag flag = new F1ag();
+						InputStream data_in = null;
+						Object tParm = dor.onThreadSt(parm);
+						try
+						{
+							long seekTarget=_record_info_struct_list[it*step].compressed_size_accumulator+_record_block_offset+_number_width*4+_num_record_blocks*2*_number_width;
+							//data_in = mOpenInputStream();
+							//long seek = data_in.skip(seekTarget);
+							data_in = getStreamAt(seekTarget, false);
+							//if(seek!=seekTarget)
+							//	throw new RuntimeException("seek!=seekTarget !!!");
+							int jiaX=0;
+							if(it==split_recs_thread_number-1) jiaX=yuShu;
+							for(int i=it*step; i<it*step+step+jiaX; i++)//_num_record_blocks
+							{
+								//if(SearchLauncher.IsInterrupted || SearchLauncher.unitAborted) { SearchLauncher.poolEUSize.set(0); return; }
+								record_info_struct RinfoI = _record_info_struct_list[i];
+								
+								int compressed_size = (int) RinfoI.compressed_size;
+								int decompressed_size = (int) RinfoI.decompressed_size;
+								data_in.read(record_block_compressed, 0, compressed_size);
+								
+								//解压开始
+								switch (record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32){
+									case 0:
+										System.arraycopy(record_block_compressed, 8, record_block_, 0, compressed_size-8);
+										break;
+									case 1:
+										new LzoDecompressor1x().decompress(record_block_compressed, 8, (compressed_size-8), record_block_, 0, new lzo_uintp());
+										break;
+									case 2:
+										Inflater inf = new Inflater();
+										inf.setInput(record_block_compressed,8,compressed_size-8);
+										int ret = inf.inflate(record_block_,0,decompressed_size);
+										inf.end();
+										break;
+									case 3:
+										SU.Zstd_decompress(record_block_compressed, 8, compressed_size-8, record_block_, 0, decompressed_size);
+										break;
+									case 4:
+										SU.Lz4_decompress(record_block_compressed, 8, record_block_, 0, decompressed_size);
+										break;
+								}
+								
+								//内容块解压完毕
+								long off = RinfoI.decompressed_size_accumulator;
+								int key_block_id = binary_find_closest(keyBlocksHeaderTextKeyID,off);
+								
+								long[] ko; int recordodKeyLen, try_idx;
+								OUT:
+								while(true) {
+									if(SearchLauncher.IsInterrupted  || SearchLauncher.unitAborted || key_block_id>=_key_block_info_list.length) break;
+									ko = prepareItemByKeyInfo(null,key_block_id,null).key_offsets;
+									//if(infoI_cacheI.blockID!=key_block_id)
+									//	throw new RuntimeException("bad !!!"+infoI_cacheI.blockID+" != "+key_block_id);
+									for(int relative_pos=binary_find_closest(ko,off);relative_pos<ko.length;relative_pos++) {
+										if(relative_pos<ko.length-1){//不是最后一个entry
+											recordodKeyLen=(int) (ko[relative_pos+1]-ko[relative_pos]);
+										}
+										else if(key_block_id<keyBlocksHeaderTextKeyID.length-1){//不是最后一块key block
+											recordodKeyLen=(int) (keyBlocksHeaderTextKeyID[key_block_id+1]-ko[relative_pos]);
+										}else {
+											recordodKeyLen = (int) (decompressed_size-(ko[ko.length-1]-RinfoI.decompressed_size_accumulator));
+										}
+										
+										if(ko[relative_pos]-RinfoI.decompressed_size_accumulator+recordodKeyLen>RinfoI.decompressed_size) {
+											//show("break OUT");
+											break OUT;
+										}
+
+									/*
+									File dump = new File("D:\\record_dump."+i+".bin");
+									if(!dump.exists()) //块调试器
+										BU.printFile(record_block_, 0, decompressed_size, dump);*/
+										
+										int start=(int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator);
+
+//									GlobalOptions.debug=relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator==1844;
+//									if(GlobalOptions.debug){
+//										SU.Log("full res ::str", new String(record_block_, start, recordodKeyLen, _charset));
+//										SU.Log("full res ::relative_pos", relative_pos, "kos_len", ko.length-1, "key_block_id", key_block_id, "keyBlocksHeaderTextKeyID_len", keyBlocksHeaderTextKeyID.length-1);
+//										SU.Log("full res ::start-len", start, recordodKeyLen, record_block_.length);
+//									} else continue;
+										
+										dor.doit(parm, tParm, null, relative_pos+_key_block_info_list[key_block_id].num_entries_accumulator
+										, null, record_block_, start, recordodKeyLen, _charset);
+										
+										if(SearchLauncher.IsInterrupted || SearchLauncher.unitAborted) break;
+										
+										//if(GlobalOptions.debug) SU.Log("full res ::", try_idx, key, (int) (ko[relative_pos]-RinfoI.decompressed_size_accumulator), recordodKeyLen, record_block_.length);
+										SearchLauncher.dirtyProgressCounter++;
+									}
+									key_block_id++;
+								}
+							}
+							data_in.close();
+							
+						} catch (Exception e) {
+							try {
+								if(data_in!=null) data_in.close();
+							} catch (IOException ignored) {  }
+							//BU.printBytes(record_block_compressed,0,4);
+							//CMN.Log(record_block_compressed[0]|record_block_compressed[1]<<8|record_block_compressed[2]<<16|record_block_compressed[3]<<32);
+							SU.Log(e);
+						}
+						dor.onThreadEd(parm);
+						SearchLauncher.thread_number_count--;
+						if(split_recs_thread_number>thread_number) SearchLauncher.poolEUSize.addAndGet(-1);
+					}}
 					//)
-				//)
-				);
+					//)
+			);
 			//t.start();
 		}
 		SearchLauncher.currentThreads=fixedThreadPool;
@@ -1083,129 +1392,90 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 //			}
 //		}
 	}
-
-	protected void bakeJoniEncoding() {
-		switch (_charset.name()){
+	
+	public static Encoding bakeJoniEncoding(Charset charset) {
+		switch (charset.name()){
 			case "US-ASCII":
-				encoding=ASCIIEncoding.INSTANCE;
-			break;
+				return ASCIIEncoding.INSTANCE;
 			case "Big5":
-				encoding=BIG5Encoding.INSTANCE;
-			break;
+				return BIG5Encoding.INSTANCE;
 			case "Big5-HKSCS":
-				encoding=Big5HKSCSEncoding.INSTANCE;
-			break;
+				return Big5HKSCSEncoding.INSTANCE;
 			case "x-IBM949":
-				encoding=CP949Encoding.INSTANCE;
-			break;
+				return CP949Encoding.INSTANCE;
 			case "EUC-JP":
-				encoding=EUCJPEncoding.INSTANCE;
-			break;
+				return EUCJPEncoding.INSTANCE;
 			case "EUC-KR":
-				encoding=EUCKREncoding.INSTANCE;
-			break;
+				return EUCKREncoding.INSTANCE;
 			case "x-EUC-TW":
-				encoding=EUCTWEncoding.INSTANCE;
-			break;
+				return EUCTWEncoding.INSTANCE;
 			case "GB2312":
-				encoding=GB2312Encoding.INSTANCE;
-			break;
+				return GB2312Encoding.INSTANCE;
 			case "GB18030":
-				encoding=GB18030Encoding.INSTANCE;
-			break;
+				return GB18030Encoding.INSTANCE;
 			case "GBK":
-				encoding=GBKEncoding.INSTANCE;
-			break;
+				return GBKEncoding.INSTANCE;
 			case "ISO-8859-1":
-				encoding=ISO8859_1Encoding.INSTANCE;
-			break;
+				return ISO8859_1Encoding.INSTANCE;
 			case "ISO-8859-2":
-				encoding=ISO8859_2Encoding.INSTANCE;
-			break;
+				return ISO8859_2Encoding.INSTANCE;
 			case "ISO-8859-3":
-				encoding=ISO8859_3Encoding.INSTANCE;
-			break;
+				return ISO8859_3Encoding.INSTANCE;
 			case "ISO-8859-4":
-				encoding=ISO8859_4Encoding.INSTANCE;
-			break;
+				return ISO8859_4Encoding.INSTANCE;
 			case "ISO-8859-5":
-				encoding=ISO8859_5Encoding.INSTANCE;
-			break;
+				return ISO8859_5Encoding.INSTANCE;
 			case "ISO-8859-6":
-				encoding=ISO8859_6Encoding.INSTANCE;
-			break;
+				return ISO8859_6Encoding.INSTANCE;
 			case "ISO-8859-7":
-				encoding=ISO8859_7Encoding.INSTANCE;
-			break;
+				return ISO8859_7Encoding.INSTANCE;
 			case "ISO-8859-8":
-				encoding=ISO8859_8Encoding.INSTANCE;
-			break;
+				return ISO8859_8Encoding.INSTANCE;
 			case "ISO-8859-9":
-				encoding=ISO8859_9Encoding.INSTANCE;
-			break;
+				return ISO8859_9Encoding.INSTANCE;
 			case "ISO-8859-10":
-				encoding=ISO8859_10Encoding.INSTANCE;
-			break;
+				return ISO8859_10Encoding.INSTANCE;
 			case "ISO-8859-11":
-				encoding=ISO8859_11Encoding.INSTANCE;
-			break;
+				return ISO8859_11Encoding.INSTANCE;
 			case "ISO-8859-13":
-				encoding=ISO8859_13Encoding.INSTANCE;
-			break;
+				return ISO8859_13Encoding.INSTANCE;
 			case "ISO-8859-14":
-				encoding=ISO8859_14Encoding.INSTANCE;
-			break;
+				return ISO8859_14Encoding.INSTANCE;
 			case "ISO-8859-15":
-				encoding=ISO8859_15Encoding.INSTANCE;
-			break;
+				return ISO8859_15Encoding.INSTANCE;
 			case "ISO-8859-16":
-				encoding=ISO8859_16Encoding.INSTANCE;
-			break;
+				return ISO8859_16Encoding.INSTANCE;
 			case "KOI8-R":
-				encoding=KOI8REncoding.INSTANCE;
-			break;
+				return KOI8REncoding.INSTANCE;
 			case "KOI8-U":
-				encoding=KOI8UEncoding.INSTANCE;
-			break;
+				return KOI8UEncoding.INSTANCE;
 			case "Shift_JIS":
-				encoding=SJISEncoding.INSTANCE;
-			break;
+				return SJISEncoding.INSTANCE;
+			default:
 			case "UTF-8":
-				encoding=UTF8Encoding.INSTANCE;
-			break;
+				return UTF8Encoding.INSTANCE;
 			case "UTF-16BE":
-				encoding=UTF16BEEncoding.INSTANCE;
-			break;
+				return UTF16BEEncoding.INSTANCE;
 			case "UTF-16LE":
-				encoding=UTF16LEEncoding.INSTANCE;
-			break;
+				return UTF16LEEncoding.INSTANCE;
 			case "UTF-32BE":
-				encoding=UTF32BEEncoding.INSTANCE;
-			break;
+				return UTF32BEEncoding.INSTANCE;
 			case "UTF-32LE":
-				encoding=UTF32LEEncoding.INSTANCE;
-			break;
+				return UTF32LEEncoding.INSTANCE;
 			case "Windows-31j":
-				encoding=Windows_31JEncoding.INSTANCE;
-			break;
+				return Windows_31JEncoding.INSTANCE;
 			case "Windows-1250":
-				encoding=Windows_1250Encoding.INSTANCE;
-			break;
+				return Windows_1250Encoding.INSTANCE;
 			case "Windows-1251":
-				encoding=Windows_1251Encoding.INSTANCE;
-			break;
+				return Windows_1251Encoding.INSTANCE;
 			case "Windows-1252":
-				encoding=Windows_1252Encoding.INSTANCE;
-			break;
+				return Windows_1252Encoding.INSTANCE;
 			case "Windows-1253":
-				encoding=Windows_1253Encoding.INSTANCE;
-			break;
+				return Windows_1253Encoding.INSTANCE;
 			case "Windows-1254":
-				encoding=Windows_1254Encoding.INSTANCE;
-			break;
+				return Windows_1254Encoding.INSTANCE;
 			case "Windows-1257":
-				encoding=Windows_1257Encoding.INSTANCE;
-			break;
+				return Windows_1257Encoding.INSTANCE;
 		}
 	}
 
@@ -1424,11 +1694,10 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 
 	public int split_keys_thread_number;
 	//public ArrayList<myCpr<String,Integer>>[] combining_search_tree;
-	public ArrayList<Integer>[] combining_search_tree2;
-	public ArrayList<Integer>[] combining_search_tree_4;
+	//public ArrayList<Integer>[] combining_search_tree_4;
 
 	public void executeAdvancedSearch(String key, int i, AbsAdvancedSearchLogicLayer layer) throws IOException {
-		if(layer.type==-1||layer.type==1){
+		if(layer.type==SEARCHTYPE_SEARCHINNAMES){
 			flowerFindAllKeys(key, i, layer);
 		}
 		else{
@@ -1436,8 +1705,8 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		}
 	}
 
-	public String getVirtualRecordAt(int vi) throws IOException {
-		return virtualIndex.getRecordAt(vi);
+	public String getVirtualRecordAt(Object presenter, long vi) throws IOException {
+		return virtualIndex.getRecordAt(vi, null, true);
 	}
 
 	public String getDictionaryName() {
@@ -1446,6 +1715,54 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	
 	public boolean hasMdd() {
 		return mdd!=null && mdd.size()>0 || ftd!=null && ftd.size()>0 || isResourceFile;
+	}
+	
+	@Override
+	public String getRichDescription() {
+		return _header_tag==null?"":_header_tag.get("Description");
+	}
+	
+	@Override
+	public boolean getIsResourceFile() {
+		return isResourceFile;
+	}
+	
+	@Override
+	public Object[] getSoundResourceByName(String canonicalName) throws IOException {
+		CMN.debug("mdict::getSoundResourceByName", canonicalName, mdd);
+		if(getIsResourceFile()){
+			int idx = lookUp(canonicalName, false);
+			CMN.debug("mdict::getSoundResourceByName res lookup::", canonicalName, getIsResourceFile(), idx, canonicalName);
+			if(idx>=0){
+				String matched=getEntryAt(idx);
+				if(matched.regionMatches(true,0, canonicalName, 0, canonicalName.length())){
+					String spx = "spx";
+					return new Object[]{matched.regionMatches(true,canonicalName.length(), spx, 0, spx.length()), getResourseAt(idx)};
+				}
+			}
+		} else {
+			if(mdd!=null && mdd.size()>0){
+				for(mdictRes mddTmp:mdd){
+					int idx = mddTmp.lookUp(canonicalName, false);
+					CMN.debug("mdict::getSoundResourceByName lookup::", idx, canonicalName);
+					if(idx>=0) {
+						String matched=mddTmp.getEntryAt(idx);
+						CMN.debug("mdict::getSoundResourceByName res matched=?", matched);
+						if(matched.regionMatches(true,0, canonicalName, 0, canonicalName.length())){
+							String spx = "spx";
+							return new Object[]{matched.regionMatches(true,canonicalName.length(), spx, 0, spx.length()), mddTmp.getResourseAt(idx)};
+						}
+					}
+					//else SU.Log("chrochro inter_ key is not find:",bookImpl.getFileName(),canonicalName, idx);
+				}
+			}
+		}
+		return null;
+	}
+	
+	@Override
+	public String getCharsetName() {
+		return _charset.name();
 	}
 	
 	public List<mdictRes> getMdd() {
@@ -1457,10 +1774,10 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	}
 
 	public boolean hasStyleSheets() {
-		SU.Log("_stylesheet", _stylesheet.size(), _stylesheet.keySet().size(), _stylesheet.values().size());
+		//SU.Log("_stylesheet", _stylesheet.size(), _stylesheet.keySet().size(), _stylesheet.values().size());
 		return _stylesheet.size()>0;
 	}
-
+	
 	public static abstract class AbsAdvancedSearchLogicLayer{
 		public int type;
 		public int Idx;
@@ -1471,8 +1788,10 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		public GetIndexedString fanJnMap;
 		public volatile int dirtyResultCounter;
 		public volatile int dirtyProgressCounter;
+		public volatile int dirtyTotalProgress;
 		public long st;
 		public String key;
+		public volatile boolean unitAborted;
 
 		public ArrayList<ArrayList<ArrayList<Object>>> mParallelKeys = new ArrayList<>();
 
@@ -1640,11 +1959,11 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 
 		public ArrayList<ArrayList<Integer>[]> combining_search_tree;
 
-		public abstract ArrayList<Integer>[] getCombinedTree(int DX);
+		public abstract ArrayList<SearchResultBean>[] getTreeBuilding(Object book, int splitNumber);
 
-		public abstract void setCombinedTree(int DX, ArrayList<Integer>[] val);
+		//public abstract void setCombinedTree(Object book, ArrayList<Integer>[] val, int searchType);
 
-		public abstract ArrayList<Integer>[] getInternalTree(mdict mdtmp);
+		public abstract ArrayList<SearchResultBean>[] getTreeBuilt(Object book);
 
 		public abstract boolean getEnableFanjnConversion();
 
@@ -1654,7 +1973,8 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 
 		public abstract void setCurrentPhrase(String currentPhrase);
 		
-		public abstract int getSearchType();
+		/** 0=wild card match; 1=regular expression search; 2=plain search. */
+		public abstract int getSearchEngineType();
 	}
 
 	public int thread_number,step,yuShu;
@@ -1686,18 +2006,18 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	}
 
 	//XXX2
-	public void flowerFindAllKeys(String key, int SelfAtIdx, AbsAdvancedSearchLogicLayer SearchLauncher)
+	public void flowerFindAllKeys(String key, Object book, AbsAdvancedSearchLogicLayer SearchLauncher)
 	{
 		if(virtualIndex!=null){
-			virtualIndex.flowerFindAllKeys(key, SelfAtIdx, SearchLauncher);
+			virtualIndex.flowerFindAllKeys(key, book, SearchLauncher);
 			return;
 		}
 		Pattern keyPattern=null;//用于 复核 ，并不直接参与搜索
 		byte[][][][][] matcher=null;
 		Regex Joniregex = null;
-		boolean regexIntent=SearchLauncher.getSearchType()==1;
+		boolean regexIntent=SearchLauncher.getSearchEngineType()==SEARCHENGINETYPE_REGEX;
 		if(regexIntent){
-			if(encoding==null) bakeJoniEncoding();
+			if(encoding==null) encoding = bakeJoniEncoding(_charset);
 			if(encoding!=null) {
 				//.if (getRegexAutoAddHead() && !key.startsWith(".*"))
 				//.	key = ".*" + key;
@@ -1712,7 +2032,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				keyPattern=Pattern.compile(regexIntent?keyword:keyword.replace("*", ".+?"),Pattern.CASE_INSENSITIVE);
 			}catch(Exception ignored) {}
 
-			matcher =  leafSanLieZhi(SearchLauncher);
+			matcher =  leafSanLieZhi(SearchLauncher, _charset);
 		}
 
 		if(_key_block_info_list==null) read_key_block_info(null);
@@ -1733,24 +2053,8 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		ExecutorService fixedThreadPoolmy = OpenThreadPool(thread_number);
 
 		//show("~"+step+"~"+split_keys_thread_number+"~"+_num_key_blocks);
-
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(SelfAtIdx);
-		boolean hold=false;
-		if(SearchLauncher.combining_search_tree==null){
-			hold=true;
-			_combining_search_tree=parent!=null?parent.combining_search_tree2:combining_search_tree2;
-		}
-		if(_combining_search_tree==null || _combining_search_tree.length!=split_keys_thread_number){
-			_combining_search_tree = new ArrayList[split_keys_thread_number];
-			if(hold){
-				if(parent!=null)
-					parent.combining_search_tree2=_combining_search_tree;
-				else
-					combining_search_tree2=_combining_search_tree;
-			}
-			else
-				SearchLauncher.setCombinedTree(SelfAtIdx, _combining_search_tree);
-		}
+		
+		ArrayList<SearchResultBean>[] final_combining_search_tree=SearchLauncher.getTreeBuilding(book, split_keys_thread_number);
 
 
 		for(int ti=0; ti<split_keys_thread_number; ti++){//分  thread_number 股线程运行
@@ -1768,7 +2072,6 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			Regex finalJoniregex = Joniregex;
 			Pattern finalKeyPattern = keyPattern;
 			byte[][][][][] finalMatcher = matcher;
-			ArrayList<Integer>[] final_combining_search_tree = _combining_search_tree;
 			fixedThreadPoolmy.execute(
 					new Runnable(){@Override public void run()
 					{
@@ -1777,7 +2080,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						if(it==split_keys_thread_number-1) jiaX=yuShu;
 						if(final_combining_search_tree[it]==null)
 							final_combining_search_tree[it] = new ArrayList<>();
-						ArrayList<Integer> item = final_combining_search_tree[it];
+						ArrayList<SearchResultBean> item = final_combining_search_tree[it];
 
 						int compressedSize_many = 0, _maxDecomKeyBlockSize = 0;
 						//小循环
@@ -1791,7 +2094,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 								compressedSize_many += _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
 						}
 						//TODO optimise compressedSize_many
-						//SU.Log("compressedSize_many;;"+compressedSize_many);
+						//SU.Log("compressedSize_many;"+compressedSize_many);
 						byte[] key_block = new byte[_maxDecomKeyBlockSize];/*分配资源 maxDecomKeyBlockSize 32770   65536 (common cache for index blocks)*/
 						long start = _key_block_info_list[it*step].key_block_compressed_size_accumulator;
 
@@ -1826,7 +2129,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 								//byte[] record_block_type = new byte[]{_key_block_compressed_many[(int) startI],_key_block_compressed_many[(int) (startI+1)],_key_block_compressed_many[(int) (startI+2)],_key_block_compressed_many[(int) (startI+3)]};
 								//int adler32 = getInt(_key_block_compressed_many[(int) (startI+4)],_key_block_compressed_many[(int) (startI+5)],_key_block_compressed_many[(int)(startI+6)],_key_block_compressed_many[(int) (startI+7)]);
 
-								//SU.Log(key_block.length+";;"+infoI.key_block_decompressed_size+";;"+maxDecomKeyBlockSize);
+								//SU.Log(key_block.length+";"+infoI.key_block_decompressed_size+";"+maxDecomKeyBlockSize);
 								//SU.Log(_key_block_compressed_many.length, startI, key_block.length,_key_block_size-8);
 								//解压开始
 								switch (_key_block_compressed_many[startI]|_key_block_compressed_many[startI+1]<<8|_key_block_compressed_many[startI+2]<<16|_key_block_compressed_many[startI+3]<<32){
@@ -1838,13 +2141,20 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 									break;
 									case 2:
 										Inflater inf = new Inflater();
-										inf.setInput(_key_block_compressed_many,(startI+8),(compressedSize-8));
+										inf.setInput(_key_block_compressed_many, startI+8, compressedSize-8);
 										try {
 											int ret = inf.inflate(key_block,0,(int)(infoI.key_block_decompressed_size));
-										} catch (DataFormatException e) {e.printStackTrace();}
+										} catch (Exception e) {SU.Log(e);}
+										inf.end();
+									break;
+									case 3:
+										SU.Zstd_decompress(_key_block_compressed_many, startI+8, compressedSize-8, key_block, 0, (int)(infoI.key_block_decompressed_size));
+									break;
+									case 4:
+										SU.Lz4_decompress(_key_block_compressed_many, startI+8, key_block, 0, (int)(infoI.key_block_decompressed_size));
 									break;
 								}
-								find_in_keyBlock(finalJoniregex, finalKeyPattern, key_block,infoI, finalMatcher,SelfAtIdx,item, SearchLauncher);
+								find_in_keyBlock(finalJoniregex, finalKeyPattern, key_block,infoI, finalMatcher,book,item, SearchLauncher);
 							}
 							_key_block_compressed_many=null;
 						}
@@ -1869,26 +2179,90 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		fixedThreadPoolmy=null;
 		//System.gc();
 	}
-
+	
+	@Override
+	public String getResourcePaths() {
+		StringBuilder ret = new StringBuilder();
+		if (hasMdd()) {
+			if(mdd!=null)
+			for(mdictRes md:mdd) {
+				ret.append(md.getPath()).append("\n");
+			}
+			if(ftd!=null)
+			for(File fd:ftd) {
+				ret.append(fd.getPath()).append("\n");
+			}
+		}
+		return ret.toString();
+	}
+	
+	@Override
+	public byte[] getOptions() {
+		return options;
+	}
+	
+	@Override
+	public void setOptions(byte[] options) {
+		this.options = options;
+	}
+	
+	@Override
+	public int getType() {
+		return 0;
+	}
+	
 	protected ExecutorService OpenThreadPool(int thread_number) {
 		if(parent!=null)
 			return parent.OpenThreadPool(thread_number);
 		return Executors.newFixedThreadPool(thread_number);
 	}
-
+	
 	protected int flowerIndexOf(byte[] source, int sourceOffset, int sourceCount, byte[][][] matchers, int marcherOffest, int fromIndex, AbsAdvancedSearchLogicLayer launcher, F1ag flag, ArrayList<Object> mParallelKeys, int[] jumpMap)
 	{
-		int tagCheckFrame = 64;
+		int tagCheckFrame = 32;
+		int tagSkipFrame = 32;
 		int lastSeekLetSize=0;
 		int totalLen = matchers.length;
-		boolean bSearchInContents = launcher.type==2||launcher.type==-2;
-		boolean bCheckTags = bSearchInContents;
+		boolean bSearchInContents = launcher.type==SEARCHTYPE_SEARCHINTEXTS;
+		boolean bSkipTags = bSearchInContents;
+		boolean bCheckInTag = bSearchInContents;
 		boolean trimStart = fromIndex==0 && (jumpMap[matchers.length]&1)!=0;
 		int hudieling;
-		//if(true) checkEven=0;
+		if(true) {
+			//checkEven=0;
+			//bSkipTags=false;
+			//bCheckInTag=false;
+		}
 //		boolean debug=false;
 //		if(new String(source, sourceOffset, sourceCount, _charset).equals("democracy")) {
 //			SU.Log("正在搜索"); debug=true;
+//		}
+		if (bSkipTags && false) {
+			//todo skip html tags 三步，检查紧邻< ，搜索>，而后推进fromIndex_
+			int fromIndex_=fromIndex;
+			while(bingStartWith(source,sourceOffset,sourceCount,htmlOpenTag, 0,htmlOpenTag.length,fromIndex_)){
+				int htmlForward = safeKalyxIndexOf(source, sourceOffset, Math.min(sourceCount, fromIndex_+htmlOpenTag.length+tagSkipFrame), htmlTagsB, fromIndex_+htmlOpenTag.length, flag);
+				if(htmlForward>=fromIndex_+htmlOpenTag.length){
+					fromIndex_=htmlForward+htmlCloseTag.length;
+				} else break;
+				while(
+						bingStartWith(source, sourceOffset,sourceCount,spaceBytes, 0,spaceBytes.length,fromIndex_)
+						||bingStartWith(source, sourceOffset,sourceCount,spaceBytes, 0,spaceBytes.length,fromIndex_)
+				)
+					fromIndex_+=spaceBytes.length;
+			}
+			//SU.Log("跳过了:", fromIndex, fromIndex_);
+			fromIndex=fromIndex_;
+		}
+		int bInTagCheckNeeded=-1;
+//		RBTree<MyIntPair> tagsMap = new RBTree<>();
+//		for (int i = 0; i < sourceCount; i++) {
+//			if (source[i]==htmlOpenTag[0]) {
+//				//tagsMap.insert(new MyIntPair(i,0));
+//			}
+//			else if(source[i]==htmlCloseTag[0]) {
+//				//tagsMap.insert(new MyIntPair(i,0));
+//			}
 //		}
 		while(fromIndex<sourceCount) {
 			//SU.Log("==");
@@ -1989,14 +2363,17 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 //							}
 						}
 						if (pass) {
-							if(bCheckTags){
-								//todo skip html tags 检查不在<>之中。 往前找>，截止于<>两者。若找先到<则放行。
+							if(bCheckInTag)
+							if(true) // delay the check
+								bInTagCheckNeeded=newSeekPos+lastSeekLetSize;
+							else {
+								// 标签内检查
+								//todo skip html tags 检查不在<>之中。 前进找>，截止于<>两者。若找先到<则放行。
 								//									若找先到>则需要进一步检查。 [36]
-								//									往后找<，截止于<>两者。若找先到>则放行。[36]
+								//									后退找<，截止于<>两者。若找先到>则放行。[36]
 								//									若找先到<则简单认为需要跳过。
 								int from = newSeekPos+lastSeekLetSize;
 								int htmlForward = safeKalyxIndexOf(source, sourceOffset, Math.min(sourceCount, from+tagCheckFrame), htmlTags, from, flag);
-
 								if (htmlForward>=from) {
 									if(flag.val==1){ // x >
 										from = newSeekPos-1;
@@ -2035,7 +2412,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 							continue;
 						}
 					}
-//					if(debug)SU.Log("seekPos:"+seekPos+" fromIndex_: "+fromIndex_, Matched);
+//					if(SU.debug) SU.Log("seekPos:"+seekPos+" fromIndex_: "+fromIndex_, Matched);
 					if(!Matched)
 						return -1;
 					seekPos+=lastSeekLetSize;
@@ -2057,6 +2434,32 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						if(marchLet==null) break;
 						if(bingStartWith(source,sourceOffset, sourceCount, marchLet,0,marchLet.length,fromIndex_)) {
 							Matched=true;
+							if(bInTagCheckNeeded>=0){
+								//延后的标签内检查 delay the check
+								int from = bInTagCheckNeeded;
+								//todo skip html tags 检查不在<>之中。 前进找>，截止于<>两者。若找先到<则放行。
+								//									若找先到>则需要进一步检查。 [36]
+								//									后退找<，截止于<>两者。若找先到>则放行。[36]
+								//									若找先到<则简单认为需要跳过。
+								//int htmlForward = indexOf(source, sourceOffset, Math.min(sourceCount, from+tagCheckFrame), htmlCloseTag, 0, htmlCloseTag.length, from);
+								int htmlForward = safeKalyxIndexOf(source, sourceOffset, Math.min(sourceCount, from+tagCheckFrame), htmlTags, from, flag);
+								if (htmlForward>=from) {
+									if(flag.val==1){ // x >
+										from = bInTagCheckNeeded-1;
+										//int htmlBackward = safeKalyxLastIndexOf(source, sourceOffset, sourceOffset+Math.max(0, from-tagCheckFrame), htmlTags, from, flag);
+										int htmlBackward = safeKalyxLastIndexOf(source, sourceOffset, sourceOffset+Math.max(0, from-tagCheckFrame), htmlTags, from, flag);
+										if(htmlBackward>=0){
+											if(flag.val==0){ // < x
+												fromIndex=fromIndex_=htmlForward+htmlTags[flag.val].length;
+												Matched=false;
+												bInTagCheckNeeded=0;
+												break; // re-seek
+											}
+										}
+									}
+								}
+								bInTagCheckNeeded=0;
+							}
 //							if(debug) {
 //								SU.Log("matchedHonestily: ", sourceCount, "::", " fromIndex_: ", fromIndex_ + " seekPos: ");
 //								SU.Log("matchedHonestily: ", lexiPartIdx, mParallelKeys.get(lexiPartIdx));
@@ -2065,10 +2468,10 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 							break;
 						}
 					}
-					if(Matched && bCheckTags) {
+					if(Matched && bSkipTags) {
 						//todo skip html tags 三步，检查紧邻< ，搜索>，而后推进fromIndex_
 						while(bingStartWith(source,sourceOffset,sourceCount,htmlOpenTag, 0,htmlOpenTag.length,fromIndex_)){
-							int htmlForward = safeKalyxIndexOf(source, sourceOffset, Math.min(sourceCount, fromIndex_+htmlOpenTag.length+tagCheckFrame), htmlTagsB, fromIndex_+htmlOpenTag.length, flag);
+							int htmlForward = safeKalyxIndexOf(source, sourceOffset, Math.min(sourceCount, fromIndex_+htmlOpenTag.length+tagSkipFrame), htmlTagsB, fromIndex_+htmlOpenTag.length, flag);
 							if(htmlForward>=fromIndex_+htmlOpenTag.length){
 								fromIndex_=htmlForward+htmlCloseTag.length;
 								//CMN.Log("跳过！");
@@ -2092,7 +2495,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return -1;
 	}
 
-	protected byte[][][][][] leafSanLieZhi(AbsAdvancedSearchLogicLayer searchLauncher) {
+	public static byte[][][][][] leafSanLieZhi(AbsAdvancedSearchLogicLayer searchLauncher, Charset _charset) {
 		ArrayList<ArrayList<ArrayList<Object>>> pm = searchLauncher.mParallelKeys;
 		byte[][][][][] res = new byte[pm.size()][][][][];
 		ArrayList<String> item;
@@ -2118,7 +2521,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return res;
 	}
 
-	protected void find_in_keyBlock(Regex JoniRegx, Pattern keyPattern, byte[] key_block, key_info_struct infoI, byte[][][][][] matcher, int SelfAtIdx, ArrayList<Integer> it, AbsAdvancedSearchLogicLayer SearchLauncher) {
+	protected void find_in_keyBlock(Regex JoniRegx, Pattern keyPattern, byte[] key_block, key_info_struct infoI, byte[][][][][] matcher, Object book, ArrayList<SearchResultBean> it, AbsAdvancedSearchLogicLayer SearchLauncher) {
 		//org.joni.Matcher Jonimatcher = null;
 		//if(JoniRegx!=null)
 		//	Jonimatcher = JoniRegx.matcher(key_block);
@@ -2139,7 +2542,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			// sf.position(8);
 			//key_id = sf.getLong(key_start_index);//Key_ID
 			//show("key_id"+key_id);
-			key_end_index = key_start_index + _number_width;
+			key_end_index = key_start_index + _number_width + entryNumExt;
 
 			SK_DELI:
 			while(true){
@@ -2177,7 +2580,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 							mParallelKeys = mpk.get(k);
 							int len = matcher[j][k].length;
 							int[] jumpMap = (int[]) mParallelKeys.get(len);
-							try_idx = flowerIndexOf(key_block, key_start_index+_number_width, key_end_index-(key_start_index+_number_width), matcher[j][k], 0, 0, SearchLauncher, flag, mParallelKeys, jumpMap);
+							try_idx = flowerIndexOf(key_block, key_start_index+_number_width + entryNumExt, key_end_index-(key_start_index+_number_width + entryNumExt), matcher[j][k], 0, 0, SearchLauncher, flag, mParallelKeys, jumpMap);
 							//SU.Log("and_group>>"+j, "or_group#"+k, try_idx);
 							//BU.printBytes3(matcher[j][k]);
 							if (try_idx < 0 ^ (jumpMap[len] & 4) == 0) break;
@@ -2187,14 +2590,14 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						}
 					}
 				} else {
-					try_idx = JoniRegx.matcher(key_block, key_start_index+_number_width, key_end_index).search(key_start_index+_number_width, key_end_index, Option.SINGLELINE);
+					try_idx = JoniRegx.matcher(key_block, key_start_index+_number_width + entryNumExt, key_end_index).search(key_start_index+_number_width + entryNumExt, key_end_index, Option.SINGLELINE);
 				}
 
 				if(try_idx!=-1){
 					//SU.Log("复核 re-collate");
 					if(false)
 					if (keyPattern != null){
-						String LexicalEntry = new String(key_block, key_start_index + _number_width, key_end_index - (key_start_index + _number_width), _charset);
+						String LexicalEntry = new String(key_block, key_start_index + _number_width + entryNumExt, key_end_index - (key_start_index + _number_width + entryNumExt), _charset);
 						//SU.Log("checking ", LexicalEntry);
 						if (!keyPattern.matcher(LexicalEntry).find()) {
 							SU.Log("发现错匹！！！", LexicalEntry, _Dictionary_fName);
@@ -2210,7 +2613,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 					//additiveMyCpr1 tmpnode = new additiveMyCpr1(LexicalEntry,""+SelfAtIdx+""+((int) (infoI.num_entries_accumulator+keyCounter)));//new ArrayList<Integer>() new int[] {SelfAtIdx,(int) (infoI.num_entries_accumulator+keyCounter)}
 					//tmpnode.value.add(SelfAtIdx);
 					//tmpnode.value.add((int) (infoI.num_entries_accumulator+keyCounter));
-					it.add((int) (infoI.num_entries_accumulator+keyCounter));//new additiveMyCpr1(LexicalEntry,infoI.num_entries_accumulator+keyCounter));
+					it.add(new SearchResultBean(infoI.num_entries_accumulator+keyCounter));//new additiveMyCpr1(LexicalEntry,infoI.num_entries_accumulator+keyCounter));
 					//SU.Log("fuzzyKeyCounter"+fuzzyKeyCounter);
 					SearchLauncher.dirtyResultCounter++;
 				}
@@ -2230,7 +2633,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	int key_block_Splitted_flag=-1;
 	int[][] scaler = null;
 
-	public int reduce(String phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
+	public int reduceInBlock(String phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
 		int len = end-start;
 		if (len > 1) {
 			len = len >> 1;
@@ -2246,14 +2649,14 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				  }
 			  }*/
 			return phrase.compareTo(processMyText(zhujio))>0
-					? reduce(phrase,data,scaler,start+len,end)
-					: reduce(phrase,data,scaler,start,start+len);
+					? reduceInBlock(phrase,data,scaler,start+len,end)
+					: reduceInBlock(phrase,data,scaler,start,start+len);
 		} else {
 			return start;
 		}
 	}
 
-	public int reduce2(byte[] phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
+	public int reduceInBlock(byte[] phrase,byte[] data,int[][] scaler,int start,int end) {//via mdict-js
 		int len = end-start;
 		if (len > 1) {
 			len = len >> 1;
@@ -2271,54 +2674,221 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			byte[] sub_data = processMyText(zhujio).getBytes(_charset);
 
 			return compareByteArray(phrase, sub_data)>0
-					? reduce2(phrase,data,scaler,start+len,end)
-					: reduce2(phrase,data,scaler,start,start+len);
+					? reduceInBlock(phrase,data,scaler,start+len,end)
+					: reduceInBlock(phrase,data,scaler,start,start+len);
 		} else {
 			return start;
 		}
 	}
 
-	public ArrayList<myCpr<String, Integer>> combining_search_list;
-	//联合搜索  555
-	public void size_confined_lookUp5(String keyword,
-									  RBTree_additive combining_search_tree, int SelfAtIdx, int theta) //多线程
+	//快速联合搜索
+	public int lookUpRangeQuick(int startIndex, String keyword, ArrayList<myCpr<String, Long>> rangReceiver, RBTree_additive treeBuilder, long SelfAtIdx, int theta, AtomicBoolean task, boolean strict) //多线程
 	{
-		if(virtualIndex!=null){
-			virtualIndex.combining_search_list=combining_search_list;
-			virtualIndex.size_confined_lookUp5(keyword, combining_search_tree, SelfAtIdx, theta);
-			return;
+		long position = startIndex;
+		if(position==-1 || position>=_num_entries) return 0;
+		if(_key_block_info_list==null) read_key_block_info(null);
+		int blockId = accumulation_blockId_tree.xxing(new myCpr<>(position,1)).getKey().value;
+		key_info_struct infoI;
+		
+		int[][] scaler_ = null;
+		byte[] key_block_cache_ = null;
+		if(keyword==null) keyword = getEntryAt(position);
+		keyword = processMyText(keyword);
+		byte[] kAB = keyword.getBytes(_charset);
+		
+		boolean doHarvest=false;
+		int results=0;
+		//OUT:
+		while(theta>0) {
+			infoI = _key_block_info_list[blockId];
+			try {
+				long start = infoI.key_block_compressed_size_accumulator;
+				long compressedSize;
+				if(key_block_cacheId!=blockId || key_block_cache==null) {
+					if(blockId==_key_block_info_list.length-1)
+						compressedSize = _key_block_size - _key_block_info_list[_key_block_info_list.length-1].key_block_compressed_size_accumulator;
+					else
+						compressedSize = _key_block_info_list[blockId+1].key_block_compressed_size_accumulator-infoI.key_block_compressed_size_accumulator;
+					
+					DataInputStream data_in = getStreamAt(_key_block_offset+start, false);
+					
+					byte[]  _key_block_compressed = new byte[(int) compressedSize];
+					data_in.read(_key_block_compressed, 0, _key_block_compressed.length);
+					data_in.close();
+					
+					//int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
+					if(checkByteArray(_zero4, _key_block_compressed)){
+						//System.out.println("no compress!");
+						key_block_cache_ = new byte[(int) (_key_block_compressed.length-start-8)];
+						System.arraycopy(_key_block_compressed, (int)(start+8), key_block_cache_, 0,key_block_cache_.length);
+					}
+					else if(checkByteArray(_1zero3, _key_block_compressed)) {
+						//MInt len = new MInt((int) infoI.key_block_decompressed_size);
+						//key_block_cache_ = new byte[len.v];
+						//byte[] arraytmp = new byte[(int) compressedSize];
+						//System.arraycopy(_key_block_compressed, (int)(+8), arraytmp, 0,(int) (compressedSize-8));
+						//MiniLZO.lzo1x_decompress(arraytmp,arraytmp.length,key_block_cache_,len);
+						key_block_cache_ =  new byte[(int) infoI.key_block_decompressed_size];
+						new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block_cache_, 0, new lzo_uintp());
+					}
+					else if(checkByteArray(_2zero3, _key_block_compressed)) {
+						//key_block_cache_ = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
+						key_block_cache_ =  new byte[(int) infoI.key_block_decompressed_size];
+						Inflater inf = new Inflater();
+						inf.setInput(_key_block_compressed,8,(int)compressedSize-8);
+						int ret = inf.inflate(key_block_cache_,0,key_block_cache_.length);
+						inf.end();
+					}
+					key_block_cache=key_block_cache_;
+					key_block_cacheId = blockId;
+				} else {
+					key_block_cache_=key_block_cache;
+				}
+				/*!!spliting curr Key block*/
+				if(key_block_Splitted_flag!=blockId || scaler==null) {
+					if(!doHarvest)
+						scaler_ = new int[(int) infoI.num_entries][2];
+					int key_start_index = 0;
+					int key_end_index;
+					int keyCounter = 0;
+					
+					while(key_start_index < key_block_cache_.length){
+						key_end_index = key_start_index + _number_width + entryNumExt;
+						SK_DELI:
+						while(true){
+							for(int sker=0;sker<delimiter_width;sker++) {
+								if(key_block_cache_[key_end_index+sker]!=0) {
+									key_end_index+=delimiter_width;
+									continue SK_DELI;
+								}
+							}
+							break;
+						}
+						//SU.Log(new String(key_block_cache_,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset));
+						//if(EntryStartWith(key_block_cache_,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
+						if(doHarvest) {
+							String kI = new String(key_block_cache_, key_start_index+_number_width + entryNumExt,key_end_index-(key_start_index+_number_width + entryNumExt), _charset);
+							String proKey = processMyText(kI);
+							if(proKey.startsWith(keyword) && (!strict || proKey.equals(keyword))) {
+								long toAdd = keyCounter+infoI.num_entries_accumulator;
+								for (int i = 0; i < rangReceiver.size(); i++) if(rangReceiver.get(i).value==toAdd) return results;
+								if(treeBuilder !=null) treeBuilder.insert(kI, SelfAtIdx, toAdd);
+								else rangReceiver.add(new myCpr<String, Long>(kI, toAdd));
+								theta--;
+								results++;
+							} else return results;
+							if(theta<=0) {
+								if (results<1000 && proKey.equals(keyword)) {
+									theta += 30;
+								} else {
+									return results;
+								}
+							}
+						} else {
+							scaler_[keyCounter][0] = key_start_index+_number_width + entryNumExt;
+							scaler_[keyCounter][1] = key_end_index-(key_start_index+_number_width + entryNumExt);
+						}
+						
+						key_start_index = key_end_index + delimiter_width;
+						keyCounter++;
+					}
+					if(!doHarvest) {
+						scaler=scaler_;
+						key_block_Splitted_flag=blockId;
+					}
+				} else {
+					scaler_=scaler;
+				}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+			
+			if(!doHarvest) {
+				int idx;
+				
+				if(_encoding.startsWith("GB")) idx = reduceInBlock(kAB, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
+				else idx = reduceInBlock(keyword, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
+				
+				//SU.Log(new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset));
+				//SU.Log(new String(key_block_cache_, scaler_[idx+1][0],scaler_[idx+1][1], _charset));
+				String kI = new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset);
+				while(true) {
+					String proKey = processMyText(kI);
+					if(proKey.startsWith(keyword) && (!strict || proKey.equals(keyword))) {
+						long toAdd = idx+infoI.num_entries_accumulator;
+						for (int i = 0; i < rangReceiver.size(); i++) if(rangReceiver.get(i).value==toAdd) return results;
+						if(treeBuilder !=null) treeBuilder.insert(kI, SelfAtIdx, toAdd);
+						else rangReceiver.add(new myCpr<>(kI, toAdd));
+						theta--;
+						results++;
+					} else {
+						if (results==0) {
+							return -1*(int) ((infoI.num_entries_accumulator+idx+2));
+						}
+						return results;
+					}
+					idx++;
+					//if(idx>=infoI.num_entries) SU.Log("nono!");
+					if(theta<=0) { // Max limit reached.
+						if (results<1000 && proKey.equals(keyword)) {
+							theta += 30;
+						} else {
+							return results;
+						}
+					}
+					if(idx>=infoI.num_entries) {
+						break;
+					}
+					kI = new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset);
+				}
+				doHarvest=true;
+				// todo optimize the loop
+			}
+			++blockId;
+			if(_key_block_info_list.length<=blockId) return results;
+		}
+		return results;
+	}
+	
+	//联合搜索  555
+	public int lookUpRange(String keyword, ArrayList<myCpr<String, Long>> rangReceiver, RBTree_additive treeBuilder, long SelfAtIdx, int theta, AtomicBoolean task, boolean strict) //多线程
+	{
+		if(virtualIndex!=null) {
+			return virtualIndex.lookUpRange(keyword, rangReceiver, treeBuilder, SelfAtIdx, theta, task, false);
 		}
 		int[][] scaler_ = null;
 		byte[] key_block_cache_ = null;
-		ArrayList<myCpr<String, Integer>> _combining_search_list = combining_search_list;
 		keyword = processMyText(keyword);
 		byte[] kAB = keyword.getBytes(_charset);
 		if(_encoding.startsWith("GB")) {
 			if(compareByteArray(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,kAB)<0)
-				return;
+				return 0;
 			if(compareByteArray(_key_block_info_list[0].headerKeyText,kAB)>0)
-				return;
+				return 0;
 		} else {
 			if((TailerTextStr==null? TailerTextStr =processMyText(new String(_key_block_info_list[(int)_num_key_blocks-1].tailerKeyText,_charset).toLowerCase()):TailerTextStr).compareTo(keyword)<0) {
-				return;
+				return 0;
 			}
 			if((HeaderTextStr==null? HeaderTextStr=processMyText(new String(_key_block_info_list[0].headerKeyText,_charset).toLowerCase()):HeaderTextStr).compareTo(keyword)>0) {
 				if(!HeaderTextStr.startsWith(keyword))
-					return;
+					return 0;
 			}
 		}
 		if(_key_block_info_list==null) read_key_block_info(null);
-		int blockId = _encoding.startsWith("GB")?reduce_index2(kAB,0,_key_block_info_list.length):reduce_index(keyword,0,_key_block_info_list.length);
-
-		if(blockId==-1) return;
+		int blockId;
+		if(_encoding.startsWith("GB")) blockId = reduce_index2(kAB,0,_key_block_info_list.length);
+		else if(isKeyCaseSensitive) blockId = reduce_index_with_keycase(keyword,0,_key_block_info_list.length);
+		else blockId = reduce_index(keyword,0,_key_block_info_list.length);
+		
+		if(blockId==-1) return 0;
 		//show(_Dictionary_fName+_key_block_info_list[blockId].tailerKeyText+"1~"+_key_block_info_list[blockId].headerKeyText);
 		//while(blockId!=0 &&  compareByteArray(_key_block_info_list[blockId-1].tailerKeyText,kAB)>=0)
 		//	blockId--;
-
+		
 		boolean doHarvest=false;
-
+		int results=0;
 		//OUT:
-		while(theta>0) {//complexity explanation: the aim is to harvest at most number theta matching results. but they might be crossing-blocks.
+		while(theta>0) {
 			key_info_struct infoI = _key_block_info_list[blockId];
 			try {
 				long start = infoI.key_block_compressed_size_accumulator;
@@ -2336,12 +2906,12 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 					data_in.close();
 
 					//int adler32 = getInt(_key_block_compressed[(int) (+4)],_key_block_compressed[(int) (+5)],_key_block_compressed[(int) (+6)],_key_block_compressed[(int) (+7)]);
-					if(compareByteArrayIsPara(_zero4, _key_block_compressed)){
+					if(checkByteArray(_zero4, _key_block_compressed)){
 						//System.out.println("no compress!");
 						key_block_cache_ = new byte[(int) (_key_block_compressed.length-start-8)];
 						System.arraycopy(_key_block_compressed, (int)(start+8), key_block_cache_, 0,key_block_cache_.length);
-					}else if(compareByteArrayIsPara(_1zero3, _key_block_compressed))
-					{
+					}
+					else if(checkByteArray(_1zero3, _key_block_compressed)) {
 						//MInt len = new MInt((int) infoI.key_block_decompressed_size);
 						//key_block_cache_ = new byte[len.v];
 						//byte[] arraytmp = new byte[(int) compressedSize];
@@ -2350,16 +2920,17 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						key_block_cache_ =  new byte[(int) infoI.key_block_decompressed_size];
 						new LzoDecompressor1x().decompress(_key_block_compressed, 8, (int)(compressedSize-8), key_block_cache_, 0, new lzo_uintp());
 					}
-					else if(compareByteArrayIsPara(_2zero3, _key_block_compressed)){
+					else if(checkByteArray(_2zero3, _key_block_compressed)) {
 						//key_block_cache_ = zlib_decompress(_key_block_compressed,(int) (+8),(int)(compressedSize-8));
 						key_block_cache_ =  new byte[(int) infoI.key_block_decompressed_size];
 						Inflater inf = new Inflater();
 						inf.setInput(_key_block_compressed,8,(int)compressedSize-8);
 						int ret = inf.inflate(key_block_cache_,0,key_block_cache_.length);
+						inf.end();
 					}
 					key_block_cache=key_block_cache_;
 					key_block_cacheId = blockId;
-				}else {
+				} else {
 					key_block_cache_=key_block_cache;
 				}
 				/*!!spliting curr Key block*/
@@ -2371,7 +2942,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 					int keyCounter = 0;
 
 					while(key_start_index < key_block_cache_.length){
-						key_end_index = key_start_index + _number_width;
+						key_end_index = key_start_index + _number_width + entryNumExt;
 						SK_DELI:
 						while(true){
 							for(int sker=0;sker<delimiter_width;sker++) {
@@ -2385,18 +2956,26 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						//SU.Log(new String(key_block_cache_,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),_charset));
 						//if(EntryStartWith(key_block_cache_,key_start_index+_number_width,key_end_index-(key_start_index+_number_width),matcher)) {
 						if(doHarvest) {
-							String kI = new String(key_block_cache_, key_start_index+_number_width,key_end_index-(key_start_index+_number_width), _charset);
-							if(processMyText(kI).startsWith(keyword)) {
-								if(combining_search_tree!=null)
-									combining_search_tree.insert(kI,SelfAtIdx,(int)(keyCounter+infoI.num_entries_accumulator));
+							String kI = new String(key_block_cache_, key_start_index+_number_width + entryNumExt,key_end_index-(key_start_index+_number_width + entryNumExt), _charset);
+							String proKey = processMyText(kI);
+							if(proKey.startsWith(keyword) && (!strict || proKey.equals(keyword))) {
+								if(treeBuilder !=null)
+									treeBuilder.insert(kI, SelfAtIdx, keyCounter+infoI.num_entries_accumulator);
 								else
-									_combining_search_list.add(new myCpr(kI,(int)(keyCounter+infoI.num_entries_accumulator)));
+									rangReceiver.add(new myCpr<String, Long>(kI, keyCounter+infoI.num_entries_accumulator));
 								theta--;
-							}else return;
-							if(theta<=0) return;
-						}else {
-							scaler_[keyCounter][0] = key_start_index+_number_width;
-							scaler_[keyCounter][1] = key_end_index-(key_start_index+_number_width);
+								results++;
+							} else return results;
+							if(theta<=0) {
+								if (results<1000 && proKey.equals(keyword)) {
+									theta += 30;
+								} else {
+									return results;
+								}
+							}
+						} else {
+							scaler_[keyCounter][0] = key_start_index+_number_width + entryNumExt;
+							scaler_[keyCounter][1] = key_end_index-(key_start_index+_number_width + entryNumExt);
 						}
 
 						key_start_index = key_end_index + delimiter_width;
@@ -2406,47 +2985,58 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 						scaler=scaler_;
 						key_block_Splitted_flag=blockId;
 					}
-				}else {
+				} else {
 					scaler_=scaler;
 				}
 			} catch (Exception e2) {
 				e2.printStackTrace();
 			}
 
-
 			if(!doHarvest) {
 				int idx;
-				if(_encoding.startsWith("GB"))
-					idx = reduce2(kAB, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
-				else
-					idx = reduce(keyword, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
+				
+				if(_encoding.startsWith("GB")) idx = reduceInBlock(kAB, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
+				else idx = reduceInBlock(keyword, key_block_cache_, scaler_, 0, (int) infoI.num_entries);
+				
 				//SU.Log(new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset));
 				//SU.Log(new String(key_block_cache_, scaler_[idx+1][0],scaler_[idx+1][1], _charset));
-
 				String kI = new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset);
 				while(true) {
-					if(processMyText(kI).startsWith(keyword)) {
-						if(combining_search_tree!=null)
-							combining_search_tree.insert(kI,SelfAtIdx,(int)(idx+infoI.num_entries_accumulator));
+					String proKey = processMyText(kI);
+					if(proKey.startsWith(keyword) && (!strict || proKey.equals(keyword))) {
+						if(treeBuilder !=null)
+							treeBuilder.insert(kI, SelfAtIdx, idx+infoI.num_entries_accumulator);
 						else
-							_combining_search_list.add(new myCpr<>(kI,(int)(idx+infoI.num_entries_accumulator)));
+							rangReceiver.add(new myCpr<>(kI, idx+infoI.num_entries_accumulator));
 						theta--;
-					}else
-						return;
+						results++;
+					} else {
+						if (results==0) {
+							return -1*(int) ((infoI.num_entries_accumulator+idx+2));
+						}
+						return results;
+					}
 					idx++;
 					//if(idx>=infoI.num_entries) SU.Log("nono!");
-					if(theta<=0)//no need to proceed. Max results fetched.
-						return;
+					if(theta<=0) { // Max limit reached.
+						if (results<1000 && proKey.equals(keyword)) {
+							theta += 30;
+						} else {
+							return results;
+						}
+					}
 					if(idx>=infoI.num_entries) {
 						break;
 					}
 					kI = new String(key_block_cache_, scaler_[idx][0],scaler_[idx][1], _charset);
 				}
 				doHarvest=true;
+				// todo optimize the loop
 			}
 			++blockId;
-			if(_key_block_info_list.length<=blockId) return;
+			if(_key_block_info_list.length<=blockId) return results;
 		}
+		return results;
 	}
 
 	public String processKey(byte[] in){
@@ -2495,7 +3085,11 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	public String getAboutString() {
 		return _header_tag.get("Description");
 	}
-
+	
+	public String getField(String fieldName) {
+		return _header_tag.get(fieldName);
+	}
+	
 	public String getDictInfo(){
 		DecimalFormat numbermachine = new DecimalFormat("#.00");
 		return new StringBuilder()
@@ -2509,13 +3103,15 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				.append("Avg. Rec Block: ").append(numbermachine.format(1.0*_record_block_size/_num_record_blocks/1024)).append(" kb, ").append(numbermachine.format(1.0*_num_entries/_num_record_blocks)).append(" items / block").append("<BR>")
 				.append("Compact  排序: ").append(isCompact).append("<BR>")
 				.append("StripKey 排序: ").append(isStripKey).append("<BR>")
-				.append("Case Sensitive: ").append(isKeyCaseSensitive).append("<BR>")
+				.append("Ignore KeyCase v1: ").append(!isKeyCaseSensitive).append("<BR>")
+				.append("Ignore KeyCase v2: ").append(isKeyCaseInsensitive).append("<BR>")
+				.append("Ignore 变音符号: ").append(isDiacriticsInsensitive).append("<BR>")
 				//.append(mdd==null?"&lt;no assiciated mdRes&gt;":("MdResource count "+mdd.getNumberEntries()+","+mdd._encoding+","+mdd._num_key_blocks+","+mdd._num_record_blocks)).append("<BR>")
-				.append("Internal Name: ").append(_header_tag.get("Title")).append("<BR>")
+				.append("书籍名称: ").append(_header_tag.get("Title")).append("<BR>")
 				.append("Path: ").append(getPath()).toString();
 	}
 
-	static boolean bingStartWith(byte[] source, int sourceOffset, int sourceCount,byte[] target, int targetOffset, int targetCount, int fromIndex) {
+	public static boolean bingStartWith(byte[] source, int sourceOffset, int sourceCount,byte[] target, int targetOffset, int targetCount, int fromIndex) {
 		if (fromIndex >= sourceCount || targetCount+fromIndex > sourceCount) { // || targetCount+fromIndex>=sourceCount || fromIndex>=sourceCount
 			return false;
 		}
@@ -2530,12 +3126,22 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 	}
 
 	public String processMyText(String input) {
-		String ret = isStripKey?replaceReg.matcher(input).replaceAll(emptyStr):input;
-		int KeycaseStrategy=getCaseStrategy();
-		return isKeyCaseSensitive?ret:(((KeycaseStrategy>0)?(KeycaseStrategy==2):bGlobalUseClassicalKeycase)?mOldSchoolToLowerCase(ret):ret.toLowerCase());
+		String ret;
+		try {
+			ret = isStripKey?replaceReg.matcher(input).replaceAll(emptyStr):input;
+		} catch (StackOverflowError e) {
+			error_input = input;
+			ret = input;
+		}
+		if(isDiacriticsInsensitive) {
+			ret = SU.removeDiacritics(ret);
+		}
+		//return ret.toLowerCase();
+		return isKeyCaseSensitive?ret:isKeyCaseInsensitive?ret.toLowerCase():AngloToLowerCase(ret);
 	}
 
-	public String mOldSchoolToLowerCase(String input) {
+	/** This is the old way. */
+	public static String AngloToLowerCase(String input) {
 		StringBuilder sb = new StringBuilder(input);
 		for(int i=0;i<sb.length();i++) {
 			if(sb.charAt(i)>='A' && sb.charAt(i)<='Z')
@@ -2544,7 +3150,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		return sb.toString();
 	}
 
-	public String processStyleSheet(String input, int pos) {
+	public String processStyleSheet(String input, long pos) {
 		if(_stylesheet.size()==0)
 			return input;
 		Matcher m = markerReg.matcher(input);
@@ -2558,7 +3164,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			String[] nowArr = _stylesheet.get(now);
 			if(nowArr==null)
 				if("0".equals(now)) {
-					nowArr=new String[] {getCachedEntryAt(pos),""};
+					nowArr=new String[] {getCachedEntryAt(pos),""}; // todo check mt
 				}
 			if(nowArr==null) {
 				if(last!=null) {
@@ -2622,13 +3228,13 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		}
 	}
 	
-	protected StringBuilder AcquireStringBuffer(int capacity) {
+	public StringBuilder AcquireStringBuffer(int capacity) {
 		StringBuilder sb;
 		if(univeral_buffer != null && isMainThread()){
 			sb = univeral_buffer;
 			sb.ensureCapacity(capacity);
 			sb.setLength(0);
-			SU.Log("复用字符串构建器……");
+			//SU.Log("复用字符串构建器……");
 		} else {
 			sb = new StringBuilder(capacity);
 		}
@@ -2654,6 +3260,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 				int base_full_name_L = sb.length();
 				File f2 = new File(p, sb.append(".0.txt").toString());
 				if(f2.exists()){
+					fZero_LPT = 0;
 					fZero=f2;
 					ftd = new ArrayList<>();
 					handleDebugLines();
@@ -2704,6 +3311,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		htmlTags = new byte[][]{htmlOpenTag, htmlCloseTag};
 		htmlTagsA = new byte[][]{htmlOpenTag};
 		htmlTagsB = new byte[][]{htmlCloseTag};
+		spaceBytes = " ".getBytes(_charset);
 		switch (_charset.name()){
 			case "EUC-JP":
 				checkEven=5;
@@ -2750,7 +3358,7 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 		}
 	}
 
-	class EncodeChecker{
+	public static class EncodeChecker{
 		public boolean checkBefore(byte[] source, int sourceOffset, int fromIndex_, int ret) {
 			try {
 				int code = source[sourceOffset + ret - 1]&0xff;
@@ -2819,30 +3427,21 @@ public class mdict extends mdBase implements UniversalDictionaryInterface{
 			return false;
 		}
 	}
-
-	long _bid;
+	
 	@Override
-	public long getBooKID() {
-		return _bid;
+	public void saveConfigs(Object book) {
+	
 	}
+	
 	@Override
-	public void setBooKID(long id) {
-		_bid = id;
+	public int guessRootWord(UniversalDictionaryInterface d, String keyword){
+		return -1;
 	}
-	byte[] options;
-	@Override
-	public byte[] getOptions() {
-		return options;
-	}
-	@Override
-	public void setOptions(byte[] options) {
-		this.options = options;
-	}
-	@Override
-	public int getType() {
-		return 0;
-	}
-
+	
+//	@Override
+//	public void onPageFinished(BookPresenter invoker, WebViewmy mWebView, String url, boolean b) {
+//	
+//	}
 }
 
 

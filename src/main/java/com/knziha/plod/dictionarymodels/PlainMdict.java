@@ -71,7 +71,6 @@ public class PlainMdict extends com.knziha.plod.dictionary.mdict {
 		return ret;
 	}
 
-	@Override
 	public String getCachedEntryAt(int pos) {
 		return getEntryAt(pos);
 	}
@@ -96,9 +95,9 @@ public class PlainMdict extends com.knziha.plod.dictionary.mdict {
 				out.close();
 			}
 		}else {
-			FileOutputStream out = new FileOutputStream(file);
-			out.write(getRecordsAt(position).getBytes(_charset));
-			out.close();
+//			FileOutputStream out = new FileOutputStream(file);
+//			out.write(getRecordsAt(null, position).getBytes(_charset));
+//			out.close();
 		}
 	}
 	

@@ -8,71 +8,71 @@ import com.knziha.plod.dictionary.Utils.IU;
 import javafx.scene.web.WebEngine;
 
 public class resultRecorderScattered extends resultRecorderDiscrete {
-	private List<PlainMdict> md;
+	private List<BookPresenter> md;
 	private WebEngine engine;
 	private int[] firstLookUpTable;
 	private int size=0;
 	
 	@Override
 	public void invalidate() {
-		if(md.size()==0)
-			return;
-		if(firstLookUpTable.length<md.size())
-			firstLookUpTable = new int[md.size()];
-
-		int resCount=0;
-		for(int i=0;i<md.size();i++){//遍历所有词典
-			PlainMdict mdtmp = md.get(i);
-			//int baseCount=0;
-			//if(i!=0)
-			//	baseCount=firstLookUpTable[i-1];
-			ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(i);
-			if(_combining_search_tree==null)
-				_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
-
-			if(_combining_search_tree!=null)
-    		for(int ti=0;ti<_combining_search_tree.length;ti++){//遍历搜索结果
-    			if(_combining_search_tree[ti]==null) {
-    				continue;
-    			}
-    			resCount+=_combining_search_tree[ti].size();
-    		}
-			firstLookUpTable[i]=resCount;
-			
-		}
-		size=resCount;
+//		if(md.size()==0)
+//			return;
+//		if(firstLookUpTable.length<md.size())
+//			firstLookUpTable = new int[md.size()];
+//
+//		int resCount=0;
+//		for(int i=0;i<md.size();i++){//遍历所有词典
+//			PlainMdict mdtmp = md.get(i).getMdict();
+//			//int baseCount=0;
+//			//if(i!=0)
+//			//	baseCount=firstLookUpTable[i-1];
+//			ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(i);
+//			if(_combining_search_tree==null)
+//				_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+//
+//			if(_combining_search_tree!=null)
+//    		for(int ti=0;ti<_combining_search_tree.length;ti++){//遍历搜索结果
+//    			if(_combining_search_tree[ti]==null) {
+//    				continue;
+//    			}
+//    			resCount+=_combining_search_tree[ti].size();
+//    		}
+//			firstLookUpTable[i]=resCount;
+//			
+//		}
+//		size=resCount;
 	}
 	
 	@Override
 	public void invalidate(int idx) {
-		if(md.size()==0)
-			return;
-		if(firstLookUpTable.length<md.size())
-			firstLookUpTable = new int[md.size()];
-
-		int resCount=0;
-		PlainMdict mdtmp = md.get(idx);
-
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(idx);
-		if(_combining_search_tree==null)
-			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
-
-		if(_combining_search_tree!=null)
-		for(int ti=0;ti<_combining_search_tree.length;ti++){//遍历搜索结果
-			if(_combining_search_tree[ti]==null) {
-				continue;
-			}
-			resCount+=_combining_search_tree[ti].size();
-		}
-		
-		//firstLookUpTable[idx]=resCount;
-		for(int i=0;i<firstLookUpTable.length;i++) {
-			if(i<idx)
-				firstLookUpTable[i] = 0;
-			else
-				firstLookUpTable[i] = resCount;
-		}
-		size=resCount;
+//		if(md.size()==0)
+//			return;
+//		if(firstLookUpTable.length<md.size())
+//			firstLookUpTable = new int[md.size()];
+//
+//		int resCount=0;
+//		PlainMdict mdtmp = md.get(idx).getMdict();
+//
+//		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(idx);
+//		if(_combining_search_tree==null)
+//			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+//
+//		if(_combining_search_tree!=null)
+//		for(int ti=0;ti<_combining_search_tree.length;ti++){//遍历搜索结果
+//			if(_combining_search_tree[ti]==null) {
+//				continue;
+//			}
+//			resCount+=_combining_search_tree[ti].size();
+//		}
+//		
+//		//firstLookUpTable[idx]=resCount;
+//		for(int i=0;i<firstLookUpTable.length;i++) {
+//			if(i<idx)
+//				firstLookUpTable[i] = 0;
+//			else
+//				firstLookUpTable[i] = resCount;
+//		}
+//		size=resCount;
 	}
 	
 	public resultRecorderScattered(PlainDictionaryPcJFX.AdvancedSearchLogicLayer _SearchLauncher, WebEngine engine_){
@@ -85,39 +85,39 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 	
 	@Override
 	public String getResAt(int pos) {
-		if(size<=0 || pos<0 || pos>size-1)
-			return "!!! Error: code 1";
-		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
-		if(Rgn<0 || Rgn>md.size()-1)
-			return "!!! Error: code 2 Rgn="+Rgn+" size="+md.size();
-		PlainMdict mdtmp = md.get(Rgn);
-		dictIdx=Rgn;
-		if(Rgn!=0)
-			pos-=firstLookUpTable[Rgn-1];
-		int idxCount = 0;
-
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(Rgn);
-		if(_combining_search_tree==null)
-			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
-
-		if(_combining_search_tree!=null)
-		for(int ti=0;ti<_combining_search_tree.length;ti++){
-			if(_combining_search_tree[ti]==null)
-				continue;
-			int max = _combining_search_tree[ti].size();
-			if(max==0)
-				continue;
-			if(pos-idxCount<max) {
-				String tmp=mdtmp.getEntryAt(_combining_search_tree[ti].get(pos-idxCount),mflag);
-				if(mdtmp.hasVirtualIndex()){
-					int tailIdx=tmp.lastIndexOf(":");
-					if(tailIdx>0)
-						tmp=tmp.substring(0, tailIdx);
-				}
-				return tmp;
-			}
-			idxCount+=max;
-		}
+//		if(size<=0 || pos<0 || pos>size-1)
+//			return "!!! Error: code 1";
+//		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
+//		if(Rgn<0 || Rgn>md.size()-1)
+//			return "!!! Error: code 2 Rgn="+Rgn+" size="+md.size();
+//		PlainMdict mdtmp = md.get(Rgn).getMdict();
+//		dictIdx=Rgn;
+//		if(Rgn!=0)
+//			pos-=firstLookUpTable[Rgn-1];
+//		int idxCount = 0;
+//
+//		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(Rgn);
+//		if(_combining_search_tree==null)
+//			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+//
+//		if(_combining_search_tree!=null)
+//		for(int ti=0;ti<_combining_search_tree.length;ti++){
+//			if(_combining_search_tree[ti]==null)
+//				continue;
+//			int max = _combining_search_tree[ti].size();
+//			if(max==0)
+//				continue;
+//			if(pos-idxCount<max) {
+//				String tmp=mdtmp.getEntryAt(_combining_search_tree[ti].get(pos-idxCount),mflag);
+//				if(mdtmp.hasVirtualIndex()){
+//					int tailIdx=tmp.lastIndexOf(":");
+//					if(tailIdx>0)
+//						tmp=tmp.substring(0, tailIdx);
+//				}
+//				return tmp;
+//			}
+//			idxCount+=max;
+//		}
 		return "!!! Error: code 3 ";
 	}
 
@@ -128,7 +128,7 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
 		if(Rgn<0 || Rgn>md.size()-1)
 			return null;
-		return md.get(Rgn);
+		return md.get(Rgn).getMdict();
 	}
 
 	@Override
@@ -140,52 +140,52 @@ public class resultRecorderScattered extends resultRecorderDiscrete {
 	
 	@Override
 	public void renderContentAt(int pos, int selfAtIdx, boolean post) {
-		if(size<=0 || pos<0 || pos>size-1)
-			return;
-		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
-		if(Rgn<0 || Rgn>md.size()-1)
-			return;
-		PlainMdict mdtmp = md.get(Rgn);
-		dictIdx=Rgn;
-		if(Rgn!=0)
-			pos-=firstLookUpTable[Rgn-1];
-		int idxCount = 0;
-
-		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(Rgn);
-		if(_combining_search_tree==null)
-			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
-
-		if(_combining_search_tree!=null)
-		for(int ti=0;ti<_combining_search_tree.length;ti++){
-			if(_combining_search_tree[ti]==null)
-				continue;
-			int max = _combining_search_tree[ti].size();
-			if(max==0)
-				continue;
-			if(pos-idxCount<max) {
-				int renderIdx = _combining_search_tree[ti].get(pos-idxCount);
-				StringBuilder basic = new StringBuilder();
-				if(post) basic.append("postInit=function(){");
-				basic.append("setDictAndPos(").append(selfAtIdx == -1 ? Rgn : selfAtIdx).append(",").append(renderIdx).append(");ClearAllPages();processContents('\\r").append(Rgn).append("@");
-				if(mdtmp.hasVirtualIndex()){
-					String tmp = mdtmp.getEntryAt(renderIdx);
-					int tailIdx=tmp.lastIndexOf(":");
-					if(tailIdx>0)
-						basic.append(IU.parsint(tmp.substring(tailIdx+1),0));
-					else
-						basic.append(0);
-					basic.append(":").append(renderIdx);// 0@0:16@17@18
-				}else{
-					basic.append(renderIdx);
-				}
-				basic.append("');pendingHL='").append(currentSearchTerm).append("'");
-				if(post) basic.append("}; ScanInDicts();");
-				engine.executeScript(basic.toString());
-				return;
-			}
-			idxCount+=max;
-		}
-		return;
+//		if(size<=0 || pos<0 || pos>size-1)
+//			return;
+//		int Rgn = binary_find_closest(firstLookUpTable,pos+1,md.size());
+//		if(Rgn<0 || Rgn>md.size()-1)
+//			return;
+//		PlainMdict mdtmp = md.get(Rgn).getMdict();
+//		dictIdx=Rgn;
+//		if(Rgn!=0)
+//			pos-=firstLookUpTable[Rgn-1];
+//		int idxCount = 0;
+//
+//		ArrayList<Integer>[] _combining_search_tree=SearchLauncher.getCombinedTree(Rgn);
+//		if(_combining_search_tree==null)
+//			_combining_search_tree=SearchLauncher.getInternalTree(mdtmp);
+//
+//		if(_combining_search_tree!=null)
+//		for(int ti=0;ti<_combining_search_tree.length;ti++){
+//			if(_combining_search_tree[ti]==null)
+//				continue;
+//			int max = _combining_search_tree[ti].size();
+//			if(max==0)
+//				continue;
+//			if(pos-idxCount<max) {
+//				int renderIdx = _combining_search_tree[ti].get(pos-idxCount);
+//				StringBuilder basic = new StringBuilder();
+//				if(post) basic.append("postInit=function(){");
+//				basic.append("setDictAndPos(").append(selfAtIdx == -1 ? Rgn : selfAtIdx).append(",").append(renderIdx).append(");ClearAllPages();processContents('\\r").append(Rgn).append("@");
+//				if(mdtmp.hasVirtualIndex()){
+//					String tmp = mdtmp.getEntryAt(renderIdx);
+//					int tailIdx=tmp.lastIndexOf(":");
+//					if(tailIdx>0)
+//						basic.append(IU.parsint(tmp.substring(tailIdx+1),0));
+//					else
+//						basic.append(0);
+//					basic.append(":").append(renderIdx);// 0@0:16@17@18
+//				}else{
+//					basic.append(renderIdx);
+//				}
+//				basic.append("');pendingHL='").append(currentSearchTerm).append("'");
+//				if(post) basic.append("}; ScanInDicts();");
+//				engine.executeScript(basic.toString());
+//				return;
+//			}
+//			idxCount+=max;
+//		}
+//		return;
 	};
 	
 	@Override

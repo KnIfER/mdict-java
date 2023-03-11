@@ -76,6 +76,7 @@ public class CMN{
         }
         System.out.println(msg.toString());
     }
+    public static Object hotTracingObject;
 
     static FileOutputStream fout;
     public static void ConfigLogFile(String path, boolean...a) {

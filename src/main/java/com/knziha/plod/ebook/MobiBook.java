@@ -10,6 +10,7 @@
 
 package com.knziha.plod.ebook;
 
+import com.knziha.plod.dictionary.GetRecordAtInterceptor;
 import com.knziha.plod.dictionary.Utils.ReusableByteOutputStream;
 import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.dictionarymodels.PlainMdict;
@@ -812,7 +813,7 @@ public class MobiBook extends PlainMdict {
 	}
 
 	@Override
-	public String getEntryAt(int position) {
+	public String getEntryAt(long position) {
 		if(contentList!=null)
 			return "第"+position+"页";
 		return "index";
@@ -824,7 +825,7 @@ public class MobiBook extends PlainMdict {
 	}
 
 	@Override
-	public String getRecordsAt(int... positions) throws IOException {
+	public String getRecordsAt(GetRecordAtInterceptor getRecordAtInterceptor, long... positions) throws IOException {
 		return getRecordAt(positions[0]);
 	}
 
@@ -1185,7 +1186,7 @@ public class MobiBook extends PlainMdict {
 	int readEndOffset=0;
 
 	@Override
-	public String getRecordAt(int position) throws IOException {
+	public String getRecordAt(long position) throws IOException {
 		//return new String(m.rec.next.data, _charset);
 		if (m.rh == null || m.rh.text_record_count == 0) {
 			return "404";
@@ -1194,7 +1195,7 @@ public class MobiBook extends PlainMdict {
 			return "404 : huff parse error";
 
 		if(contentList!=null)
-			return buildContent(contentList.get(position), true);
+			return buildContent(contentList.get((int) position), true);
 
 		StringBuilder sb = new StringBuilder();
 
@@ -1217,7 +1218,7 @@ public class MobiBook extends PlainMdict {
 	}
 	ArrayList<ContentContext> contentList;
 	public void parseContent(){
-		if(encoding==null) bakeJoniEncoding();
+		if(encoding==null) bakeJoniEncoding(_charset);
 		SU.Log(encoding);
 		String key = "<!DOCTYPE";
 		byte[] pattern = key.getBytes(_charset);

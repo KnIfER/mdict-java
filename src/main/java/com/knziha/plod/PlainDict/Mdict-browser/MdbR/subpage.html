@@ -1,56 +1,221 @@
+<!-- 这个是网页版 -->
 <!DOCTYPE html>
 <html>
+<meta name='viewport' content='initial-scale=1,user-scalable=yes' class="_PDict">
 <head>
 <style>
-mark {background: yellow; }
-mark.current {
-	background: orange;
-	border:1px solid #FF0000
-}
-.highlight { background-color: yellow; }
+	mark {background: yellow; }
+	mark.current {
+		background: orange;
+		box-shadow: inset 0px 0px 0px .5px #ff0000;
+	}
+	.highlight { background-color: yellow; }
+	img{max-width:100%;}
 	html, body {
-	-moz-user-select:text;
-	-webkit-user-select:text;
-	-ms-user-select:text;
-	-khtml-user-select:text;
-	user-select:text;
-}
+		-moz-user-select:text;
+		-webkit-user-select:text;
+		-ms-user-select:text;
+		-khtml-user-select:text;
+		user-select:text;
+	}
+</style>
+<style id='_pd_mh'>
+	
 </style>
 
 <script>
-if(window.addEventListener){
-	window.addEventListener('load',wrappedOnLoadFunc,false);
-	window.addEventListener('click',wrappedClickFunc);
-	window.addEventListener('mousedown',wrappedMouseDown);
-}else if(window.attachEvent){ //ie
-	window.addEventListener('onload',wrappedOnLoadFunc);
-	window.addEventListener('onclick',wrappedClickFunc);
-	window.addEventListener('onmousedown',wrappedMouseDown);
-}else{
-	window.onload=wrappedOnLoadFunction;
-	window.onclick=wrappedClickFunc;
-	window.onmousedown=wrappedMouseDown;
+var debug = function(a,b,c,d,e){var t=[a,b,c,d,e];for(var i=5;i>=0;i--){if(t[i]===undefined)t[i]='';else break}console.log("%c 子页面 ","color:#333!important;background:#b0f7ce;",t[0],t[1],t[2],t[3],t[4])};
+(function(){
+var contentUrl = location.origin+location.pathname, contentHash = contentUrl+'#', baseEntryUrl, baseSoundUrl
+	, w=window, pw=parent, _app=w.app;
+debug("frameElement::", frameElement, contentUrl);
+function ge(e){return document.getElementById(e)};
+if(frameElement) {
+	w._merge={};
+	w.edEtJts=function(a, b, c){
+		if(!_merge[b]) {
+			(b.d?document:w).addEventListener(a, b, c);
+			_merge[b] = 1;
+		}
+	};
+}
+w.shzh=0;
+var remarked=false, withSel;
+w.addEventListener('load',wrappedOnLoadFunc,false);
+w.addEventListener('click',wrappedClickFunc);
+w.addEventListener('mousedown',wrappedDown);
+w.addEventListener('touchstart',wrappedDown);
+w.addEventListener('touchend',function(){
+	if(frameElement) {
+		pw.postOnClick(frameElement.inf);
+	}
+});
+//w.addEventListener('scroll',wrappedScroll,true);
+
+// function wrappedScroll(e){
+// 	debug(e);
+// 	document.body.scrollTop=0;
+// 	e.preventDefault();
+// 	e.stopPropagation();
+// }
+var de;
+function pageScroll(e){
+	var k=0,l=de.scrollLeft,wd=w.innerWidth;
+	if(l>0) k=1;
+	if(Math.ceil(l+0.2+wd)<de.scrollWidth) k|=2;
+	debug('onscroll', k, l+0.2+wd<de.scrollWidth);
+	if((pw.scrollLck||0)!=k) _app.scrollLck(sid.get(), pw.scrollLck=k);
 }
 function wrappedOnLoadFunc(){
-	console.log('mdpage loaded');
-	//document.body.style.fontSize=35+'px';
-	highlight(null);
-	//console.log('frameAt !! '+frameAt);
-	if(_onloadchecks && _onloadchecks.length)
-	for(var i=0;i<_onloadchecks.length;i++){
-		_onloadchecks[i]();
+	debug('wrappedOnLoadFunc');
+	w.addEventListener('click',pw.tpshc); //wtf??
+	// //document.body.style.fontSize=35+'px';
+	// highlight(null);
+	// //debug('frameAt !! '+frameAt);
+	// if(_onloadchecks && _onloadchecks.length)
+	// for(var i=0;i<_onloadchecks.length;i++){
+	// 	_onloadchecks[i]();
+	// }
+	//debug("wrappedOnLoadFunc::", frameElement.tag, frameElement.u, location.href);
+	var fe=frameElement;
+	if(pw.processPage) pw.processPage(fe);
+	if(fe) {
+		debug('mdpage loaded', fe.dictInfo.name, 'tpshc!=null:'+pw.tpshc!=null);
+		var inf=fe.dictInfo;
+		if(pw) {
+			// w.addEventListener('click',pw.tpshc);
+			for(var i=0,j;j=pw._merge[i++];) {
+				edEtJts(j[0], j[1], j[2])
+			}
+			// if(pw.paddingLeft) {
+			// 	document.body.style.paddingLeft = pw.paddingLeft;
+			// }
+		}
+		if(!fe.scrollExpand) {
+			if(inf.lastX || inf.lastY)
+				document.documentElement.scrollTo(inf.lastX, inf.lastY);
+		}
+		if(fe.u) {
+			if(fe.u.startsWith(location.href)) {
+				location.href=fe.u;
+			}
+			fe.u=0;
+		}
+		if(pw.bOnceHighlighted) {
+			console.log('子页面高亮开始!!!');
+			pw.MarkFrame(fe);
+		}
+		//debug('needs img loader', inf.img, inf.name);
+		if(_app && inf.img) {
+			pw.LoadIMG(inf);
+		}
+		ge('_pd_mh').innerText ='html, body {min-height: unset!important;}';
+	} else {
+		if(_app){
+			w.shzh=_app.rcsp(sid.get());
+			var lnks = document.links;
+			for(var i=0,max=Math.min(lnks.length,10);i<max;i++) {
+				if(lnks[i].href.startsWith("sound")) {
+					lnks=1; break;
+				}
+			} 
+			_app.maySound(sid.get(), lnks===1);
+		}
+	}
+	if(!remarked) {
+		if(fe) {
+			restoreMarks(pw); 
+		} else if(_app) { // 暂时仅为app内部开启笔记
+			loadJs('/MdbR/annot.js', function(){restoreMarks(w)})
+		}
+		remarked = true;
+	}
+	//todo 处理背景色？
+	if(_app) {
+		de = document.documentElement;
+		document.body.onscroll = pageScroll;
 	}
 }
 
-function loadVI(pos){
+function loadJs(url,callback){
+	var e=document.createElement('script');
+	e.type="text/javascript";
+	e.onload=callback;
+	e.src=url;
+	document.body.appendChild(e);
+}
+
+function restoreMarks(pw) {
+	var url = ''+location.href, idx = url.indexOf('_'), multi=url.indexOf('_', idx+1) > 0;
+	var t = _app.remarkByUrl(sid.get(), url, w.pos||0);
+	debug('remarkByUrl???', url, t);
+	if(multi) {
+		var frames = document.getElementsByClassName('_PDict_body'), map=[];
+	 	for(var i=0,f;f=frames[i++];) {
+			map[f.getAttribute('pd_pos')] = f;
+		}
+		t = t.split('\t\n\0'); // \n\n\n
+		debug('remarkByUrl::multi::', t, 'map=',map);
+	 	for(var i=0,f,n;n=t[i];i+=2) {
+			f = map[t[i+1]];
+			if(f) {
+				debug('remark=', t[i+1], f);
+				remark(n, f, document, pw); 
+			}
+		}
+	} else {
+		remark(t, document.body, document, pw); 
+	}
+}
+
+function remark(t, rootNode, doc, w){
+    w.RestoreMarks(t, rootNode, doc);
+}
+
+w.markPage = function(tcn) {
+	var s = w.getSelection();
+	if(s && !s.isCollapsed) {
+		var wh = whereSelection();
+		MakeMark(tcn, wh[2], document, wh[0], wh[1])
+	}
+}
+
+w.expUrl = function() {
+	return url.substring(url.lastIndexOf('/',idx));
+}
+
+w.whereSelection = function(){
+	var url = ''+location.href, idx = url.indexOf('_'), multi=url.indexOf('_', idx+1) > 0;
+	var pos, did = did = url.substring(url.lastIndexOf('/',idx)+1, idx), rootNode=document.body;
+	if(multi) {
+		var n = getSelection().getRangeAt(0).startContainer;
+		while(n=n.parentNode) {
+			if(n.classList.contains('_PDict_body')) {
+				pos = parseInt(n.getAttribute('pd_pos'))
+				rootNode = n;
+				break;
+			}
+		}
+	} else {
+		//todo handle ? parms
+		pos = w.pos;
+		if(pos==undefined) pos = pw.decodePosid(url.substring(idx+1));
+	}
+
+	debug('whereSelection::', pos, did, url.substring(idx+1));
+	return [pos, did, rootNode];
+
+}
+
+w.loadVI = function(pos){
 	//111
-	console.log('hi !! loadVI/'+pos);
+	debug('hi !! loadVI/'+pos);
 	var req=new XMLHttpRequest();
 	req.open('POST','VI/'+pos);
 	req.responseType='text';
 	req.onreadystatechange=function(e) {
 		if(req.readyState == 4 && req.status==200) {
-			console.log(req.responseText);
+			debug(req.responseText);
 			var vc = JSON.parse(req.responseText);
 			if(vc.JS){
 				eval(vc.JS)
@@ -63,398 +228,208 @@ var _onloadchecks;
 var frameAt;
 var audio;
 var regHttp=new RegExp("^https?://");
-var regEntry=new RegExp("^entry://");
 var regPdf=new RegExp("^pdf://");
 var regSound=new RegExp("^sound://");
+var stopLnk, nxtEntry;
 
 function hiPlaySound(e){
-	var cur=e.ur1?e:e.srcElement;
-	//console.log("hijacked sound playing : "+cur.ur1);
-	if(audio)
-		audio.pause();
-	else
-		audio = new Audio();
-	audio.src = cur.ur1;
-	audio.play();
+	e=e.target;
+	while(e && !e._pd_vc) e=e.parentNode;
+	if(e) {
+		var vc = baseSoundUrl+e.getAttribute('href').substring(8);
+		debug("subpage hijacked sound playing : ", vc);
+		if(audio) audio.pause();
+		else audio = new Audio();
+		audio.src = vc;
+		var pro = audio.play();
+		pro.catch(function(error){
+			if(((error+'').indexOf('found'))>0) {
+				//debug("播放失败.. ");
+				if(_app) location.href = 'sound://happy.mp3'
+				//else todo 使得 mdbr/sounds/ 等效于 sounds:// ……
+			}
+		});
+	}
 }
 
-function wrappedMouseDown(e){
-	//console.log(e);
-	var cur=e.srcElement;
-	if(cur.href && (e.button==1||e.button==0)) {
-		console.log("01! found link : "+cur.href+" : "+regSound.test(cur.href));
-		var getRawLink=cur.href;
-		var patt1 = /\/base\/[0-9]*\/(#.*)/;
-		var m = getRawLink.match(patt1);
-		if(m && m[0].length>0){
-			console.log(m[1]);
-			getRawLink=m[1];
-			console.log(window.location.href);
-			cur.href=window.location.href+getRawLink;
-			return false;
-		}
-		if(regEntry.test(cur.href)){
-			cur.href=/* "entry/"+ */cur.href.substring(8);
-			console.log(111);
-		}else if(regSound.test(cur.href)){/*拦截 sound 连接*/
-			var link=/* "sound/"+ */cur.href.substring(8);
-			cur.href=link;
-			if(cur.onclick==undefined){
-				//console.log("1! found internal sound link : "+cur.href);
-				cur.ur1=cur.href;
-				cur.removeAttribute("href");
-				cur.onclick=hiPlaySound;
-				hiPlaySound(cur)
-				return false;
-			}
-		}
-		else if(parent.app && regHttp.test(cur.href)){/*拦截 http*/
-			parent.app.handleWebLink(cur.href);
-			return false;
-		}
-		else if(parent.app && regPdf.test(cur.href)){/*拦截 pdf*/
-			parent.app.handlePdfLink(cur.href);
-			return false;
-		}
-		return true;/*连接通行！*/
+function popupEntry(e){
+	if(pw._touchtarget_lck) return true;
+	var t;
+	var p=e.path;
+	if(!p && e.composedPath) p=e.composedPath();
+	for(var i=0;i<10 && (t=p[i]);i++)
+		if(t.href!==undefined)
+			break;
+	debug('popupEntry', t)
+	if(t.href.startsWith(contentHash)) {
+		location.href = t.href;
+		return true;
 	}
-}
-function wrappedClickFunc(e){
-	//if(1)return;
-	//parent.window.dismiss_menu();
-	//parent.dismiss_menu();
-	var cur=e.srcElement;
-	if(0)
-	if(cur.href){
-		console.log("1! found link : "+cur.href+" : "+regSound.test(cur.href));
-		var getRawLink=cur.href;
-		var patt1 = /\/base\/[0-9]*\/(#.*)/;
-		var m = getRawLink.match(patt1);
-		if(m && m[0].length>0){
-			console.log(m[1]);
-			getRawLink=m[1];
-			console.log(window.location.href);
-			cur.href=window.location.href+getRawLink;
-			return false;
-		}
-		if(regEntry.test(cur.href)){
-			cur.href="entry/"+cur.href.substring(8);
-			console.log(111);
-		}else if(regSound.test(cur.href)){/*拦截 sound 连接*/
-			var link=/* "sound/"+ */cur.href.substring(8);
-			cur.href=link;
-			if(cur.onclick==undefined){
-				//console.log("1! found internal sound link : "+cur.href);
-				cur.ur1=cur.href;
-				cur.removeAttribute("href");
-				cur.onclick=hiPlaySound;
-				hiPlaySound(cur)
-				return false;
-			}
-		}
-		else if(parent.app && regHttp.test(cur.href)){/*拦截 http*/
-			parent.app.handleWebLink(cur.href);
-			return false;
-		}
-		else if(parent.app && regPdf.test(cur.href)){/*拦截 pdf*/
-			parent.app.handlePdfLink(cur.href);
-			return false;
-		}
-		return true;/*连接通行！*/
-	}
-	else if(cur.src && regEntry.test(cur.src)){
-		console.log("2! found link : "+cur.src);
-		return false;
-	}
-	else if(e.srcElement!=document.documentElement && e.srcElement.nodeName!='INPUT'){ // immunize blank area out of body ( in html )
-		//console.log(e.srcElement+'')
-		//console.log(e);
-		var s = window.getSelection();
-		if(s.isCollapsed && s.anchorNode){ // don't bother with user selection
-			s.modify('extend', 'forward', 'word'); // first attempt
-			//if(1) return;
-			var an=s.anchorNode;
-			//console.log(s.anchorNode); console.log(s);  console.log(s.getRangeAt(0)); console.log(s+'');
-			fixPdfForword(s);
-			if(s.baseNode != document.body) {// immunize blank area
-				var scer=s.getRangeAt(0);
-				if(scer.startOffset==0){
-					scer=scer.startContainer;
-					if(scer.nodeType==3){
-						scer=scer.parentNode;
-					}
-					if(scer.previousSibling==null){
-						console.log(e.clientX-scer.offsetLeft, e.clientY-scer.offsetTop);
-						if(Math.abs(e.clientX-scer.offsetLeft)>50||Math.abs(e.clientY-scer.offsetTop)>50){
-							s.empty();
-							scer=null;
-						}
-					}
-				}
-				if(scer){
-					scer=0;
-					var text=s.toString(); // for word made up of just one character
-					if(text.length>0){
-						var re=/[\u4e00-\u9fa5]/g;
-						tillNext=text;
-						if(re.test(text.trim())){
-							scer=1;
-						}else{
-							var range = s.getRangeAt(0);  // first attempt, forward range
-							//console.log(range);
-							var lb='lineboundary';
-							s.collapseToStart();
-							s.modify('extend', 'forward', lb);
-							tillNextLine=s.toString();
-							var eN='word';
-							var eB='word';
-							if(tillNextLine.trim()!="") {
-								s.collapseToStart();
-								s.modify('extend', 'backward', 'word');
-								tillNext=s.toString();
-								s.collapseToEnd();
-								s.modify('extend', 'backward', lb);
-								tillNextLine=s.toString();
-								
-								// !!!  !!! sometime in the pdf
-								// a lot of tags till be wrongly treated as in one line.
-								if(tillNextLine.length<tillNext.length){
-									var code=tillNextLine.charAt(0);
-									if(code.toUpperCase()===code && code.toLowerCase!=code) eB=lb;
-								}
-							
-								s.empty(); s.addRange(range);
-								s.collapseToStart();
-								
-								
-								s.modify('move', 'backward', eB);
-								
-								s.modify('extend', 'forward', 'word');
-								tillNext=s.toString();
-								s.collapseToStart();
-								s.modify('extend', 'forward', lb);
-								tillNextLine=s.toString();
-								
-								// !!!  !!! sometime in the pdf
-								// a lot of tags till be wrongly treated as in one line.
-								if(tillNextLine.length<tillNext.length){
-									var code=tillNext.charAt(tillNextLine.length);
-									if(code.toUpperCase()==code && code.toLowerCase()!=code) eN=lb;
-								}
-								s.collapseToStart();
-								
-								s.modify('extend', 'forward', eN);
-								
-								text=s.toString();
-								scer=1;
-							}
-						}
-						if(scer){
-							console.log(text); // final output
-						}
-					}
-				}
-			}
-			//s.empty();
-		}
+	if(_app && _app.shouldPopupEntry()) 
+	{
+		_app.popupEntry(sid.get(), t.href);
+		stopLnk = 1;
+		return true;
 	}
 	return false;
-};
+}
 
-function fixPdfForword(s){
-	var r = s.getRangeAt(0);
-	if(r.startContainer!=r.endContainer){
-		r.setEndAfter(r.startContainer);
+function getId(){
+	return frameElement?frameElement.dictInfo.id:''
+}
+function entryPop(t){
+	debug("entryPop on node::", t, t.href);
+	if(_app && _app.entryPopup(sid.get(), getId())/*  && frameElement */) {
+		if(t.onclick!==popupEntry) {
+			t.rawClick=t.onclick;
+			t.onclick=popupEntry; // 选择在新窗口打开！
+		}
+		nxtEntry=0;
+	} else {
+		if(t.onclick==popupEntry) t.onclick=t.rawClick;
+		nxtEntry=t; // 下一刻在此页面打开！
 	}
 }
-function fixPdfBackword(s){
-	var r = s.getRangeAt(0);
-	if(r.startContainer!=r.endContainer){
-		r.setStartBefore(r.endContainer);
+
+function baseEntry() {
+	if(!baseEntryUrl) {
+		var tar=contentUrl, tmp=location.pathname.startsWith('/content/');
+		if(tmp) {
+			tar = tar.replace('/content/','/base/');
+			tmp = tar.indexOf('_');
+			if(tmp>0) tar = tar.slice(0, tmp);
+		} else {
+			tmp = tar.indexOf('/entry/');
+			if(tmp>0) tar = tar.slice(0, tmp);
+		}
+		baseSoundUrl = tar+'/';
+		baseEntryUrl = tar+'/entry/';
+	}
+	return baseEntryUrl;
+}
+
+function wrappedDown(e){
+	debug('wrappedDown', e);
+	var t;
+	if(pw.scrollLck) pageScroll();
+	var p=e.path;
+	if(!p && e.composedPath) p=e.composedPath();
+	for(var i=0;i<10 && (t=p[i]);i++)
+		if(t.href!==undefined)
+			break;
+	if(!pw._touchtarget_lck && e.touches && e.touches.length==1){
+		pw._touchtarget = e.touches[0].target;
+		pw.subw = w;
+	}
+	if(frameElement && ((e.button||0)==0)) {
+		pw.tFrame(frameElement.dictInfo);
+	}
+	stopLnk = 0;
+	withSel = !getSelection().isCollapsed;
+	if(t && t.href) { //  && (e.button==1||e.button==0)
+		stopLnk = 1;
+		debug("01! found link : "+t.href+" : testSound="+regSound.test(t.href));
+		var attr = t.getAttribute('href'), href = t.href;
+		if(attr.startsWith('#')) { // 标准页内跳转
+			t.href=contentUrl+attr; // 转换为contentUrl页内跳转
+			stopLnk = t.href;
+		}
+		else if(attr.startsWith('entry://')) { // entry://跳转
+			attr=attr.substring(8);
+			if(attr.startsWith('#')) { // entry://#页内跳转
+				t.href=contentUrl+attr; // 转换为contentUrl页内跳转
+				stopLnk = t.href;
+			} else { // entry://词条名跳转
+				t._ntz=attr;
+				t.href=baseEntry()+attr; // 转换为contentUrl词条跳转 "/base/dOED/entry/词条名";
+				entryPop(t);
+			}
+		} 
+		else if(t._ntz) {
+			entryPop(t); // 已缓存的词条跳转
+		}
+		else if(regSound.test(attr)) {/*拦截 sound 连接*/
+			baseEntry();
+			if(t.onclick==undefined){
+				debug("1! found internal sound link : "+attr);
+				t.onclick=hiPlaySound;
+				//t.addEventListener('click', hiPlaySound)
+			}
+			t._pd_vc = 1;
+			stopLnk = 1;
+			return true;
+		}
+		else if(_app && regHttp.test(t.href)){
+			if(!attr.startsWith('#') && attr && attr.trim()) {
+				debug('拦截 http');
+				stopLnk = t.href;
+				return true;
+			}
+		}
+		else if(_app && regPdf.test(t.href)){/*拦截 pdf*/
+			_app.handlePdfLink(t.href);
+			return false;
+		}
+		stopLnk = 0;
+		debug('连接通行！');
+		return true;
+	}
+}
+
+w._pd_d = wrappedDown;
+
+function wrappedClickFunc(e){
+	debug('wrappedClickFunc'+stopLnk+' '+withSel);
+	if(pw._touchtarget_lck) {
+		stopLnk=nxtEntry=0;
+		e.stopPropagation();
+		e.preventDefault();
+	}
+	if(frameElement) {
+		pw.postOnClick(frameElement.dictInfo);
+	}
+	if(_app && stopLnk) {
+		if(typeof stopLnk==='string' && !pw._touchtarget_lck) {
+			if(!frameElement || stopLnk.startsWith(contentHash))
+				location.href = stopLnk;
+			else
+				_app.handleWebLink(getId(), stopLnk);
+		}
+		e.preventDefault();
+		stopLnk = 0;
+		return;
+	}
+	if(nxtEntry) {
+		e.preventDefault();
+		if(!frameElement || frameElement.dictInfo.scrollExpand) JumpUrl(nxtEntry);
+		nxtEntry=0;
+	}
+	if(_app && withSel && getSelection().isCollapsed) {
+		_app.textMenu(sid.get(), false);
+	}
+}
+
+function JumpUrl(nxt){
+	if(!pw._touchtarget_lck) {
+		debug('JumpUrl', nxt);
+		var ent=nxt._ntz;
+		var h=ent.indexOf('#');
+		if(frameElement) {
+			debug("JumpUrl::nxtEntry=", nxt.href, location.href);
+			if(h>0) {
+				pw.JumpUrlTag(frameElement, ent.slice(h+1), nxt.href, nxt);
+				//ent=ent.slice(0,h);
+			} else {
+				pw.JumpUrlFrame(frameElement);
+				location.href = nxt.href;
+			}
+		} else {
+			location.href = nxt.href;
+		}
 	}
 }
 
 /*!!!高亮开始*/
-var bOnceHighlighted;
-var MarkLoad,MarkInst;
-var results=[], current,currentIndex = 0;
-var currentClass = "current";
 
-function jumpTo(d) {
-    if (results.length) {
-		console.log('jumpTo received '+frameAt+'->'+parent.window.HlightIdx+' '+(currentIndex+d)+'/'+(results.length)+' dir='+d);
-		var np=currentIndex+d;
-		var max=results.length - 1;
-		if (currentIndex > max) currentIndex=0;
-		var pw=parent.window;
-		if(pw.desiredOffset>=0){
-			np=0;
-			if(frameAt<pw.HlightIdx) return d;
-			var baseOffset=pw.topOffset(frameAt);
-			for(;np>=0&&np<=max;np+=d){
-				console.log(frameAt+'->'+pw.HlightIdx+' npnpnpnp ? '+np+'/'+max+' ? '+(baseOffset+pw.topOffset(results[np])+' >= '+pw.desiredOffset));
-				if(baseOffset+pw.topOffset(results[np])>=pw.desiredOffset)
-					break;
-			}
-			pw.desiredOffset=-1;
-		}
-		if (np < 0) return -1;
-		if (np > max) return 1;
-		currentIndex=np;
-        if(current) removeClass(current, currentClass);
-        current = results[currentIndex];
-        if(current){
-			addClass(current, currentClass);
-			var position = topOffset(current);
-			pw.scrollHighlight(position, d);
-			return 0;
-        }
-    }
-	return d;
-}
-
-function topOffset(elem){
-    var top=0;
-    var add=1;
-    while(elem && elem!=document.body){
-    console.log(""+(elem.style.display==""))
-        if(elem.style.display=='none'){
-        	elem.style.display='block';
-		}
-		else if(elem.style.display==''){
-        	elem.style.display='inline';
-		}
-        if(add){
-			top+=elem.offsetTop;
-			var tmp = elem.offsetParent;
-        	if(!tmp) add=0;
-        	else elem=tmp;
-		}
-		if(!add) elem=elem.parentNode;
-    }
-    return !add&&top==0?-1:top;
-}
-
-function quenchLight(){
-    if(current) removeClass(current, currentClass);
-}
-
-function resetLight(d){
-	if(d==1) currentIndex=-1;
-	else if(d==-1) currentIndex=results.length;
-	quenchLight();
-}
-
-function setAsEndLight(){
-	currentIndex=results.length-1;
-}
-
-function setAsStartLight(){
-	currentIndex=0;
-}
-
-function addClass(elem, className) {
-    if (!className) return;
-    const els = Array.isArray(elem) ? elem : [elem];
-    for(var i=0;i<els.length;i++){
-    	els[i].className+=className;
-    }
-}
-
-function removeClass(elem, className) {
-    if (!className) return;
-    const els = Array.isArray(elem) ? elem : [elem];
-    for(var i=0;i<els.length;i++){
-		els[i].className=els[i].className.replace(className, '');
-	}
-}
-
-function clearHighlights(){
-	if(bOnceHighlighted && MarkInst && MarkLoad)
-	MarkInst.unmark({
-		done: function() {
-			results=[];
-			bOnceHighlighted=false;
-		}
-	});
-}
-
-function highlight(keyword){
-	var b1=keyword==null;
-	var rcsp;
-	if(b1 && parent.window.app){
-		keyword=parent.window.app.getCurrentPageKey(true);
-	}
-	if(keyword==null)
-		return;
-	var index=keyword.indexOf('x');
-	if(index>=0){
-		rcsp=parseInt(keyword.substring(0, index));
-		keyword=keyword.substring(index+1);
-	}
-	if(b1&&keyword.trim().length==0)
-		return;
-	if(!MarkLoad){
-		loadJs('/MdbR/mark.js', function(){
-			MarkLoad=true;
-			do_highlight(keyword,rcsp);
-		});
-	}else
-		do_highlight(keyword,rcsp);
-}
-
-function do_highlight(keyword,rcsp){
-	if(!MarkInst)
-		MarkInst = new Mark(document);
-	MarkInst.unmark({
-		done: function() {
-			bOnceHighlighted=false;
-			if(keyword){
-				keyword=decodeURIComponent(keyword);
-				console.log('keyword='+keyword+', rcsp='+rcsp);
-				if(rcsp&0x1)
-				MarkInst.markRegExp(new RegExp(keyword, (rcsp&0x2)?'m':'im'), {
-					done: done_highlight
-				});
-				else
-				MarkInst.mark(keyword, {
-					separateWordSearch:(rcsp&0x4)!=0,wildcards:(rcsp&0x8)?'enabled':'withSpaces',done: done_highlight,
-					caseSensitive:(rcsp&0x2)!=0
-				});
-			}
-		}
-	});
-}
-
-function done_highlight(){
-	bOnceHighlighted=true;
-	results = document.getElementsByTagName("mark");
-	currentIndex=-1;
-	if(frameAt==0&&parent.window.desiredOffset<=0)
-		jumpTo(1);
-}
-
-function loadJs(url,callback){
-	var script=document.createElement('script');
-	script.type="text/javascript";
-	if(typeof(callback)!="undefined"){
-		if(script.readyState){
-			script.onreadystatechange=function(){
-				if(script.readyState == "loaded" || script.readyState == "complete"){
-					script.onreadystatechange=null;
-					callback();
-				}
-			}
-		}else{
-			script.onload=function(){
-				callback();
-			}
-		}
-	}
-	script.src=url;
-	document.body.appendChild(script);
-}
+})()
 </script>
-
-<base href='/base//'/>
-<base target="_self" />

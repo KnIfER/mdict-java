@@ -31,6 +31,10 @@ public class PDICMainAppOptions {
 		return true;
 	}
 
+	public static boolean isSingleThreadServer() {
+		return false;
+	}
+
 	public final String GetPathToMainFolder() {
 		// _rootPath = rootPath + "/" + CMN.BrandName + "/";
 		return _rootPath;

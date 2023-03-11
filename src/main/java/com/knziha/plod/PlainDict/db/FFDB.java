@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.parser.Feature;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SU;
+import org.nanohttpd.protocols.http.HTTPSession;
 import org.nanohttpd.protocols.http.IHTTPSession;
 import org.nanohttpd.protocols.http.request.Method;
 import org.nanohttpd.protocols.http.response.Response;
@@ -517,14 +518,15 @@ public class FFDB {
 	}
 
 
-	public static Response handleRequest(IHTTPSession session) {
+	public static Response handleRequest(HTTPSession session) {
 		if (Method.POST.equals(session.getMethod())) {
 			try {
 				session.parseBody(null);
 				//SU.Log("DB.jsp::", session.getHeaders());
 				SU.Log("DB.jsp::", session.getParameters(), session.getMethod());
 				FFDB db = FFDB.getInstance();
-				String text = session.getParameter("data");
+//				String text = session.getParameter("data");
+				String text = session.getParms().get("data");
 				//SU.Log("text::", text, text.length());
 				//text = URLDecoder.decode(text);
 				Objects.requireNonNull(text);

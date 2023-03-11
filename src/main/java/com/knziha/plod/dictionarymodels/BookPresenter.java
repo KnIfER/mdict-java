@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.knziha.plod.dictionary.UniversalDictionaryInterface;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SU;
+import com.knziha.plod.plaindict.MainActivityUIBase;
 import com.knziha.plod.plaindict.PDICMainAppOptions;
 import com.knziha.plod.plaindict.PlainDictionary;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -12,6 +13,7 @@ import org.knziha.metaline.Metaline;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BookPresenter {
@@ -20,6 +22,8 @@ public class BookPresenter {
 	public final String idStr;
 	public final String idStr10;
 	public File placeHolder;
+	public ArrayList[] combining_search_tree2;
+	public ArrayList[] combining_search_tree_4;
 
 	long FFStamp;
 	long firstFlag;
@@ -34,6 +38,8 @@ public class BookPresenter {
 	public BookPresenter(PlainMdict mdtmp) {
 		bookImpl = mdtmp;
 		mType = DictionaryAdapter.PLAIN_BOOK_TYPE.PLAIN_TYPE_MDICT;
+		mBaseUrl = idStr = idStr10 = null;
+		
 	}
 
 	/** set by {@link PDICMainAppOptions#getAllowPlugRes} */
@@ -195,7 +201,7 @@ public class BookPresenter {
 
 	public static ConcurrentHashMap<String, Long> bookImplsNameMap = new ConcurrentHashMap<>();
 
-	public BookPresenter(@NonNull File fullPath, PlainDictionary THIS, int pseudoInit) throws IOException {
+	public BookPresenter(@NonNull File fullPath, MainActivityUIBase THIS, int pseudoInit) throws IOException {
 		if (pseudoInit<0) {
 			placeHolder = fullPath;
 			mBaseUrl = idStr = idStr10 = null;
@@ -244,7 +250,7 @@ public class BookPresenter {
 		return h;
 	}
 
-	public static UniversalDictionaryInterface getBookImpl(PlainDictionary THIS, File fullPath, int pseudoInit) throws IOException {
+	public static UniversalDictionaryInterface getBookImpl(MainActivityUIBase THIS, File fullPath, int pseudoInit) throws IOException {
 		UniversalDictionaryInterface bookImpl = null;
 		String pathFull = fullPath.getPath();
 		long bid = -1;
