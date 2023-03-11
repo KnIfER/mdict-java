@@ -82,7 +82,7 @@ public abstract class MdictServer extends NanoHTTPD {
 	protected mdBase MdbResource;
 	
 	PlainWeb webResHandler;
-
+	
 	public MainActivityUIBase.LoadManager loadManager;
 	
 	public MdictServer(int port, MainActivityUIBase app) {
@@ -604,8 +604,8 @@ public abstract class MdictServer extends NanoHTTPD {
 			if (!key.startsWith("\\")) {
 				key = "\\"+key;
 			}
-			if(MdbResource instanceof mdict) {
-				ret = ((mdict)MdbResource).getResourceByKey(key);
+			if(MdbResource instanceof com.knziha.plod.dictionary.mdict) {
+				ret = ((com.knziha.plod.dictionary.mdict)MdbResource).getResourceByKey(key);
 			} else {
 				int id = MdbResource.lookUp(key);
 				//SU.Log("lookUp::", key, id);
