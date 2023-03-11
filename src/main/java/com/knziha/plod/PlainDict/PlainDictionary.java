@@ -12,6 +12,13 @@ public class PlainDictionary extends MainActivityUIBase{
 		super();
 		CMN.Log("App");
 		try {
+			if (System.getProperty("app")!=null)
+			{
+//				File file = new File("D:\\test.log");
+//				PrintStream stream = new PrintStream(new FileOutputStream(file, true));
+//				System.setOut(stream);
+//				CMN.Log("000", userDir);
+			}
 			currentDictionary = loadManager.md.get(0);
 		} catch (Exception e) {
 			SU.Log(e);

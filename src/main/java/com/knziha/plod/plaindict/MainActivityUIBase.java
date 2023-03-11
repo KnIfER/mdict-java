@@ -4,7 +4,6 @@ import com.knziha.plod.dictionary.UniversalDictionaryInterface;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SubStringKey;
 import com.knziha.plod.dictionarymodels.BookPresenter;
-import com.knziha.plod.dictionarymodels.PlainMdict;
 import com.knziha.plod.dictionarymodels.PlainWeb;
 import com.knziha.plod.ebook.Utils.BU;
 import org.nanohttpd.protocols.http.HTTPSession;
@@ -26,6 +25,13 @@ public class MainActivityUIBase {
 	public final  LoadManager loadManager;
 
 	public String userDir;
+	public String fontFaces;
+	public String plainCSS;
+
+	public Map<SubStringKey, String> serverHosts;
+	public ArrayList<PlainWeb>  serverHostsHolder=new ArrayList();
+	public HashMap<String, BookPresenter> mdict_cache = new HashMap<>();
+	
 	public BookPresenter currentDictionary;
 	public int currentDisplaying=0;
 	public int adapter_idx;
@@ -43,22 +49,14 @@ public class MainActivityUIBase {
 	public MainActivityUIBase(){
 		opt = new PlainDictAppOptions();
 		loadManager = new MainActivityUIBase.LoadManager(this);
+		CMN.Log("System.getProperties()", System.getProperties());
+		userDir = System.getProperty("user.dir") + "\\" + "PlainDict";
 		try {
-			userDir = System.getProperty("user.dir") + "\\" + "PlainDict";
-			if (System.getProperty("app")!=null)
-			{
-//				File file = new File("D:\\test.log");
-//				PrintStream stream = new PrintStream(new FileOutputStream(file, true));
-//				System.setOut(stream);
-//				CMN.Log("000", userDir);
-			}
 			SQLiteConfig config = new SQLiteConfig();
 			config.setSharedCache(true);
 			database = DriverManager.getConnection("jdbc:sqlite:" + userDir.replace("\\", "/") + "/database.db", config.toProperties());
 			statement = database.createStatement();
 			database.setAutoCommit(true);
-			CMN.Log("123", System.getProperties());
-
 			String sqlBuilder = "CREATE TABLE IF NOT EXISTS " +
 					TABLE_BOOK_v2 +
 					"(" +
@@ -70,25 +68,21 @@ public class MainActivityUIBase {
 					")";
 			statement.execute(sqlBuilder);
 			statement.execute("CREATE INDEX if not exists book_name_index ON book (name)");
-			CMN.Log("init done.");
-//			database.close();
-
+			CMN.Log("sqlite init done.");
+		} catch (Exception e) {
+			CMN.Log(e);
+		}
+		try {
 			loadManager.reload("test.set.txt");
 		} catch (Exception e) {
 			CMN.Log(e);
 		}
 	}
 	
-	public String fontFaces;
-	public String plainCSS;
-	
-	public Map<SubStringKey, String> serverHosts;
-	public ArrayList<PlainWeb>  serverHostsHolder=new ArrayList();
-	public HashMap<String, BookPresenter> mdict_cache = new HashMap<>();
-	
-	public String getCommonAsset(String s) {
+	public String getCommonAsset(String s) { // not used
 		return null;
 	}
+	
 	public String fileToString(String path) {
 		return BU.fileToString(new File(path));
 	}
@@ -126,8 +120,8 @@ public class MainActivityUIBase {
 		}
 
 		public void reload(String moduleName) throws Exception {
-			File setFile = new File(app.userDir, "CONFIG/" + moduleName);
-			BufferedReader in = new BufferedReader(new FileReader(setFile), 4096);
+			File fileset = new File(app.userDir, "CONFIG/" + moduleName);
+			BufferedReader in = new BufferedReader(new FileReader(fileset), 4096);
 			String line;
 			int cc=0;
 			filterCount=0;
@@ -137,7 +131,7 @@ public class MainActivityUIBase {
 			while((line = in.readLine())!=null) {
 				int flag = 0;
 				boolean chair = true;
-				if(line.startsWith("[:")){
+				if(line.startsWith("[:")) {
 					int idx = line.indexOf("]",2);
 					if(idx>=2){
 						String[] arr = line.substring(2, idx).split(":");
@@ -172,9 +166,12 @@ public class MainActivityUIBase {
 					}
 				}
 				if (map.add(line)) { // 避免重复
-					BookPresenter bookPresenter = new BookPresenter(new File(line), app, 0);
-//					BookPresenter bookPresenter = new BookPresenter(new PlainMdict(new File(line), app.opt));
-					md.add(bookPresenter);
+					try {
+						BookPresenter bookPresenter = new_book(new File(line), app);
+						md.add(bookPresenter);
+					} catch (Exception e) {
+						CMN.debug(e);
+					}
 				}
 			}
 			in.close();
@@ -227,18 +224,13 @@ public class MainActivityUIBase {
 		}
 	}
 	
-	public String handleWordMap() {
+	public String handleWordMap() { // todo impl
 		return null;
 	}
 
-
-
-
 	byte[] Hzh;
 
-	/**
-	 * 获取常规汉字的拼音首字母
-	 */
+	/** 获取常规汉字的拼音首字母 */
 	public byte[] getHzh() {
 		if (Hzh == null) {
 			try {
@@ -253,9 +245,7 @@ public class MainActivityUIBase {
 		return Hzh;
 	}
 
-	/**
-	 * 生成具有一定确定性的ID
-	 */
+	/**  生成具有一定确定性的ID */
 	public long GenIdStr(String nameKey) {
 		long ret = -1;
 		try {
@@ -386,6 +376,7 @@ public class MainActivityUIBase {
 		return id;
 	}
 
+	/** 获取程序中的搜索词 */
 	public String etSearch_getText() {
 		return null;
 	}
