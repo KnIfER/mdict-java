@@ -1,5 +1,6 @@
 package com.knziha.plod.plaindict.javafx;
 
+import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.Utils.SU;
 import com.knziha.plod.dictionarymodels.BookPresenter;
 import com.knziha.plod.dictionarymodels.MagentTransient;
@@ -62,7 +63,7 @@ import java.util.regex.Pattern;
 
 import static javafx.concurrent.Worker.State.FAILED;
 		 
-public class PlainDictionaryPcJFX extends Application implements EventHandler{
+public class PlainDictionaryPcJFX extends Application implements EventHandler {
 	ResourceBundle bundle;
 	GridPane topGrid;
 	SearchBox searchBox;
@@ -103,7 +104,7 @@ public class PlainDictionaryPcJFX extends Application implements EventHandler{
 	public final ArrayList<BookPresenter> md;
 	public final MainActivityUIBase app;
 	
-	public MdictServerOyster server;
+	public MdictServerLaptop server;
 
 	public static boolean isNeoJRE=false;
 	
@@ -138,11 +139,9 @@ public class PlainDictionaryPcJFX extends Application implements EventHandler{
 		}
 
 		public void setLastMd(String val) {
-			try {
-				int idx = Integer.parseInt(val);
-				app.currentDictionary= md.get(idx);
-				app.adapter_idx=idx;
-			} catch (Exception e) { }
+			int idx = IU.parsint(val, 0);
+			app.currentDictionary = app.loadManager.md_get(idx);
+			app.adapter_idx=idx;
 		}
 
 		public String getCurrentPageKey(boolean bAppendFlag){
@@ -429,7 +428,7 @@ public class PlainDictionaryPcJFX extends Application implements EventHandler{
 	public void start(javafx.stage.Stage stage_) throws Exception {
 		//sun.net.http.allowRestrictedHeaders=true;
 		ScanSettings(new File(PlainDictAppOptions.projectPath,"settings.xml"));
-		server = new MdictServerOyster(port, app);
+		server = new MdictServerLaptop(port, app);
 		//scanInFiles();
 		toolBar = new MenuBar();
 		stage = stage_;

@@ -6,6 +6,7 @@ import com.knziha.plod.dictionary.Utils.SubStringKey;
 import com.knziha.plod.dictionarymodels.BookPresenter;
 import com.knziha.plod.dictionarymodels.PlainWeb;
 import com.knziha.plod.ebook.Utils.BU;
+import com.knziha.plod.plaindict.db.FFDB;
 import org.nanohttpd.protocols.http.HTTPSession;
 import org.nanohttpd.protocols.http.response.Response;
 import org.sqlite.SQLiteConfig;
@@ -106,6 +107,7 @@ public class MainActivityUIBase {
 		THIS.mdict_cache.put(fullPath.getName(), ret);
 		return ret;
 	}
+
 	public class LoadManager {
 		public int md_size;
 		public final ArrayList<BookPresenter> md = new ArrayList<>();
@@ -180,7 +182,10 @@ public class MainActivityUIBase {
 		}
 
 		public BookPresenter md_get(int idx) {
-			return md.get(idx);
+			if (idx>=0 && idx<md.size()) {
+				return md.get(idx);
+			}
+			return EmptyBook;
 		}
 
 		public String md_getName(int idx) {
@@ -188,7 +193,7 @@ public class MainActivityUIBase {
 		}
 		
 		public String md_getName(int idx, int id) {
-			return md.get(idx).getDictionaryName();
+			return md_get(idx).getDictionaryName();
 		}
 
 		public BookPresenter getBookById(long bid) {
@@ -389,4 +394,7 @@ public class MainActivityUIBase {
 		return "";
 	}
 
+	public Response handleFFDB(HTTPSession session) {
+		return FFDB.handleRequest(session);
+	}
 }

@@ -3,7 +3,6 @@ package com.knziha.plod.plaindict.javafx;
 import com.knziha.plod.dictionarymodels.*;
 import com.knziha.plod.plaindict.*;
 import com.knziha.plod.dictionarymodels.BookPresenter;
-import com.knziha.plod.plaindict.javafx.PlainDictionaryPcJFX;
 import com.knziha.plod.plaindict.javafx.widgets.DragSortTableView;
 import com.knziha.plod.plaindict.javafx.widgets.splitpane.HiddenSplitPaneApp;
 import javafx.beans.property.SimpleStringProperty;
@@ -60,7 +59,7 @@ public class ManagerFragment extends VBox {
 	}
 
 	@SuppressWarnings("unchecked")
-	public ManagerFragment(PlainDictionaryPcJFX app, MdictServerOyster server, PlainDictAppOptions _opt){
+	public ManagerFragment(PlainDictionaryPcJFX app, MdictServerLaptop server, PlainDictAppOptions _opt){
 		super();
 		mainRegion=new HBox();
 		ResourceBundle bundle = ResourceBundle.getBundle("UIText", Locale.getDefault());

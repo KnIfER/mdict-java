@@ -34,7 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.knziha.plod.plaindict.MdictServer.hasRemoteDebugServer;
-import static com.knziha.plod.plaindict.MdictServerOyster.getRemoteServerRes;
+import static com.knziha.plod.plaindict.MdictServerLaptop.getRemoteServerRes;
 
 //import okhttp3.Cache;
 //import okhttp3.Dns;

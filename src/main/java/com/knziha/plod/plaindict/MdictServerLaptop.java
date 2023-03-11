@@ -16,10 +16,6 @@
 */
 package com.knziha.plod.plaindict;
 
-import com.knziha.plod.plaindict.CMN;
-import com.knziha.plod.plaindict.MainActivityUIBase;
-import com.knziha.plod.plaindict.MdictServer;
-import com.knziha.plod.plaindict.javafx.PlainDictionaryPcJFX;
 import com.knziha.plod.plaindict.utils.JAIConverter;
 import com.knziha.plod.dictionary.Utils.IU;
 import com.knziha.plod.dictionary.mdict;
@@ -39,11 +35,11 @@ import static org.nanohttpd.protocols.http.response.Response.newFixedLengthRespo
  * date 2020/06/02
  */
 
-public class MdictServerOyster extends MdictServer {
+public class MdictServerLaptop extends MdictServer {
 	public MainActivityUIBase a;
 	private JAIConverter tiffConverter;
 
-	public MdictServerOyster(int port, MainActivityUIBase app) throws IOException {
+	public MdictServerLaptop(int port, MainActivityUIBase app) throws IOException {
 		super(port, app);
 		a = app;
 		MdbResource = new mdict("D:\\Code\\tests\\recover_wrkst\\mdict-java\\src\\main\\java\\com\\knziha\\plod\\PlainDict\\MdbR.mdd");
