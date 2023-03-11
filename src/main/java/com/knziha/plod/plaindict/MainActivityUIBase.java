@@ -89,11 +89,6 @@ public class MainActivityUIBase {
 	public String getCommonAsset(String s) {
 		return null;
 	}
-
-	public Response decodeExp(HTTPSession session) {
-		return null;
-	}
-
 	public String fileToString(String path) {
 		return BU.fileToString(new File(path));
 	}
@@ -117,7 +112,6 @@ public class MainActivityUIBase {
 		THIS.mdict_cache.put(fullPath.getName(), ret);
 		return ret;
 	}
-
 	public class LoadManager {
 		public int md_size;
 		public final ArrayList<BookPresenter> md = new ArrayList<>();
@@ -395,4 +389,13 @@ public class MainActivityUIBase {
 	public String etSearch_getText() {
 		return null;
 	}
+
+	public Response decodeExp(HTTPSession session) {
+		return null;
+	}
+
+	public String getWebSettings() {
+		return "";
+	}
+
 }

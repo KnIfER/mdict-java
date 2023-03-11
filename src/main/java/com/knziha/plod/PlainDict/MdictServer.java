@@ -105,7 +105,7 @@ public abstract class MdictServer extends NanoHTTPD {
 		
 		if(uri.startsWith("/MdbR/")) {
 			CMN.debug("[fetching internal res : ]", uri);
-//			InputStream candi = MdictServer.class.getResourceAsStream("Mdict-browser"+uri);
+			//InputStream candi = MdictServer.class.getResourceAsStream("Mdict-browser"+uri);
 			InputStream candi = OpenMdbResourceByName(uri.replace("/", "\\"));
 			if(candi!=null) {
 				String mime="*/*";
@@ -244,18 +244,11 @@ public abstract class MdictServer extends NanoHTTPD {
 			return emptyResponse;
 		}
 		
-		if(key.equals("\\settings.json")) {
-			try {
-				return newFixedLengthResponse(getSettings()) ;
-			} catch (Exception e) {
-				return emptyResponse;
-			}
-		}
+		if(key.equals("\\settings.json")) // todo deprecate, use jsBridge?
+			return newFixedLengthResponse(app.getWebSettings()) ;
 		
 		if(key.equals("\\decodeExp.txt"))
-		{
 			return app.decodeExp(session);
-		}
 		
 		if(key.equals("\\wordmap.json")) {
 //			if (Method.POST.equals(session.getMethod()))
@@ -272,7 +265,7 @@ public abstract class MdictServer extends NanoHTTPD {
 		}
 		
 		if(key.equals("\\dicts.json")) {
-			SU.Log("dicts.json::", session.getParameters(), session.getMethod(), loadManager.md_size, CMN.id(loadManager));
+			SU.Log("dicts.json::", session.getParameters(), session.getMethod());
 			if (Method.POST.equals(session.getMethod())) {
 				try {
 					session.parseBody(null);
@@ -557,23 +550,6 @@ public abstract class MdictServer extends NanoHTTPD {
 		return null;
 	}
 	
-	
-	public String strOpt;
-	public String getSettings() {
-		String ret = strOpt;
-		//strOpt = null;
-		if (ret==null) {
-//			JSONObject json = new JSONObject();
-//			json.put("bg", SU.toHexRGB(CMN.GlobalPageBackground));
-//			json.put("bgr", SU.toHexRGB(CMN.AppBackground));
-//			json.put("dName", PDICMainAppOptions.showDictName());
-//			json.put("prv", PDICMainAppOptions.showPrvBtn());
-//			json.put("nxt", PDICMainAppOptions.showNxtBtn());
-//			ret = strOpt = json.toString();
-		}
-		return ret;
-	}
-	
 	protected abstract InputStream convert_tiff_img(InputStream restmp) throws Exception;
 	
 	protected abstract void handle_search_event(Map<String, List<String>> text, InputStream inputStream);
@@ -625,8 +601,8 @@ public abstract class MdictServer extends NanoHTTPD {
 			if (!key.startsWith("\\")) {
 				key = "\\"+key;
 			}
-			if(MdbResource instanceof com.knziha.plod.dictionary.mdict) {
-				ret = ((com.knziha.plod.dictionary.mdict)MdbResource).getResourceByKey(key);
+			if(MdbResource instanceof mdict) {
+				ret = ((mdict)MdbResource).getResourceByKey(key);
 			} else {
 				int id = MdbResource.lookUp(key);
 				//SU.Log("lookUp::", key, id);
@@ -639,7 +615,6 @@ public abstract class MdictServer extends NanoHTTPD {
 	}
 	
 	private String Reroute(String currentText) {
-		if(true) return currentText;
 		SU.Log(currentFilter.size(), "Reroute", currentText);
 		try {
 			for (BookPresenter mdTmp:currentFilter) {
@@ -789,7 +764,7 @@ public abstract class MdictServer extends NanoHTTPD {
 	int MdPageLength=0;
 	private String constructMdPage(BookPresenter presenter, String record, boolean b1, int pos, HTTPSession session) {
 		if(b1 && mdict.fullpagePattern.matcher(record).find())
-			b1=false;		 
+			b1=false;
 		CMN.debug("constructMdPage", session.isProxy, b1);
 		b1=true;
 		if(b1) {
@@ -896,8 +871,8 @@ public abstract class MdictServer extends NanoHTTPD {
 		}
 	}
 	public static Response emptyResponse = newFixedLengthResponse(Status.NO_CONTENT,"*/*", "");
-
-	public interface OnMirrorRequestListener{
+	
+	interface OnMirrorRequestListener{
 		public Response onMirror(String uri, boolean mirror);
 	}OnMirrorRequestListener om;
 	
