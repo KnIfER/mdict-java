@@ -82,8 +82,8 @@ public abstract class MdictServer extends NanoHTTPD {
 	protected mdBase MdbResource;
 	
 	PlainWeb webResHandler;
-	
-	MainActivityUIBase.LoadManager loadManager;
+
+	public MainActivityUIBase.LoadManager loadManager;
 	
 	public MdictServer(int port, MainActivityUIBase app) {
 		super(port);

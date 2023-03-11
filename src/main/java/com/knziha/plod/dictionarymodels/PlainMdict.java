@@ -75,16 +75,6 @@ public class PlainMdict extends com.knziha.plod.dictionary.mdict {
 		return getEntryAt(pos);
 	}
 
-	public final StringProperty getFileNameProperty() {
-		return new SimpleStringProperty(_Dictionary_fName);
-	}
-	public final DoubleProperty getFileSizeProperty() {
-		return new SimpleDoubleProperty((f.length()/1024.0/1024));
-	}
-	public final BooleanProperty getFormationProperty() {
-		return new SimpleBooleanProperty(false);
-	}
-
 	public void savePagesTo(File file, int...position) throws IOException {
 		if(isResourceFile){
 			RecordLogicLayer hey = new RecordLogicLayer();

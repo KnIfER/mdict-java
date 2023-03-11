@@ -8,6 +8,7 @@ import com.knziha.plod.plaindict.MainActivityUIBase;
 import com.knziha.plod.plaindict.PDICMainAppOptions;
 import com.knziha.plod.plaindict.PlainDictionary;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import javafx.beans.property.*;
 import org.knziha.metaline.Metaline;
 
 import java.io.File;
@@ -368,6 +369,10 @@ public class BookPresenter {
 	public PlainWeb getWebx() {
 		return getIsWebx()?((PlainWeb)bookImpl):null;
 	}
+
+	public PlainMdict getMdict() {
+		return mType==DictionaryAdapter.PLAIN_BOOK_TYPE.PLAIN_TYPE_MDICT?(PlainMdict) bookImpl:null;
+	}
 	
 	public InputStream getDebuggingResource(String decoded) {
 		return null;
@@ -406,7 +411,17 @@ public class BookPresenter {
 		return null;
 	}
 
-	public PlainMdict getMdict() {
-		return (PlainMdict) bookImpl;
+	public File f() {
+		return bookImpl.getFile();
+	}
+
+	public final StringProperty getFileNameProperty() {
+		return new SimpleStringProperty(getDictionaryName());
+	}
+	public final DoubleProperty getFileSizeProperty() {
+		return new SimpleDoubleProperty((f().length()/1024.0/1024));
+	}
+	public final BooleanProperty getFormationProperty() {
+		return new SimpleBooleanProperty(false);
 	}
 }

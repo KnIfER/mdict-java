@@ -2,8 +2,6 @@ package com.knziha.plod.plaindict.javafx;
 
 import com.knziha.plod.dictionary.SearchResultBean;
 import com.knziha.plod.dictionary.Utils.SU;
-//import com.knziha.plod.dictionarymanager.DictPickerDialog;
-//import com.knziha.plod.dictionarymanager.ManagerFragment;
 import com.knziha.plod.dictionarymodels.*;
 import com.knziha.plod.ebook.MobiBook;
 import com.knziha.plod.plaindict.*;
@@ -90,7 +88,7 @@ public class PlainDictionaryPcJFX extends Application{
 	private PlainDictAppOptions opt;
 	private long FFStamp;
 	private Stage contextDialog;
-//	private DictPickerDialog pickDictDialog;
+	private DictPickerDialog pickDictDialog;
 	private MenuBar toolBar;
 	private ArrayList<mFile> DocumentIncludePaths;
 	private ArrayList<File> DictionarySets;
@@ -103,7 +101,7 @@ public class PlainDictionaryPcJFX extends Application{
 
 	public final ArrayList<BookPresenter> md;
 	
-	final MainActivityUIBase app;
+	public final MainActivityUIBase app;
 	
 	public class AppHandle {
 		int flag;
@@ -597,54 +595,66 @@ public class PlainDictionaryPcJFX extends Application{
 						}
 					}
 				} break;
+				case UI.switchdict:{//切换词典
+					if(!DismissSyncedPane(DictPickerDialog.class)){
+						if(pickDictDialog==null)
+							pickDictDialog = new DictPickerDialog(this, ScanSets(), opt, bundle);
+						SyncPaneToMain(pickDictDialog);
+						contextDialog=pickDictDialog;
+						pickDictDialog.show();
+					}
+				} break;
 				case UI.manager:{
-//					Stage mDialog;
-//					if(managerDialog==null || managerDialog.get()==null || managerDialog.get().getScene()==null){
-//						managerDialog = new WeakReference<>(mDialog=new Stage());
-//						mDialog.setTitle(bundle.getString("manager")+" - "+opt.getCurrentPlanName());
-//						mDialog.initModality(Modality.WINDOW_MODAL);
-//						mDialog.initOwner(stage);
-//						ManagerFragment managerFragment = new ManagerFragment(this, server, opt);
-//						Scene dialogScene = new Scene(managerFragment, 800, 600);
-//						mDialog.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-//							public void handle(KeyEvent e) {
-//								if (EscComb.match(e)) {
-//									mDialog.hide();
-//									e.consume();
-//								}
-//							}
-//						});
-//						mDialog.onCloseRequestProperty().set((e -> {
-//							//CMN.show("close");
-//							if(managerFragment.tableView.isDirty) {
-//								ObservableList<PlainMdict> mdModified = managerFragment.tableView.getItems();
-//								managerFragment.try_write_configureLet(getCurrentSetFile());
-//								md.ensureCapacity(mdModified.size());
-//								md.clear();
-//								server.currentFilter.clear();
-//								for(PlainMdict mdTmp:mdModified) {
-//									boolean disabled=managerFragment.rejector.contains(mdTmp.getPath());
-//									//CMN.Log(mdTmp.getClass().getName(), mdTmp._Dictionary_fName, isFiler, disabled);
-//									if(disabled) continue;
-//									if(mdTmp instanceof mdict_nonexist)
-//										continue;
-//									if(mdTmp instanceof mdict_preempter){
-//										try {
-//											mdTmp=new PlainMdict(mdTmp.f(), opt);
-//										} catch (IOException ignored) { CMN.Log(e); continue; }
-//									}
-//									md.add(new BookPresenter(mdTmp));
-//								}
-//								engine.executeScript("ScanInDicts();");
-//							}
-//							//event.consume();
-//						}));
-//						mDialog.setScene(dialogScene);
-//					}else{
-//						mDialog = managerDialog.get();
-//						((ManagerFragment)mDialog.getScene().getRoot()).tableView.refresh();
-//					}
-//					mDialog.show();
+					Stage mDialog;
+					if(managerDialog==null || managerDialog.get()==null || managerDialog.get().getScene()==null){
+						managerDialog = new WeakReference<>(mDialog=new Stage());
+						mDialog.setTitle(bundle.getString("manager")+" - "+opt.getCurrentPlanName());
+						mDialog.initModality(Modality.WINDOW_MODAL);
+						mDialog.initOwner(stage);
+						ManagerFragment managerFragment = new ManagerFragment(this, server, opt);
+						Scene dialogScene = new Scene(managerFragment, 800, 600);
+						mDialog.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+							public void handle(KeyEvent e) {
+								if (EscComb.match(e)) {
+									mDialog.hide();
+									e.consume();
+								}
+							}
+						});
+						mDialog.onCloseRequestProperty().set((e -> {
+							//CMN.show("close");
+							if(managerFragment.tableView.isDirty) {
+								ObservableList<BookPresenter> mdModified = managerFragment.tableView.getItems();
+								managerFragment.try_write_configureLet(getCurrentSetFile());
+								md.ensureCapacity(mdModified.size());
+								md.clear();
+								server.currentFilter.clear();
+								for(BookPresenter mdTmp:mdModified) {
+									boolean disabled=managerFragment.rejector.contains(mdTmp.getPath());
+									//CMN.Log(mdTmp.getClass().getName(), mdTmp._Dictionary_fName, isFiler, disabled);
+									if(disabled) continue;
+									if(mdTmp instanceof MagentTransient) {
+										MagentTransient magent = (MagentTransient) mdTmp;
+										if (mdTmp.f().exists()) {
+											try {
+												mdTmp=app.new_book(mdTmp.f().getPath());
+												md.add(mdTmp);
+											} catch (Exception ignored) {
+												CMN.Log(e);
+											}
+										}
+									}
+								}
+								engine.executeScript("ScanInDicts();");
+							}
+							//event.consume();
+						}));
+						mDialog.setScene(dialogScene);
+					}else{
+						mDialog = managerDialog.get();
+						((ManagerFragment)mDialog.getScene().getRoot()).tableView.refresh();
+					}
+					mDialog.show();
 				} break;
 				case UI.mainfolder:{
 					DirectoryChooser fileChooser = new DirectoryChooser();
@@ -687,15 +697,6 @@ public class PlainDictionaryPcJFX extends Application{
 						advancedSearchDialog.hide();
 					}
 				} break;
-				case UI.switchdict:{//切换词典
-//					if(!DismissSyncedPane(DictPickerDialog.class)){
-//						if(pickDictDialog==null)
-//							pickDictDialog = new DictPickerDialog(this, ScanSets(), opt, bundle);
-//						SyncPaneToMain(pickDictDialog);
-//						contextDialog=pickDictDialog;
-//						pickDictDialog.show();
-//					}
-				}break;
 				case UI.settings:{
 					if(!DismissSyncedPane(SettingsDialog.class)){
 						SettingsDialog mSettingsDialog;
